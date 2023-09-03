@@ -1,0 +1,52 @@
+@model ProductViewVM
+
+<h4>Product</h4>
+<div>
+    <div>
+        <div>
+            <div>
+                <label>Name</label>
+            </div>
+            <div>
+                <p>@Model.Name</p>
+            </div>
+        </div>
+        <div>
+            <div>
+                <label>Price</label>
+            </div>
+            <div>
+                <p>@Model.Price</p>
+            </div>
+        </div>
+        <div>
+            <div>
+                <label>Quantity</label>
+            </div>
+            <div>
+                <p>@Model.Quantity</p>
+            </div>
+        </div>
+         <div>
+            <div>
+                <label>Category Name</label>
+            </div>
+            <div>
+                <p>@Model.ProductCategoryName</p>
+            </div>
+        </div>
+        <div>
+            <div>
+                <label>Category Code</label>
+            </div>
+            <div>
+                <p>@Model.ProductCategoryCode</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (ViewBag.Error != null)
+{
+    <h6>@ViewBag.Error</h6>
+}

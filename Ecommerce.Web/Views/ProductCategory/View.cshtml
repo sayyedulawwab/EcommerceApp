@@ -1,0 +1,36 @@
+@model ProductCategoryViewVM
+
+<h4>Category</h4>
+<div>
+    <div>
+        <div>
+            <div>
+                <label>Category Id</label>
+            </div>
+            <div>
+                <p>@Model.ProductCategoryID</p>
+            </div>
+        </div>
+        <div>
+            <div>
+                <label>Name</label>
+            </div>
+            <div>
+                <p>@Model.Name</p>
+            </div>
+        </div>
+        <div>
+            <div>
+                <label>Category Code</label>
+            </div>
+            <div>
+                <p>@Model.Code</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (ViewBag.Error != null)
+{
+    <h6>@ViewBag.Error</h6>
+}

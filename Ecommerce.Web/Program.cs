@@ -1,7 +1,13 @@
+using Ecommerce.Application.Configuraitons;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+DependencyConfigurations.Configure(builder.Services);
+
+
 
 var app = builder.Build();
 
