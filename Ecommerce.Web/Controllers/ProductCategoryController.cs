@@ -128,11 +128,9 @@ public class ProductCategoryController : Controller
 
             if (productCategory == null)
             {
-                ViewBag.Error = "Prouduct Category not found to update!";
+                ViewBag.Error = "Product Category not found to update!";
                 return View(model);
             }
-
-            //_mapper.Map(model, customer);
 
             productCategory.Name = model.Name;
             productCategory.Code = model.Code;

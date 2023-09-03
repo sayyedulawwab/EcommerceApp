@@ -148,7 +148,7 @@ public class ProductController : Controller
 
         if (product == null)
         {
-            ViewBag.Error = "Sorry, no product category found for this id.";
+            ViewBag.Error = "Sorry, no product found for this id.";
             return View();
         }
 
@@ -175,11 +175,9 @@ public class ProductController : Controller
 
             if (Product == null)
             {
-                ViewBag.Error = "Prouduct Category not found to update!";
+                ViewBag.Error = "Product not found to update!";
                 return View(model);
             }
-
-            //_mapper.Map(model, customer)
 
             Product.Name = model.Name;
             Product.Price = model.Price;
@@ -212,9 +210,9 @@ public class ProductController : Controller
     {
         try
         {
-            var Product = _productCategoryService.GetById((int)id);
+            var product = _productService.GetById(id);
 
-            _productCategoryService.Delete(Product);
+            _productService.Delete(product);
 
             return RedirectToAction(nameof(Index));
             

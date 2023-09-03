@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Ecommerce.Application.Configuraitons\Ecommerce.Application.Configuraitons.csproj" />
+    <ProjectReference Include="..\Ecommerce.Application.Configuraitons\Ecommerce.Application.Configurations.csproj" />
     <ProjectReference Include="..\Ecommerce.Models\Ecommerce.Models.csproj" />
     <ProjectReference Include="..\Ecommerce.Services.Abstractions\Ecommerce.Services.Abstractions.csproj" />
   </ItemGroup>
