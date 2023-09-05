@@ -147,9 +147,31 @@ public class ProductCategoryController : Controller
     }
 
     // GET: ProductCategory/Delete/5
-    public IActionResult Delete(int id)
+    public IActionResult Delete(int? id)
     {
-        return View();
+        if (id == null || id <= 0)
+        {
+            ViewBag.Error = "Please provide valid id.";
+            return View();
+        }
+
+        var productCategory = _productCategoryService.GetById((int)id);
+
+        if (productCategory == null)
+        {
+            ViewBag.Error = "Sorry, no product category found for this id.";
+            return View();
+        }
+
+        var model = new ProductCategoryViewVM()
+        {
+            ProductCategoryID = productCategory.ProductCategoryID,
+            Name = productCategory.Name,
+            Code = productCategory.Code,
+
+        };
+
+        return View(model);
     }
 
     // POST: ProductCategory/Delete/5
@@ -161,10 +183,14 @@ public class ProductCategoryController : Controller
         {
             var productCategory = _productCategoryService.GetById((int)id);
 
-            _productCategoryService.Delete(productCategory);
+            bool isSuccess = _productCategoryService.Delete(productCategory);
 
-            return RedirectToAction(nameof(Index));
-            
+            if (isSuccess)
+            {
+                return RedirectToAction(nameof(Index));
+            }
+            return View();
+
         }
         catch
         {

@@ -13,10 +13,10 @@ namespace Ecommerce.Models.UtilityModels
             CurrentPage = 1;
             PageSize = 10;
         }
-        public string Name { get; set; }
-        public double Price { get; set; }
-        public int Quantity { get; set; }
-        public int ProductCategoryID { get; set; }
+        public string? Name { get; set; }
+        public double? Price { get; set; }
+        public int? Quantity { get; set; }
+        public int? ProductCategoryID { get; set; }
         public int CurrentPage { get; set; }
         public int PageSize { get; set; }
     }

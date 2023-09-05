@@ -14,7 +14,7 @@ namespace Ecommerce.Models.UtilityModels
             PageSize = 10;
         }
         public string? Name { get; set; }
-        public string Code { get; set; }
+        public string? Code { get; set; }
         public int CurrentPage { get; set; }
         public int PageSize { get; set; }
     }

@@ -117,8 +117,8 @@ public class ProductController : Controller
             Name = product.Name,
             Price = product.Price,
             Quantity = product.Quantity,
-            ProductCategoryName = product.ProductCategory.Name,
-            ProductCategoryCode = product.ProductCategory.Code
+            ProductCategoryName = product.ProductCategory?.Name,
+            ProductCategoryCode = product.ProductCategory?.Code
 
         };
 
@@ -198,9 +198,34 @@ public class ProductController : Controller
     }
 
     // GET: Product/Delete/5
-    public IActionResult Delete(int id)
+    public IActionResult Delete(int? id)
     {
-        return View();
+        if (id == null || id <= 0)
+        {
+            ViewBag.Error = "Please provide valid id.";
+            return View();
+        }
+
+        var product = _productService.GetById((int)id);
+
+        if (product == null)
+        {
+            ViewBag.Error = "Sorry, no product found for this id.";
+            return View();
+        }
+
+        var model = new ProductViewVM()
+        {
+
+            Name = product.Name,
+            Price = product.Price,
+            Quantity = product.Quantity,
+            ProductCategoryName = product.ProductCategory?.Name,
+            ProductCategoryCode = product.ProductCategory?.Code
+
+        };
+
+        return View(model);
     }
 
     // POST: Product/Delete/5

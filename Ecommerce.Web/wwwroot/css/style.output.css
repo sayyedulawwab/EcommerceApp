@@ -588,6 +588,10 @@ video {
   margin-bottom: 1.25rem;
 }
 
+.mr-2 {
+  margin-right: 0.5rem;
+}
+
 .mt-10 {
   margin-top: 2.5rem;
 }

@@ -1,32 +1,44 @@
 
-@model ProductCategoryViewVM
+@model ProductViewVM
 
 
 <h4>Product Category Delete</h4>
 
 <h2>Are you sure you want to delete ?</h2>
 <form method="post" asp-action="Delete">
-	<input asp-for="ProductCategoryID" hidden />
-	<div>
-		<div>
-			<h2>Delete Category</h2>
-			<hr />
-		</div>
+	<input asp-for="ProductID" hidden />
+    <div>
+        <div>
+            <h2>Delete Product</h2>
+            <hr />
+        </div>
 
-		<div>
-			<label asp-for="Name"></label>
-			<input asp-for="Name" disabled />
-		</div>
-		<div>
-			<label asp-for="Code"></label>
-			<input asp-for="Code" disabled />
-		</div>
-		
-		<button type="submit">Delete</button>
-		<a asp-controller="ProductCategory" asp-action="Index">
-			Back to List
-		</a>
-	</div>
+        <div>
+            <label asp-for="Name"></label>
+            <input asp-for="Name" disabled />
+        </div>
+        <div>
+            <label asp-for="Price"></label>
+            <input asp-for="Price" disabled />
+        </div>
+        <div>
+            <label asp-for="Quantity"></label>
+            <input asp-for="Quantity" disabled />
+        </div>
+        <div>
+            <label asp-for="ProductCategoryName"></label>
+            <input asp-for="ProductCategoryName" disabled />
+        </div>
+        <div>
+            <label asp-for="ProductCategoryCode"></label>
+            <input asp-for="ProductCategoryCode" disabled />
+        </div>
+
+        <button type="submit">Delete</button>
+        <a asp-controller="Product" asp-action="Index">
+            Back to List
+        </a>
+    </div>
 </form>
 
 @if (ViewBag.Error != null)

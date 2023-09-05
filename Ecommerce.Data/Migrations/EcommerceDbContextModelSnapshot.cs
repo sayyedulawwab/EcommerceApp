@@ -22,7 +22,7 @@ namespace Ecommerce.Data.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("Ecommerce.Models.Product", b =>
+            modelBuilder.Entity("Ecommerce.Models.EntityModels.Product", b =>
                 {
                     b.Property<int>("ProductID")
                         .ValueGeneratedOnAdd()
@@ -50,7 +50,7 @@ namespace Ecommerce.Data.Migrations
                     b.ToTable("Products");
                 });
 
-            modelBuilder.Entity("Ecommerce.Models.ProductCategory", b =>
+            modelBuilder.Entity("Ecommerce.Models.EntityModels.ProductCategory", b =>
                 {
                     b.Property<int>("ProductCategoryID")
                         .ValueGeneratedOnAdd()
@@ -71,16 +71,16 @@ namespace Ecommerce.Data.Migrations
                     b.ToTable("ProductCategories");
                 });
 
-            modelBuilder.Entity("Ecommerce.Models.Product", b =>
+            modelBuilder.Entity("Ecommerce.Models.EntityModels.Product", b =>
                 {
-                    b.HasOne("Ecommerce.Models.ProductCategory", "ProductCategory")
+                    b.HasOne("Ecommerce.Models.EntityModels.ProductCategory", "ProductCategory")
                         .WithMany("Products")
                         .HasForeignKey("ProductCategoryID");
 
                     b.Navigation("ProductCategory");
                 });
 
-            modelBuilder.Entity("Ecommerce.Models.ProductCategory", b =>
+            modelBuilder.Entity("Ecommerce.Models.EntityModels.ProductCategory", b =>
                 {
                     b.Navigation("Products");
                 });

@@ -2,6 +2,7 @@
 using Ecommerce.Models.EntityModels;
 using Ecommerce.Models.UtilityModels;
 using Ecommerce.Repositories.Base;
+using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Repositories;
 
@@ -27,7 +28,7 @@ public class ProductRepository : BaseRepository<Product>, IProductRepository
         return _db.SaveChanges() > 0;
     }
     public Product GetById(int id){
-        return _db.Products.FirstOrDefault(product => product.ProductID == id);
+        return _db.Products.Include(product => product.ProductCategory).FirstOrDefault(product => product.ProductID == id);
         
     }
     public ICollection<Product> GetAll()
