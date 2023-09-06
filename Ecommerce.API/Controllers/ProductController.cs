@@ -34,7 +34,9 @@ namespace Ecommerce.API.Controllers
                 return NotFound();
             }
 
-            return Ok(products);
+            ICollection<ProductViewVM> productModels = _mapper.Map<ICollection<ProductViewVM>>(products);
+
+            return Ok(productModels);
 
         }
 
@@ -49,7 +51,9 @@ namespace Ecommerce.API.Controllers
                 return NotFound("Product category not found!");
             }
 
-            return Ok(product);
+            var model = _mapper.Map<ProductViewVM>(product);
+
+            return Ok(model);
         }
 
         // POST api/products
@@ -91,7 +95,7 @@ namespace Ecommerce.API.Controllers
                 bool isSuccess = _productService.Update(product);
                 if (isSuccess)
                 {
-                    return Ok("Product is upudated!");
+                    return Ok("Product is updated!");
                 }
             }
 

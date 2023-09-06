@@ -9,17 +9,12 @@ namespace Ecommerce.API.AutomapperProfiles
         public ProductProfile()
         {
             CreateMap<ProductCreateVM, Product>();
-                //.ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
-                //.ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.Price))
-                //.ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => src.Quantity))
-                //.ForMember(dest => dest.ProductCategoryID, opt => opt.MapFrom(src => src.ProductCategoryID));
-
             CreateMap<ProductEditVM, Product>();
-                //.ForMember(dest => dest.ProductID, opt => opt.MapFrom(src => src.ProductID))
-                //.ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
-                //.ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.Price))
-                //.ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => src.Quantity))
-                //.ForMember(dest => dest.ProductCategoryID, opt => opt.MapFrom(src => src.ProductCategoryID));
+            CreateMap<Product, ProductViewVM>()
+                .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
+                .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.Price))
+                .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => src.Quantity))
+                .ForMember(dest => dest.ProductCategoryName, opt => opt.MapFrom(src => src.ProductCategory.Name)); 
 
         }
     }

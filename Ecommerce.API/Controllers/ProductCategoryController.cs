@@ -34,7 +34,9 @@ namespace Ecommerce.API.Controllers
                 return NotFound();
             }
 
-            return Ok(productCategories);
+            ICollection<ProductCategoryViewVM> productCategoryModels = _mapper.Map<ICollection<ProductCategoryViewVM>>(productCategories);
+
+            return Ok(productCategoryModels);
 
         }
 
@@ -49,7 +51,10 @@ namespace Ecommerce.API.Controllers
                 return NotFound("Product category not found!");
             }
 
-            return Ok(productCategory);
+            var model = _mapper.Map<ProductCategoryViewVM>(productCategory);
+
+         
+            return Ok(model);
         }
 
         // POST api/productcategories

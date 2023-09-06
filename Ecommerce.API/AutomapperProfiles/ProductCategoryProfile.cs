@@ -8,13 +8,9 @@ namespace Ecommerce.API.AutomapperProfiles
     {
         public ProductCategoryProfile() {
 
-            CreateMap<ProductCategoryCreateVM, ProductCategory>()
-                //.ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
-                //.ForMember(dest => dest.Code, opt => opt.MapFrom(src => src.Code));
-
+            CreateMap<ProductCategoryCreateVM, ProductCategory>();
             CreateMap<ProductCategoryEditVM, ProductCategory>();
-                //.ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
-                //.ForMember(dest => dest.Code, opt => opt.MapFrom(src => src.Code));
+            CreateMap<ProductCategory, ProductCategoryViewVM>(); 
         }
         
             
