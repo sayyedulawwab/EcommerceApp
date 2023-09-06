@@ -38,7 +38,7 @@ public class ProductRepository : BaseRepository<Product>, IProductRepository
 
     public ICollection<Product> Search(ProductSearchCriteria searchCriteria)
     {
-        var products = _db.Products.AsQueryable();
+        var products = _db.Products.Include(p => p.ProductCategory).AsQueryable();
 
         if (searchCriteria != null && !string.IsNullOrEmpty(searchCriteria.Name))
         {
