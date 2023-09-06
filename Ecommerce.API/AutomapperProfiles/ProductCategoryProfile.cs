@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Ecommerce.Models.APIModels;
+using Ecommerce.API.Models;
 using Ecommerce.Models.EntityModels;
 
 namespace Ecommerce.API.AutomapperProfiles
@@ -8,9 +8,9 @@ namespace Ecommerce.API.AutomapperProfiles
     {
         public ProductCategoryProfile() {
 
-            CreateMap<ProductCategoryCreateVM, ProductCategory>();
-            CreateMap<ProductCategoryEditVM, ProductCategory>();
-            CreateMap<ProductCategory, ProductCategoryViewVM>(); 
+            CreateMap<ProductCategoryCreateDTO, ProductCategory>();
+            CreateMap<ProductCategoryEditDTO, ProductCategory>();
+            CreateMap<ProductCategory, ProductCategoryViewDTO>(); 
         }
         
             

@@ -1,12 +1,11 @@
-﻿using Ecommerce.Models;
-using Ecommerce.Models.EntityModels;
+﻿using Ecommerce.Models.EntityModels;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Data
 {
-    public class EcommerceDbContext : DbContext
+    public class EcommerceEFDbContext : DbContext
     {
-        public EcommerceDbContext(DbContextOptions options) : base(options)
+        public EcommerceEFDbContext(DbContextOptions options) : base(options)
         {
         }
         public DbSet<Product> Products { get; set; }

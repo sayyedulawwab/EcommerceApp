@@ -1,6 +1,6 @@
-﻿namespace Ecommerce.Models.APIModels;
+﻿namespace Ecommerce.API.Models;
 
-public class ProductViewVM
+public class ProductViewDTO
 {
     public int ProductID { get; set; }
     public string Name { get; set;}

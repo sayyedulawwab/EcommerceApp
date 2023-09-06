@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Ecommerce.Models.APIModels;
+using Ecommerce.API.Models;
 using Ecommerce.Models.EntityModels;
 
 namespace Ecommerce.API.AutomapperProfiles
@@ -8,9 +8,9 @@ namespace Ecommerce.API.AutomapperProfiles
     {
         public ProductProfile()
         {
-            CreateMap<ProductCreateVM, Product>();
-            CreateMap<ProductEditVM, Product>();
-            CreateMap<Product, ProductViewVM>()
+            CreateMap<ProductCreateDTO, Product>();
+            CreateMap<ProductEditDTO, Product>();
+            CreateMap<Product, ProductViewDTO>()
                 .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
                 .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.Price))
                 .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => src.Quantity))

@@ -7,8 +7,8 @@ namespace Ecommerce.Repositories;
 
 public class ProductCategoryRepository : BaseRepository<ProductCategory>, IProductCategoryRepository
 {
-    EcommerceDbContext _db;
-    public ProductCategoryRepository(EcommerceDbContext db) : base(db)
+    EcommerceEFDbContext _db;
+    public ProductCategoryRepository(EcommerceEFDbContext db) : base(db)
     {
         _db = db;
     }

@@ -21,7 +21,7 @@ namespace Ecommerce.Application.Configuraitons
             services.AddTransient<IProductCategoryService, ProductCategoryService>();
             services.AddTransient<IProductRepository, ProductRepository>();
 
-            services.AddDbContext<EcommerceDbContext>(options =>
+            services.AddDbContext<EcommerceEFDbContext>(options =>
             {
                 string connectionString = "Server=(localdb)\\mssqllocaldb;Database=EcommerceDB;Trusted_Connection=True";
                 options.UseSqlServer(connectionString);

@@ -1,9 +1,9 @@
 ﻿using Ecommerce.Models.UtilityModels;
 using Ecommerce.Services.Abstractions.Products;
-using Ecommerce.Models.APIModels;
 using Microsoft.AspNetCore.Mvc;
 using Ecommerce.Models.EntityModels;
 using AutoMapper;
+using Ecommerce.API.Models;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -34,7 +34,7 @@ namespace Ecommerce.API.Controllers
                 return NotFound();
             }
 
-            ICollection<ProductCategoryViewVM> productCategoryModels = _mapper.Map<ICollection<ProductCategoryViewVM>>(productCategories);
+            ICollection<ProductCategoryViewDTO> productCategoryModels = _mapper.Map<ICollection<ProductCategoryViewDTO>>(productCategories);
 
             return Ok(productCategoryModels);
 
@@ -51,7 +51,7 @@ namespace Ecommerce.API.Controllers
                 return NotFound("Product category not found!");
             }
 
-            var model = _mapper.Map<ProductCategoryViewVM>(productCategory);
+            var model = _mapper.Map<ProductCategoryViewDTO>(productCategory);
 
          
             return Ok(model);
@@ -59,7 +59,7 @@ namespace Ecommerce.API.Controllers
 
         // POST api/productcategories
         [HttpPost]
-        public IActionResult Post([FromBody] ProductCategoryCreateVM model)
+        public IActionResult Post([FromBody] ProductCategoryCreateDTO model)
         {
             if (ModelState.IsValid)
             {
@@ -81,7 +81,7 @@ namespace Ecommerce.API.Controllers
 
         // PUT api/productcategories/5
         [HttpPut("{id}")]
-        public IActionResult Put(int id, [FromBody] ProductCategoryEditVM model)
+        public IActionResult Put(int id, [FromBody] ProductCategoryEditDTO model)
         {
             if (ModelState.IsValid)
             {
