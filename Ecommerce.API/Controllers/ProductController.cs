@@ -1,4 +1,5 @@
-﻿using Ecommerce.Models.APIModels;
+﻿using AutoMapper;
+using Ecommerce.Models.APIModels;
 using Ecommerce.Models.EntityModels;
 using Ecommerce.Models.UtilityModels;
 using Ecommerce.Services.Abstractions.Products;
@@ -14,10 +15,12 @@ namespace Ecommerce.API.Controllers
     public class ProductController : ControllerBase
     {
         private readonly IProductService _productService;
+        private readonly IMapper _mapper;
 
-        public ProductController(IProductService productService)
+        public ProductController(IProductService productService, IMapper mapper)
         {
             _productService = productService;
+            _mapper = mapper;
 
         }
         // GET: api/products
@@ -55,13 +58,7 @@ namespace Ecommerce.API.Controllers
         {
             if (ModelState.IsValid)
             {
-                var product = new Product()
-                {
-                    Name = model.Name,
-                    Price = model.Price,
-                    Quantity = model.Quantity,
-                    ProductCategoryID = model.ProductCategoryID
-                };
+                var product = _mapper.Map<Product>(model);
 
                 bool isSuccess = _productService.Add(product);
 
@@ -89,10 +86,7 @@ namespace Ecommerce.API.Controllers
                     return NotFound("Product not found to update!");
                 }
 
-                product.Name = model.Name;
-                product.Price = model.Price;
-                product.Quantity = model.Quantity;
-                product.ProductCategoryID = model.ProductCategoryID;
+                _mapper.Map(model, product);
 
                 bool isSuccess = _productService.Update(product);
                 if (isSuccess)

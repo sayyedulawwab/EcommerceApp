@@ -3,6 +3,7 @@ using Ecommerce.Services.Abstractions.Products;
 using Ecommerce.Models.APIModels;
 using Microsoft.AspNetCore.Mvc;
 using Ecommerce.Models.EntityModels;
+using AutoMapper;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -13,11 +14,14 @@ namespace Ecommerce.API.Controllers
     public class ProductCategoryController : ControllerBase
     {
         private readonly IProductCategoryService _productCategoryService;
+        private readonly IMapper _mapper;
 
-        public ProductCategoryController(IProductCategoryService productCategoryService)
+        public ProductCategoryController(IProductCategoryService productCategoryService, IMapper mapper)
         {
             _productCategoryService = productCategoryService;
-           
+            _mapper = mapper;
+
+
         }
         // GET: api/productcategories
         [HttpGet]
@@ -54,13 +58,9 @@ namespace Ecommerce.API.Controllers
         {
             if (ModelState.IsValid)
             {
-                var productCategory = new ProductCategory()
-                {
-                    Name = model.Name,
-                    Code = model.Code,
+                var productCategory = _mapper.Map<ProductCategory>(model);
 
-                };
-                
+
                 bool isSuccess = _productCategoryService.Add(productCategory);
 
                 if (isSuccess)
@@ -87,9 +87,7 @@ namespace Ecommerce.API.Controllers
                     return NotFound("Product Category not found to update!");
                 }
 
-                productCategory.Name = model.Name;
-                productCategory.Code = model.Code;
-
+                _mapper.Map(model, productCategory);
 
                 bool isSuccess = _productCategoryService.Update(productCategory);
                 if (isSuccess)
