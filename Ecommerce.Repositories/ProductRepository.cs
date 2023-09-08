@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Repositories;
 
-public class ProductRepository : BaseRepository<Product>, IProductRepository
+public class ProductRepository : EFCoreBaseRepository<Product>, IProductRepository
 {
     EcommerceEFDbContext _db;
     public ProductRepository(EcommerceEFDbContext db) : base(db)

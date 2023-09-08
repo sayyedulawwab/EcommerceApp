@@ -5,7 +5,7 @@ using Ecommerce.Repositories.Base;
 
 namespace Ecommerce.Repositories;
 
-public class ProductCategoryRepository : BaseRepository<ProductCategory>, IProductCategoryRepository
+public class ProductCategoryRepository : EFCoreBaseRepository<ProductCategory>, IProductCategoryRepository
 {
     EcommerceEFDbContext _db;
     public ProductCategoryRepository(EcommerceEFDbContext db) : base(db)

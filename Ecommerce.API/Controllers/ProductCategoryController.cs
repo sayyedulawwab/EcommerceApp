@@ -29,9 +29,9 @@ namespace Ecommerce.API.Controllers
         {
             var productCategories = _productCategoryService.Search(productCategorySearchCriteria);
 
-            if (productCategories == null)
+            if (productCategories == null || !productCategories.Any())
             {
-                return NotFound();
+                return NotFound("Product category not found!");
             }
 
             ICollection<ProductCategoryViewDTO> productCategoryModels = _mapper.Map<ICollection<ProductCategoryViewDTO>>(productCategories);

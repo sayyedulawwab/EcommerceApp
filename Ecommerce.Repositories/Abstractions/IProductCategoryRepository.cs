@@ -13,6 +13,4 @@ public interface IProductCategoryRepository : IRepository<ProductCategory>
     ICollection<ProductCategory> GetAll();
     ICollection<ProductCategory> Search(ProductCategorySearchCriteria searchCriteria);
 
-
-
 }

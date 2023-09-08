@@ -28,9 +28,9 @@ namespace Ecommerce.API.Controllers
         {
             var products = _productService.Search(productSearchCriteria);
 
-            if (products == null)
+            if (products == null || !products.Any())
             {
-                return NotFound();
+                return NotFound("Product not found!");
             }
 
             ICollection<ProductViewDTO> productModels = _mapper.Map<ICollection<ProductViewDTO>>(products);
@@ -47,7 +47,7 @@ namespace Ecommerce.API.Controllers
 
             if (product == null)
             {
-                return NotFound("Product category not found!");
+                return NotFound("Product not found!");
             }
 
             var model = _mapper.Map<ProductViewDTO>(product);

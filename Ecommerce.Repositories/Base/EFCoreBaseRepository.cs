@@ -3,10 +3,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Repositories.Base
 {
-    public abstract class BaseRepository<T> : IRepository<T> where T : class
+    public abstract class EFCoreBaseRepository<T> : IRepository<T> where T : class
     {
         DbContext _db;
-        public BaseRepository(DbContext db)
+        public EFCoreBaseRepository(DbContext db)
         {
             _db = db;
         }

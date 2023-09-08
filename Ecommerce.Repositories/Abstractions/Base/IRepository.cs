@@ -13,6 +13,6 @@ namespace Ecommerce.Repositories.Abstractions.Base
         bool Update(T entity);
         bool Delete(T entity);
         ICollection<T> GetAll();
-        ICollection<T> Search(T entity);
+
     }
 }
