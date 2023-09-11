@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Ecommerce.API.Models;
+using Ecommerce.Models.APIModels;
 using Ecommerce.Models.EntityModels;
 
 namespace Ecommerce.API.AutomapperProfiles
@@ -14,7 +14,7 @@ namespace Ecommerce.API.AutomapperProfiles
                 .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name))
                 .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.Price))
                 .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => src.Quantity))
-                .ForMember(dest => dest.ProductCategoryName, opt => opt.MapFrom(src => src.ProductCategory.Name)); 
+                .ForMember(dest => dest.ProductCategoryID, opt => opt.MapFrom(src => src.ProductCategory.ProductCategoryID));
 
         }
     }

@@ -1,4 +1,4 @@
-﻿namespace Ecommerce.API.Models;
+﻿namespace Ecommerce.Models.APIModels;
 
 public class ProductCategoryViewDTO
 {

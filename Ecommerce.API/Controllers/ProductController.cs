@@ -1,8 +1,9 @@
 ﻿using AutoMapper;
-using Ecommerce.API.Models;
+using Ecommerce.Models.APIModels;
 using Ecommerce.Models.EntityModels;
 using Ecommerce.Models.UtilityModels;
 using Ecommerce.Services.Abstractions.Products;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
@@ -56,6 +57,7 @@ namespace Ecommerce.API.Controllers
         }
 
         // POST api/products
+        [Authorize]
         [HttpPost]
         public IActionResult Post([FromBody] ProductCreateDTO model)
         {
@@ -77,6 +79,7 @@ namespace Ecommerce.API.Controllers
         }
 
         // PUT api/products/5
+        [Authorize]
         [HttpPut("{id}")]
         public IActionResult Put(int id, [FromBody] ProductEditDTO model)
         {
@@ -102,6 +105,7 @@ namespace Ecommerce.API.Controllers
         }
 
         // DELETE api/products/5
+        [Authorize]
         [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {

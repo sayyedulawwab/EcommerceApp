@@ -1,5 +1,4 @@
-﻿namespace Ecommerce.API.Models;
-
+﻿namespace Ecommerce.Models.APIModels;
 public class ProductEditDTO
 {
     public int ProductID { get; set; }

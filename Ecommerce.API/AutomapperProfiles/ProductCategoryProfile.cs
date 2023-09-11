@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Ecommerce.API.Models;
+using Ecommerce.Models.APIModels;
 using Ecommerce.Models.EntityModels;
 
 namespace Ecommerce.API.AutomapperProfiles

@@ -41,10 +41,7 @@ namespace Ecommerce.Repositories.Base
             return Table.ToList();
         }
 
-        public ICollection<T> Search(T entity)
-        {
-            return Table.ToList();
-        }
+    
 
     }
 }

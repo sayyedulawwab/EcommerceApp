@@ -1,4 +1,4 @@
-﻿namespace Ecommerce.API.Models;
+﻿namespace Ecommerce.Models.APIModels;
 
 public class ProductViewDTO
 {
@@ -6,6 +6,7 @@ public class ProductViewDTO
     public string Name { get; set;}
     public double Price { get; set;}
     public int Quantity { get; set;}
+    public int ProductCategoryID { get; set; }
     public string ProductCategoryName { get; set;}
     public string ProductCategoryCode { get; set; }
 }
