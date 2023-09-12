@@ -1,12 +1,6 @@
 ﻿using Ecommerce.Data;
 using Ecommerce.Models.EntityModels;
 using Ecommerce.Repositories.Abstractions;
-using Microsoft.AspNetCore.Http.HttpResults;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Ecommerce.Repositories
 {
@@ -23,11 +17,11 @@ namespace Ecommerce.Repositories
             return _db.Users.ToList();
         }
 
-        public User GetByEmail(string email)
+        public User GetByUsername(string username)
         {
-            if (email != null && !string.IsNullOrEmpty(email))
+            if (username != null && !string.IsNullOrEmpty(username))
             {
-                var user = _db.Users.FirstOrDefault(u => u.Email.ToLower().Equals(email.ToLower()));
+                var user = _db.Users.FirstOrDefault(u => u.Username.ToLower().Equals(username.ToLower()));
                 
                 return user;
 
@@ -35,6 +29,34 @@ namespace Ecommerce.Repositories
 
             return null;
         }
+
+        public User GetByEmail(string email)
+        {
+            if (email != null && !string.IsNullOrEmpty(email))
+            {
+                var user = _db.Users.FirstOrDefault(u => u.Email.ToLower().Equals(email.ToLower()));
+
+                return user;
+
+            }
+
+            return null;
+        }
+
+        public User GetByUsernameOrEmail(string usernameOrEmail)
+        {
+            if (usernameOrEmail != null && !string.IsNullOrEmpty(usernameOrEmail))
+            {
+                var user = _db.Users.FirstOrDefault(u => u.Username.ToLower().Equals(usernameOrEmail.ToLower()) || u.Email.ToLower().Equals(usernameOrEmail.ToLower()));
+
+                return user;
+
+            }
+
+            return null;
+        }
+
+
         public bool Add(User user)
         {
             _db.Users.Add(user);

@@ -38,6 +38,11 @@ namespace Ecommerce.API.Controllers
         [HttpPost("login")]
         public IActionResult Login([FromBody] LoginDTO model)
         {
+            if (string.IsNullOrEmpty(model.Username))
+            {
+                return BadRequest("Username must be provided");
+            }
+
             var user = _authService.Login(model);
 
             if (user == null)

@@ -17,8 +17,10 @@ namespace Ecommerce.Services.Auth
         }
         public bool Register(RegisterDTO model)
         {
-            var existingUser = _userRepository.GetByEmail(model.Email);
-            if (existingUser != null)
+            var existingUserByUsername = _userRepository.GetByUsernameOrEmail(model.Username);
+            var existingUserByEmail = _userRepository.GetByUsernameOrEmail(model.Email);
+
+            if (existingUserByUsername != null || existingUserByEmail != null)
             {
                 return false;
             }
@@ -33,7 +35,13 @@ namespace Ecommerce.Services.Auth
         }
         public User Login(LoginDTO model)
         {
-            var user = _userRepository.GetByEmail(model.Email);
+            User user = null;
+
+            if (!string.IsNullOrEmpty(model.Username))
+            {
+                user = _userRepository.GetByUsername(model.Username);
+            }
+
             if (user == null)
             {
                 return null;

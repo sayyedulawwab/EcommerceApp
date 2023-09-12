@@ -14,6 +14,8 @@ namespace Ecommerce.Repositories.Abstractions
         bool Add(User user);
         bool Update(User user);
         bool Delete(User user);
+        User GetByUsername(string username);
         User GetByEmail(string email);
+        User GetByUsernameOrEmail(string usernameOrEmail);
     }
 }
