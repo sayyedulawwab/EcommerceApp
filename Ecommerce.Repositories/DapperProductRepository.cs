@@ -13,7 +13,7 @@ namespace Ecommerce.Repositories
 {
     public class DapperProductRepository : IProductRepository
     {
-        EcommerceDapperDbContext _db;
+        private readonly EcommerceDapperDbContext _db;
         public DapperProductRepository(EcommerceDapperDbContext db)
         {
             _db = db;

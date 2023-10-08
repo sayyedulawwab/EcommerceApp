@@ -7,7 +7,7 @@ namespace Ecommerce.Repositories;
 
 public class ProductCategoryRepository : EFCoreBaseRepository<ProductCategory>, IProductCategoryRepository
 {
-    EcommerceEFDbContext _db;
+    private readonly EcommerceEFDbContext _db;
     public ProductCategoryRepository(EcommerceEFDbContext db) : base(db)
     {
         _db = db;

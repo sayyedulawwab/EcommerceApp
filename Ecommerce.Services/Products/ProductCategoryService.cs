@@ -14,7 +14,7 @@ namespace Ecommerce.Services.Products
 {
     public class ProductCategoryService : BaseService<ProductCategory>, IProductCategoryService
     {
-        IProductCategoryRepository _productCategoryRepository;
+        private readonly IProductCategoryRepository _productCategoryRepository;
 
         public ProductCategoryService(IProductCategoryRepository repository) : base(repository)
         {

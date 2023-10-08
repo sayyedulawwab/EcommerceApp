@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Ecommerce.Models.APIModels;
+using Ecommerce.API.Models;
 using Ecommerce.Models.EntityModels;
 using Ecommerce.Models.UtilityModels;
 using Ecommerce.Services.Abstractions.Products;

@@ -5,7 +5,7 @@ namespace Ecommerce.Repositories.Base
 {
     public abstract class EFCoreBaseRepository<T> : IRepository<T> where T : class
     {
-        DbContext _db;
+        private readonly DbContext _db;
         public EFCoreBaseRepository(DbContext db)
         {
             _db = db;

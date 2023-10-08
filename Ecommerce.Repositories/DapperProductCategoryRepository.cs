@@ -11,7 +11,7 @@ namespace Ecommerce.Repositories;
 
 public class DapperProductCategoryRepository : IProductCategoryRepository
 {
-    EcommerceDapperDbContext _db;
+    private readonly EcommerceDapperDbContext _db;
     public DapperProductCategoryRepository(EcommerceDapperDbContext db)
     {
         _db = db;

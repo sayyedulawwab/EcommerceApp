@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Ecommerce.Models.EntityModels
+﻿namespace Ecommerce.Models.EntityModels
 {
     public class User
     {
@@ -13,6 +7,9 @@ namespace Ecommerce.Models.EntityModels
         public string Email { get; set; }
         public string PasswordHash { get; set; }
         public string PasswordSalt { get; set; }
+        public bool IsAdmin { get; set; }
+        public ICollection<Order>? Orders { get; set; }
+
 
     }
 }

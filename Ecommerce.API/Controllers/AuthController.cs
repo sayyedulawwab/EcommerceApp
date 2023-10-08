@@ -1,6 +1,5 @@
 ﻿using Ecommerce.Models.APIModels;
 using Ecommerce.Services.Abstractions.Auth;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -23,15 +22,15 @@ namespace Ecommerce.API.Controllers
         [HttpPost("register")]
         public IActionResult Register([FromBody] RegisterDTO model)
         {
-            var registrationSuccessful = _authService.Register(model);
+            int? userId = _authService.Register(model);
 
-            if (!registrationSuccessful)
+            if (userId == null)
             {
                 return BadRequest("Registration failed. Email might be in use.");
             }
 
             
-            return GenerateToken(model.Email);
+            return GenerateToken(model.Email, userId);
         }
 
 
@@ -50,17 +49,20 @@ namespace Ecommerce.API.Controllers
                 return Unauthorized();
             }
 
-            return GenerateToken(user.Email);
+            return GenerateToken(user.Email, user.UserID);
         }
 
-        private IActionResult GenerateToken(string email)
+        private IActionResult GenerateToken(string email, int? userId)
         {
             const string secretKey = "ThisIsASecretKey"; 
             var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
 
             var jwt = new JwtSecurityToken(
                 signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256),
-                claims: new[] { new Claim(ClaimTypes.Email, email) }
+                claims: new[] { 
+                    new Claim(ClaimTypes.Email, email),
+                    new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+                }
             );
 
             var token = new JwtSecurityTokenHandler().WriteToken(jwt);

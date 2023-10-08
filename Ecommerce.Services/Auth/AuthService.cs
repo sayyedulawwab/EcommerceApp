@@ -15,22 +15,28 @@ namespace Ecommerce.Services.Auth
             _userRepository = userRepository;
 
         }
-        public bool Register(RegisterDTO model)
+        public int? Register(RegisterDTO model)
         {
             var existingUserByUsername = _userRepository.GetByUsernameOrEmail(model.Username);
             var existingUserByEmail = _userRepository.GetByUsernameOrEmail(model.Email);
 
             if (existingUserByUsername != null || existingUserByEmail != null)
             {
-                return false;
+                return null;
             }
 
             var salt = GenerateSalt();
             var hashedPassword = HashPassword(model.Password, salt);
             var user = new User { Username = model.Username, Email = model.Email, PasswordHash = hashedPassword, PasswordSalt = salt };
 
-            return _userRepository.Add(user);
+            var userAdded = _userRepository.Add(user);
 
+            if (userAdded)
+            {
+                return user.UserID;
+            }
+
+            return null;
 
         }
         public User Login(LoginDTO model)

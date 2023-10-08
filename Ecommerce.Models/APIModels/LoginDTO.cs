@@ -1,6 +1,4 @@
-﻿using System.ComponentModel;
-
-namespace Ecommerce.Models.APIModels
+﻿namespace Ecommerce.Models.APIModels
 {
     public class LoginDTO
     {
