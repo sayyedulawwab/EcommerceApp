@@ -8,8 +8,9 @@
         public int Quantity { get; set;}
         public ProductCategory? ProductCategory { get; set;}
         public int? ProductCategoryID  { get; set;}
+        public string? ImagePath { get; set; }
 
-    
+
 
     }
 }

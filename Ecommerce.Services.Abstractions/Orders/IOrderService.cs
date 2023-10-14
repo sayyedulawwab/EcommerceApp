@@ -10,5 +10,6 @@ namespace Ecommerce.Services.Abstractions.Orders
         bool Delete(Order order);
         Order GetById(int id);
         ICollection<Order> GetAll();
+        Order PlaceOrderFromCart(int userId);
     }
 }

@@ -16,12 +16,12 @@ namespace Ecommerce.API.Controllers
     {
         private readonly IProductService _productService;
         private readonly IMapper _mapper;
+        private readonly IWebHostEnvironment _env;
 
         public ProductController(IProductService productService, IMapper mapper)
         {
             _productService = productService;
             _mapper = mapper;
-
         }
         // GET: api/products
         [HttpGet]
@@ -59,11 +59,30 @@ namespace Ecommerce.API.Controllers
         // POST api/products
         [Authorize]
         [HttpPost]
-        public IActionResult Post([FromBody] ProductCreateDTO model)
+        public IActionResult Post([FromForm] ProductCreateDTO model)
         {
             if (ModelState.IsValid)
             {
+                var virtualFilePath = string.Empty;
+
+                // Save the image and set the path to the Product entity
+                if (model.Image != null && model.Image.Length > 0)
+                {
+                   
+                    var fileExtension = Path.GetExtension(model.Image.FileName);
+                    var uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
+                    var filePath = Path.Combine(Directory.GetCurrentDirectory(), "Uploads", uniqueFileName);
+                    virtualFilePath = $"/Uploads/{uniqueFileName}";
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        model.Image.CopyTo(stream);
+                    }
+                }
+
                 var product = _mapper.Map<Product>(model);
+
+                product.ImagePath = virtualFilePath;
 
                 bool isSuccess = _productService.Add(product);
 
@@ -81,20 +100,52 @@ namespace Ecommerce.API.Controllers
         // PUT api/products/5
         [Authorize]
         [HttpPut("{id}")]
-        public IActionResult Put(int id, [FromBody] ProductEditDTO model)
+        public IActionResult Put(int id, [FromForm] ProductEditDTO model)
         {
             if (ModelState.IsValid)
             {
-                var product = _productService.GetById(id);
+                var existingProduct = _productService.GetById(id);
 
-                if (product == null)
+                if (existingProduct == null)
                 {
                     return NotFound("Product not found to update!");
                 }
 
-                _mapper.Map(model, product);
+                // Backup the existing image path
+                var oldImagePath = Path.Combine(Directory.GetCurrentDirectory(), existingProduct.ImagePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                var virtualFilePath = string.Empty;
 
-                bool isSuccess = _productService.Update(product);
+                if (model.Image != null && model.Image.Length > 0)
+                {
+                    // Save the new image
+                    var fileExtension = Path.GetExtension(model.Image.FileName);
+                    var uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
+                    var filePath = Path.Combine(Directory.GetCurrentDirectory(), "Uploads", uniqueFileName);
+                    virtualFilePath = $"/Uploads/{uniqueFileName}";
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        model.Image.CopyTo(stream);
+                    }
+
+                  
+                }
+
+                _mapper.Map(model, existingProduct);
+
+                if (!string.IsNullOrEmpty(virtualFilePath))
+                {
+                    // Remove old image from storage, if it exists
+                    if (!string.IsNullOrEmpty(oldImagePath))
+                    {
+                        System.IO.File.Delete(oldImagePath);
+                    }
+
+                    // Assign new image path
+                    existingProduct.ImagePath = virtualFilePath;
+                }
+
+                bool isSuccess = _productService.Update(existingProduct);
                 if (isSuccess)
                 {
                     return Ok("Product is updated!");
@@ -116,6 +167,14 @@ namespace Ecommerce.API.Controllers
                 if (product == null)
                 {
                     return NotFound("Product not found to delete!");
+                }
+
+                // Delete the image file
+                var imagePath = Path.Combine(Directory.GetCurrentDirectory(), product.ImagePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+            
+                if (System.IO.File.Exists(imagePath))
+                {
+                    System.IO.File.Delete(imagePath);
                 }
 
                 bool isSuccess = _productService.Delete(product);

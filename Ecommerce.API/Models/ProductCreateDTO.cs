@@ -5,5 +5,6 @@ public class ProductCreateDTO
     public double Price { get; set;}
     public int Quantity { get; set;}
     public int? ProductCategoryID  { get; set;}
+    public IFormFile Image { get; set; }
 
 }

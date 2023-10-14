@@ -9,4 +9,5 @@ public class ProductViewDTO
     public int ProductCategoryID { get; set; }
     public string ProductCategoryName { get; set;}
     public string ProductCategoryCode { get; set; }
+    public string ImagePath { get; set; }
 }

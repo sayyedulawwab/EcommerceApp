@@ -2,7 +2,8 @@
 {
     public class OrderEditDTO
     {
-        public int OrderID { get; set; }
         public ICollection<OrderDetailDTO> Products { get; set; }
+        public string Status { get; set; } = "Pending";
+
     }
 }

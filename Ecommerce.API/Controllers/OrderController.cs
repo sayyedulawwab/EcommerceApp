@@ -55,27 +55,24 @@ namespace Ecommerce.API.Controllers
             return Ok(model);
         }
 
-        // POST api/orders
+        // POST api/orders/checkout
         [Authorize]
-        [HttpPost]
-        public IActionResult Post([FromBody] OrderCreateDTO model)
+        [HttpPost("checkout")]
+        public IActionResult Checkout()
         {
             if (ModelState.IsValid)
             {
-                var order = _mapper.Map<Order>(model);
 
-                int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
 
-                order.UserID = userId;
+                var order = _orderService.PlaceOrderFromCart(userId);
 
-                bool isSuccess = _orderService.Add(order);
-
-                if (isSuccess)
+                if (order != null)
                 {
-                    return Ok("Order is created!");
+                    return Ok("Order successfully created!");
                 }
+                return BadRequest("Error during the checkout process.");
 
-                return BadRequest("Order could not be saved!");
             }
 
             return BadRequest(ModelState);

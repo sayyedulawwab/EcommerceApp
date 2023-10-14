@@ -2,14 +2,18 @@
 using Ecommerce.Repositories;
 using Ecommerce.Repositories.Abstractions;
 using Ecommerce.Services.Abstractions.Auth;
+using Ecommerce.Services.Abstractions.Carts;
 using Ecommerce.Services.Abstractions.Orders;
 using Ecommerce.Services.Abstractions.Products;
 using Ecommerce.Services.Auth;
+using Ecommerce.Services.Carts;
 using Ecommerce.Services.Orders;
 using Ecommerce.Services.Products;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
+using System.IO;
 
 namespace Ecommerce.Application.Configuraitons
 {
@@ -28,6 +32,9 @@ namespace Ecommerce.Application.Configuraitons
 
             services.AddTransient<IOrderRepository, OrderRepository>();
             services.AddTransient<IOrderService, OrderService>();
+
+            services.AddTransient<ICartRepository, CartRepository>();
+            services.AddTransient<ICartService, CartService>();
 
             services.AddDbContext<EcommerceEFDbContext>(options =>
             {

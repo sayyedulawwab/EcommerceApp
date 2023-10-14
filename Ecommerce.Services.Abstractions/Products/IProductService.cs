@@ -12,5 +12,6 @@ namespace Ecommerce.Services.Abstractions.Products
         ICollection<Product> GetAll();
         ICollection<Product> Search(ProductSearchCriteria searchCriteria);
         Product GetById(int id);
+       
     }
 }

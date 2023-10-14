@@ -22,4 +22,8 @@
     <ProjectReference Include="..\Ecommerce.Services.Abstractions\Ecommerce.Services.Abstractions.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Uploads\" />
+  </ItemGroup>
+
 </Project>
