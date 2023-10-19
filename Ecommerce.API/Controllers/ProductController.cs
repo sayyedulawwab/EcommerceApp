@@ -16,7 +16,6 @@ namespace Ecommerce.API.Controllers
     {
         private readonly IProductService _productService;
         private readonly IMapper _mapper;
-        private readonly IWebHostEnvironment _env;
 
         public ProductController(IProductService productService, IMapper mapper)
         {

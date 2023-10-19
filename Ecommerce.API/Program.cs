@@ -53,6 +53,14 @@ builder.Services.AddSwaggerGen(option =>
 
 });
 
+builder.Services.AddCors(options => options.AddPolicy("ProductApp", policy =>
+{
+    policy.AllowAnyHeader();
+    policy.AllowAnyMethod();
+    //policy.AllowAnyOrigin();
+    policy.WithOrigins("http://localhost:4200");
+}));
+
 
 builder.Services.AddAutoMapper(typeof(Program));
 
@@ -74,7 +82,9 @@ app.UseStaticFiles(new StaticFileOptions
     RequestPath = "/Uploads"
 });
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
+
+app.UseCors("ProductApp");
 
 app.UseAuthentication();
 app.UseAuthorization();
