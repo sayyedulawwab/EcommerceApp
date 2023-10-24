@@ -87,7 +87,7 @@ namespace Ecommerce.API.Controllers
 
                 if (isSuccess)
                 {
-                    return Ok("Product is created!");
+                    return Ok(model);
                 }
 
                 return BadRequest("Product could not be saved!");
@@ -147,7 +147,7 @@ namespace Ecommerce.API.Controllers
                 bool isSuccess = _productService.Update(existingProduct);
                 if (isSuccess)
                 {
-                    return Ok("Product is updated!");
+                    return Ok(model);
                 }
             }
 
@@ -180,7 +180,7 @@ namespace Ecommerce.API.Controllers
 
                 if (isSuccess)
                 {
-                    return Ok("Product is deleted");
+                    return Ok(product);
                 }
                 return BadRequest();
 

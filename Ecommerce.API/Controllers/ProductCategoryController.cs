@@ -72,7 +72,7 @@ namespace Ecommerce.API.Controllers
 
                 if (isSuccess)
                 {
-                    return Ok();
+                    return Ok(model);
                 }
 
                 return BadRequest("Product category could not be saved!");
@@ -125,7 +125,7 @@ namespace Ecommerce.API.Controllers
 
                 if (isSuccess)
                 {
-                    return Ok("Product Category is deleted");
+                    return Ok(productCategory);
                 }
                 return BadRequest();
 
