@@ -3,55 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ecommerce.Data", "Ecommerce.Data\Ecommerce.Data.csproj", "{01E1E2B6-AFA6-4381-9921-E4EF19EA9744}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ecommerce.Models", "Ecommerce.Models\Ecommerce.Models.csproj", "{0D2AC446-8796-4904-9812-2E0F8F257A90}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ecommerce.Repositories", "Ecommerce.Repositories\Ecommerce.Repositories.csproj", "{E29EDCB0-3A0C-4595-92C3-F793F0EB5581}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ecommerce.Services", "Ecommerce.Services\Ecommerce.Services.csproj", "{09FD34DF-6192-4BF8-9D10-C16D2C004FC3}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ecommerce.Services.Abstractions", "Ecommerce.Services.Abstractions\Ecommerce.Services.Abstractions.csproj", "{AFD15391-3A01-47BF-A281-3B1DBC792CE2}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ecommerce.Application.Configurations", "Ecommerce.Application.Configuraitons\Ecommerce.Application.Configurations.csproj", "{07F1B047-56E2-472C-BA4D-3AF23C7A22C3}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ecommerce.API", "Ecommerce.API\Ecommerce.API.csproj", "{67B5BFE4-1C0F-4172-813C-F0A606DC7F2D}"
-EndProject
 Global
-	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|Any CPU = Debug|Any CPU
-		Release|Any CPU = Release|Any CPU
-	EndGlobalSection
-	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{01E1E2B6-AFA6-4381-9921-E4EF19EA9744}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{01E1E2B6-AFA6-4381-9921-E4EF19EA9744}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{01E1E2B6-AFA6-4381-9921-E4EF19EA9744}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{01E1E2B6-AFA6-4381-9921-E4EF19EA9744}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0D2AC446-8796-4904-9812-2E0F8F257A90}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0D2AC446-8796-4904-9812-2E0F8F257A90}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0D2AC446-8796-4904-9812-2E0F8F257A90}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0D2AC446-8796-4904-9812-2E0F8F257A90}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E29EDCB0-3A0C-4595-92C3-F793F0EB5581}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E29EDCB0-3A0C-4595-92C3-F793F0EB5581}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E29EDCB0-3A0C-4595-92C3-F793F0EB5581}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E29EDCB0-3A0C-4595-92C3-F793F0EB5581}.Release|Any CPU.Build.0 = Release|Any CPU
-		{09FD34DF-6192-4BF8-9D10-C16D2C004FC3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{09FD34DF-6192-4BF8-9D10-C16D2C004FC3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{09FD34DF-6192-4BF8-9D10-C16D2C004FC3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{09FD34DF-6192-4BF8-9D10-C16D2C004FC3}.Release|Any CPU.Build.0 = Release|Any CPU
-		{AFD15391-3A01-47BF-A281-3B1DBC792CE2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{AFD15391-3A01-47BF-A281-3B1DBC792CE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{AFD15391-3A01-47BF-A281-3B1DBC792CE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{AFD15391-3A01-47BF-A281-3B1DBC792CE2}.Release|Any CPU.Build.0 = Release|Any CPU
-		{07F1B047-56E2-472C-BA4D-3AF23C7A22C3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{07F1B047-56E2-472C-BA4D-3AF23C7A22C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{07F1B047-56E2-472C-BA4D-3AF23C7A22C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{07F1B047-56E2-472C-BA4D-3AF23C7A22C3}.Release|Any CPU.Build.0 = Release|Any CPU
-		{67B5BFE4-1C0F-4172-813C-F0A606DC7F2D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{67B5BFE4-1C0F-4172-813C-F0A606DC7F2D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{67B5BFE4-1C0F-4172-813C-F0A606DC7F2D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{67B5BFE4-1C0F-4172-813C-F0A606DC7F2D}.Release|Any CPU.Build.0 = Release|Any CPU
-	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
