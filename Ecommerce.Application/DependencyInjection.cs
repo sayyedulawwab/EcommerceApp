@@ -1,6 +1,4 @@
-﻿using Ecommerce.Application.Services.Auth.Commands;
-using Ecommerce.Application.Services.Auth.Queries;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 
 namespace Ecommerce.Application
 {
@@ -8,8 +6,9 @@ namespace Ecommerce.Application
     {
         public static IServiceCollection AddApplication(this IServiceCollection services)
         {
-            services.AddScoped<IAuthCommandService, AuthCommandService>();
-            services.AddScoped<IAuthQueryService, AuthQueryService>();
+           
+            services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(typeof(DependencyInjection).Assembly));
+
             return services;
         }
     }

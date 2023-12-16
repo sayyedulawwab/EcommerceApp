@@ -1,9 +1,10 @@
-﻿using Ecommerce.Application.Services.Auth.Commands;
-using Ecommerce.Application.Services.Auth.Common;
-using Ecommerce.Application.Services.Auth.Queries;
+﻿using Ecommerce.Application.Auth.Commands.Register;
+using Ecommerce.Application.Auth.Common;
+using Ecommerce.Application.Auth.Queries.Login;
 using Ecommerce.Contracts.Auth;
 using Ecommerce.Domain.Common.Errors;
 using ErrorOr;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ecommerce.API.Contollers
@@ -11,24 +12,22 @@ namespace Ecommerce.API.Contollers
     [Route("auth")]
     public class AuthController : ApiController
     {
-        private readonly IAuthCommandService _authCommandService;
-        private readonly IAuthQueryService _authQueryService;
+        private readonly ISender _mediator;
 
-        public AuthController(IAuthCommandService authCommandService, IAuthQueryService authQueryService)
+        public AuthController(ISender mediator)
         {
-            _authCommandService = authCommandService;
-            _authQueryService = authQueryService;
+            _mediator = mediator;
         }
 
         [HttpPost("register")]
-        public IActionResult Register(RegisterRequest request)
+        public async Task<IActionResult> Register(RegisterRequest request)
         {
-            ErrorOr<AuthResult> authResult = _authCommandService.Register(
-                request.FirstName,
+            var command = new RegisterCommand(request.FirstName,
                 request.LastName,
                 request.Email,
-                request.Password
-                );
+                request.Password);
+
+            ErrorOr<AuthResult> authResult = await _mediator.Send(command);
 
             if (authResult.IsError && authResult.FirstError == Errors.User.DuplicateEmail)
             {
@@ -48,11 +47,12 @@ namespace Ecommerce.API.Contollers
         }
 
         [HttpPost("login")]
-        public IActionResult Login(LoginRequest request)
+        public async Task<IActionResult> Login(LoginRequest request)
         {
-            ErrorOr<AuthResult> authResult = _authQueryService.Login(
-                request.Email,
-                request.Password);
+
+            var query = new LoginQuery(request.Email, request.Password);
+
+            ErrorOr<AuthResult> authResult = await _mediator.Send(query);
 
             if (authResult.IsError && authResult.FirstError == Errors.Auth.InvalidCredentials)
             {
