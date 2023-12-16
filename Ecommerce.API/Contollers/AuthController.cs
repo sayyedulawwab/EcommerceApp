@@ -4,6 +4,8 @@ using Ecommerce.Application.Auth.Queries.Login;
 using Ecommerce.Contracts.Auth;
 using Ecommerce.Domain.Common.Errors;
 using ErrorOr;
+using Mapster;
+using MapsterMapper;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,19 +15,18 @@ namespace Ecommerce.API.Contollers
     public class AuthController : ApiController
     {
         private readonly ISender _mediator;
+        private readonly IMapper _mapper;
 
-        public AuthController(ISender mediator)
+        public AuthController(ISender mediator, IMapper mapper)
         {
             _mediator = mediator;
+            _mapper = mapper;
         }
 
         [HttpPost("register")]
         public async Task<IActionResult> Register(RegisterRequest request)
         {
-            var command = new RegisterCommand(request.FirstName,
-                request.LastName,
-                request.Email,
-                request.Password);
+            var command = _mapper.Map<RegisterCommand>(request);
 
             ErrorOr<AuthResult> authResult = await _mediator.Send(command);
 
@@ -39,7 +40,7 @@ namespace Ecommerce.API.Contollers
             }
             return authResult.Match
                 (
-                    authResult => Ok(MapAuthResult(authResult)),
+                    authResult => Ok(_mapper.Map<AuthResponse>(authResult)),
                     errors => Problem(errors)
                 );
 
@@ -50,7 +51,7 @@ namespace Ecommerce.API.Contollers
         public async Task<IActionResult> Login(LoginRequest request)
         {
 
-            var query = new LoginQuery(request.Email, request.Password);
+            var query = _mapper.Map<LoginQuery>(request);
 
             ErrorOr<AuthResult> authResult = await _mediator.Send(query);
 
@@ -64,19 +65,12 @@ namespace Ecommerce.API.Contollers
             }
             return authResult.Match
                (
-                   authResult => Ok(MapAuthResult(authResult)),
+                   authResult => Ok(_mapper.Map<AuthResponse>(authResult)),
                    errors => Problem(errors)
                );
 
         }
 
-        private static AuthResponse MapAuthResult(AuthResult authResult)
-        {
-            return new AuthResponse(authResult.user.Id,
-                                    authResult.user.FirstName,
-                                    authResult.user.LastName,
-                                    authResult.user.Email,
-                                    authResult.token);
-        }
+     
     }
 }

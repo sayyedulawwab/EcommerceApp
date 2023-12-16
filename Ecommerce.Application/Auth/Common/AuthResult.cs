@@ -2,5 +2,5 @@
 
 namespace Ecommerce.Application.Auth.Common
 {
-    public record AuthResult(User user, string token);
+    public record AuthResult(User User, string Token);
 }

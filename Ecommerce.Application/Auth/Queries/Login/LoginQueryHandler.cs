@@ -21,6 +21,7 @@ namespace Ecommerce.Application.Auth.Queries.Login
         }
         public async Task<ErrorOr<AuthResult>> Handle(LoginQuery query, CancellationToken cancellationToken)
         {
+            await Task.CompletedTask;
             // 1. Validate the user exists
             if (_userRepository.GetUserByEmail(query.Email) is not User user)
             {
