@@ -1,4 +1,11 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Ecommerce.Application.Auth.Commands.Register;
+using Ecommerce.Application.Auth.Common;
+using Ecommerce.Application.Common.Behaviors;
+using ErrorOr;
+using FluentValidation;
+using MediatR;
+using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
 
 namespace Ecommerce.Application
 {
@@ -8,6 +15,10 @@ namespace Ecommerce.Application
         {
            
             services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(typeof(DependencyInjection).Assembly));
+
+            services.AddScoped(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+
+            services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
 
             return services;
         }
