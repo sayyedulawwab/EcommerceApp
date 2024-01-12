@@ -1,13 +1,11 @@
 ﻿using Ecommerce.Domain.Abstractions;
-using Ecommerce.Domain.Users.Events;
-using Ecommerce.Domain.Users;
 using Ecommerce.Domain.Products.Events;
 
 namespace Ecommerce.Domain.Products;
 
 public sealed class Product : Entity
 {
-    private Product(Guid id, Name name, Description description, Money price, int quantity, Guid productCategoryId) : base(id)
+    private Product(Guid id, ProductName name, ProductDescription description, Money price, int quantity, Guid productCategoryId) : base(id)
     {
         Name = name;
         Description = description;
@@ -17,12 +15,12 @@ public sealed class Product : Entity
     }
 
     public Guid ProductCategoryId { get; private set; }
-    public Name Name { get; private set; }
-    public Description Description { get; private set; }
+    public ProductName Name { get; private set; }
+    public ProductDescription Description { get; private set; }
     public Money Price { get; private set; }
     public int Quantity { get; private set; }
 
-    public static Product Create(Name name, Description description, Money price, int quantity, Guid productCategoryId)
+    public static Product Create(ProductName name, ProductDescription description, Money price, int quantity, Guid productCategoryId)
     {
         var product = new Product(Guid.NewGuid(), name, description, price, quantity, productCategoryId);
 

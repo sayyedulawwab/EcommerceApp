@@ -1,0 +1,28 @@
+﻿using Ecommerce.Application.Abstactions.Messaging;
+using Ecommerce.Domain.Abstractions;
+using Ecommerce.Domain.ProductCategories;
+using System.Collections.Generic;
+
+namespace Ecommerce.Application.Products.GetAllProductCategories;
+internal sealed class GetAllProductCategoriesQueryHandler : IQueryHandler<GetAllProductCategoriesQuery, IReadOnlyList<ProductCategoryResponse>>
+{
+    private readonly IProductCategoryRepository _productCategoryRepository;
+    public GetAllProductCategoriesQueryHandler(IProductCategoryRepository productCategoryRepository)
+    {
+        _productCategoryRepository = productCategoryRepository;
+    }
+    public async Task<Result<IReadOnlyList<ProductCategoryResponse>>> Handle(GetAllProductCategoriesQuery request, CancellationToken cancellationToken)
+    {
+
+        var productCategories = await _productCategoryRepository.GetAllAsync();
+
+        var productCategoriesResponse = productCategories.Select(cat => new ProductCategoryResponse()
+        {
+            Id = cat.Id,
+            Name = cat.Name,
+            Code = cat.Code
+        });
+
+        return productCategoriesResponse.ToList();
+    }
+}
