@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Ecommerce.Application.Abstractions.Behaviors;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Ecommerce.Application;
 public static class DependencyInjection
@@ -8,6 +9,7 @@ public static class DependencyInjection
         services.AddMediatR(configuration =>
         {
             configuration.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
+            configuration.AddOpenBehavior(typeof(LoggingBehavior<,>));
         });
 
         return services;

@@ -18,4 +18,11 @@ public record Currency
         Usd,
         Bdt
     };
+
+    public static Currency Create(string code)
+    {
+        var currency = new Currency(code);
+
+        return currency;
+    }
 }

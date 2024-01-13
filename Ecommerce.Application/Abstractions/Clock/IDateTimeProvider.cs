@@ -1,4 +1,4 @@
-﻿namespace Ecommerce.Application.Abstactions.Clock;
+﻿namespace Ecommerce.Application.Abstractions.Clock;
 public interface IDateTimeProvider
 {
     DateTime UtcNow { get; }

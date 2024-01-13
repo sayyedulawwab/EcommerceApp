@@ -27,4 +27,12 @@ public sealed class ProductCategory : Entity
         return productCategory;
     }
 
+    public static ProductCategory Update(ProductCategory productCategory, CategoryName name, CategoryCode code, DateTime updatedOn)
+    {
+        productCategory.Name = name;
+        productCategory.Code = code;
+        productCategory.UpdatedOn = updatedOn;
+
+        return productCategory;
+    }
 }

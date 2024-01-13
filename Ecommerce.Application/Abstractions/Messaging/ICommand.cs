@@ -1,7 +1,7 @@
 ﻿using Ecommerce.Domain.Abstractions;
 using MediatR;
 
-namespace Ecommerce.Application.Abstactions.Messaging;
+namespace Ecommerce.Application.Abstractions.Messaging;
 public interface ICommand : IRequest<Result>, IBaseCommand
 {
 }

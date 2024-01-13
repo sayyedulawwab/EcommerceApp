@@ -1,23 +1,23 @@
-﻿using Ecommerce.Application.Abstactions.Clock;
-using Ecommerce.Application.Abstactions.Messaging;
+﻿using Ecommerce.Application.Abstractions.Clock;
+using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.ProductCategories;
 
-namespace Ecommerce.Application.Products.AddProductCategory;
-internal sealed class AddProductCategoryCommandHandler : ICommandHandler<AddProductCategoryCommand, Guid>
+namespace Ecommerce.Application.ProductCategories.AddProductCategory;
+internal sealed class AddProductCommandHandler : ICommandHandler<AddProductCommand, Guid>
 {
     private readonly IProductCategoryRepository _productCategoryRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IDateTimeProvider _dateTimeProvider;
 
-    public AddProductCategoryCommandHandler(IProductCategoryRepository productCategoryRepository, IUnitOfWork unitOfWork, IDateTimeProvider dateTimeProvider)
+    public AddProductCommandHandler(IProductCategoryRepository productCategoryRepository, IUnitOfWork unitOfWork, IDateTimeProvider dateTimeProvider)
     {
         _productCategoryRepository = productCategoryRepository;
         _unitOfWork = unitOfWork;
         _dateTimeProvider = dateTimeProvider;
     }
 
-    public async Task<Result<Guid>> Handle(AddProductCategoryCommand request, CancellationToken cancellationToken)
+    public async Task<Result<Guid>> Handle(AddProductCommand request, CancellationToken cancellationToken)
     {
         var productCategory = ProductCategory.Create(new CategoryName(request.name), new CategoryCode(request.code), _dateTimeProvider.UtcNow);
 

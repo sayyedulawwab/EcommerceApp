@@ -1,9 +1,8 @@
-﻿using Ecommerce.Application.Abstactions.Messaging;
+﻿using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.ProductCategories;
-using System.Collections.Generic;
 
-namespace Ecommerce.Application.Products.GetAllProductCategories;
+namespace Ecommerce.Application.ProductCategories.GetAllProductCategories;
 internal sealed class GetAllProductCategoriesQueryHandler : IQueryHandler<GetAllProductCategoriesQuery, IReadOnlyList<ProductCategoryResponse>>
 {
     private readonly IProductCategoryRepository _productCategoryRepository;
