@@ -4,7 +4,7 @@ using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.ProductCategories;
 
 namespace Ecommerce.Application.ProductCategories.AddProductCategory;
-internal sealed class AddProductCommandHandler : ICommandHandler<AddProductCommand, Guid>
+internal sealed class AddProductCommandHandler : ICommandHandler<AddProductCategoryCommand, Guid>
 {
     private readonly IProductCategoryRepository _productCategoryRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -17,7 +17,7 @@ internal sealed class AddProductCommandHandler : ICommandHandler<AddProductComma
         _dateTimeProvider = dateTimeProvider;
     }
 
-    public async Task<Result<Guid>> Handle(AddProductCommand request, CancellationToken cancellationToken)
+    public async Task<Result<Guid>> Handle(AddProductCategoryCommand request, CancellationToken cancellationToken)
     {
         var productCategory = ProductCategory.Create(new CategoryName(request.name), new CategoryCode(request.code), _dateTimeProvider.UtcNow);
 
