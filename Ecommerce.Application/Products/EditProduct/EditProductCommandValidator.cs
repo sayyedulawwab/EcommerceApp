@@ -1,15 +1,9 @@
-﻿using Ecommerce.Application.ProductCategories.EditProductCategory;
-using FluentValidation;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using FluentValidation;
 
 namespace Ecommerce.Application.Products.EditProduct;
 public class EditProductCommandValidator : AbstractValidator<EditProductCommand>
 {
-    public EditProductCategoryValidator()
+    public EditProductCommandValidator()
     {
         RuleFor(c => c.id).NotEmpty();
         RuleFor(c => c.name).NotEmpty();
