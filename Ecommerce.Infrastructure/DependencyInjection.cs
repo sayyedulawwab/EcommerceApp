@@ -1,7 +1,15 @@
 ﻿using Ecommerce.Application.Abstractions.Clock;
+using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Email;
+using Ecommerce.Domain.Abstractions;
+using Ecommerce.Domain.ProductCategories;
+using Ecommerce.Domain.Products;
+using Ecommerce.Domain.Users;
 using Ecommerce.Infrastructure.Clock;
+using Ecommerce.Infrastructure.Data;
 using Ecommerce.Infrastructure.Email;
+using Ecommerce.Infrastructure.Repositories;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,6 +20,21 @@ public static class DependencyInjection
     {
         services.AddTransient<IDateTimeProvider, DateTimeProvider>();
         services.AddTransient<IEmailService, EmailService>();
+
+        var connectionString = configuration.GetConnectionString("EcommerceDB") ?? throw new ArgumentNullException(nameof(configuration));
+
+        services.AddDbContext<ApplicationDbContext>(options =>
+        {
+            options.UseSqlServer(connectionString);
+        });
+
+        services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
+        services.AddScoped<IProductRepository, ProductRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
+
+        services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<ApplicationDbContext>());
+
+        services.AddSingleton<ISqlConnectionFactory>( _ => new SqlConnectionFactory(connectionString));
 
         return services;
     }
