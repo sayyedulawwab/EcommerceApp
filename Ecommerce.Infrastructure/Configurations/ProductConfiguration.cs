@@ -22,10 +22,16 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
 
         builder.Property(product => product.Quantity);
 
+
+
         builder.OwnsOne(product => product.Price, priceBuilder =>
         {
+            priceBuilder.Property(money => money.Amount)
+                        .HasColumnType("decimal(18, 2)");
+
             priceBuilder.Property(money => money.Currency)
-                        .HasConversion(currency => currency.Code, code => Currency.FromCode(code));
+                        .HasConversion(currency => currency.Code, code => Currency.FromCode(code))
+                        .HasDefaultValue(Currency.FromCode("BDT"));
 
         });
 

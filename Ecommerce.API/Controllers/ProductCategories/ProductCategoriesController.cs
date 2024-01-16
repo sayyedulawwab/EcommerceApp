@@ -25,15 +25,15 @@ public class ProductCategoriesController : ControllerBase
         return Ok(result.Value);
     }
 
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetProductCategory(Guid id, CancellationToken cancellationToken)
-    {
-        var query = new GetProductCategoryByIdQuery(id);
+    //[HttpGet("{id}")]
+    //public async Task<IActionResult> GetProductCategory(Guid id, CancellationToken cancellationToken)
+    //{
+    //    var query = new GetProductCategoryByIdQuery(id);
 
-        var result = await _sender.Send(query, cancellationToken);
+    //    var result = await _sender.Send(query, cancellationToken);
 
-        return Ok(result.Value);
-    }
+    //    return Ok(result.Value);
+    //}
 
     [HttpPost]
     public async Task<IActionResult> AddProductCategory(AddProductCategoryRequest request, CancellationToken cancellationToken)

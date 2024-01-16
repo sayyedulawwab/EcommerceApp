@@ -11,6 +11,9 @@ public sealed class ProductCategory : Entity
         Code = code;
         CreatedOn = createdOn;
     }
+    private ProductCategory()
+    {
+    }
 
     public CategoryName Name { get; private set; }
     public CategoryCode Code { get; private set; }

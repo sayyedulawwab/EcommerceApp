@@ -17,6 +17,10 @@ public sealed class Product : Entity
         CreatedOn = createdOn;
     }
 
+    private Product()
+    {
+    }
+
     public Guid ProductCategoryId { get; private set; }
     public ProductName Name { get; private set; }
     public ProductDescription Description { get; private set; }

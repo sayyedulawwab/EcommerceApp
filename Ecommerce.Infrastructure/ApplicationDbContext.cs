@@ -2,6 +2,7 @@
 using Ecommerce.Domain.Abstractions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System.Data;
 
 namespace Ecommerce.Infrastructure;
@@ -14,6 +15,8 @@ public sealed class ApplicationDbContext : DbContext, IUnitOfWork
         _publisher = publisher;
 
     }
+
+   
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
