@@ -1,5 +1,4 @@
 ﻿using Ecommerce.Domain.Abstractions;
-using Ecommerce.Domain.Products;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Infrastructure.Repositories;

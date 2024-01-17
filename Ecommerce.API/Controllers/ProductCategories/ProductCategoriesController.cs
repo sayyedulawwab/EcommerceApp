@@ -1,5 +1,8 @@
 ﻿using Ecommerce.Application.ProductCategories.AddProductCategory;
+using Ecommerce.Application.ProductCategories.DeleteProductCategory;
+using Ecommerce.Application.ProductCategories.EditProductCategory;
 using Ecommerce.Application.ProductCategories.GetAllProductCategories;
+using Ecommerce.Application.ProductCategories.GetProductCategoryById;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -25,15 +28,15 @@ public class ProductCategoriesController : ControllerBase
         return Ok(result.Value);
     }
 
-    //[HttpGet("{id}")]
-    //public async Task<IActionResult> GetProductCategory(Guid id, CancellationToken cancellationToken)
-    //{
-    //    var query = new GetProductCategoryByIdQuery(id);
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetProductCategory(Guid id, CancellationToken cancellationToken)
+    {
+        var query = new GetProductCategoryByIdQuery(id);
 
-    //    var result = await _sender.Send(query, cancellationToken);
+        var result = await _sender.Send(query, cancellationToken);
 
-    //    return Ok(result.Value);
-    //}
+        return Ok(result.Value);
+    }
 
     [HttpPost]
     public async Task<IActionResult> AddProductCategory(AddProductCategoryRequest request, CancellationToken cancellationToken)
@@ -47,6 +50,38 @@ public class ProductCategoriesController : ControllerBase
             return BadRequest(result.Error);
         }
 
-        return CreatedAtAction("GetProductCategory", new { id = result.Value });
+        return CreatedAtAction(nameof(GetProductCategory), new { id = result.Value }, result.Value);
     }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> EditProductCategory(Guid id, EditProductCategoryRequest request, CancellationToken cancellationToken)
+    {
+        var command = new EditProductCategoryCommand(id, request.name, request.code);
+
+        var result = await _sender.Send(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return BadRequest(result.Error);
+        }
+
+        return Ok(new { id = result.Value });
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteProductCategory(Guid id, CancellationToken cancellationToken)
+    {
+        var command = new DeleteProductCategoryCommand(id);
+
+        var result = await _sender.Send(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return BadRequest(result.Error);
+        }
+
+        return Ok(new { id = result.Value });
+    }
+
+
 }
