@@ -1,8 +1,6 @@
-﻿using Ecommerce.Application.ProductCategories.GetAllProductCategories;
-using Ecommerce.Domain.ProductCategories;
-using Ecommerce.Domain.Products;
+﻿using Ecommerce.Domain.Products;
 
-namespace Ecommerce.Application.Products.SearchProduct;
+namespace Ecommerce.Application.Products;
 public sealed class ProductResponse
 {
     public Guid Id { get; init; }
