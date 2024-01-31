@@ -1,4 +1,5 @@
-﻿using Ecommerce.Domain.Users;
+﻿using Ecommerce.Domain.Products;
+using Ecommerce.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -10,6 +11,9 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.ToTable("Users");
 
         builder.HasKey(user => user.Id);
+
+        builder.Property(user => user.Id)
+               .HasConversion(userId => userId.Value, value => new UserId(value));
 
         builder.Property(user => user.FirstName)
                .HasMaxLength(200)

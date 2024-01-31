@@ -2,9 +2,9 @@
 using Ecommerce.Domain.Users.Events;
 
 namespace Ecommerce.Domain.Users;
-public sealed class User : Entity
+public sealed class User : Entity<UserId>
 {
-    private User(Guid id, FirstName firstName, LastName lastName, Email email, string passwordHash, string passwordSalt, bool isAdmin) : base(id)
+    private User(UserId id, FirstName firstName, LastName lastName, Email email, string passwordHash, string passwordSalt, bool isAdmin) : base(id)
     {
         FirstName = firstName;
         LastName = lastName;
@@ -26,7 +26,7 @@ public sealed class User : Entity
 
     public static User Create(FirstName firstName, LastName lastName, Email email, string passwordHash, string passwordSalt, bool isAdmin)
     {
-        var user = new User(Guid.NewGuid(), firstName, lastName, email, passwordHash, passwordSalt, isAdmin);
+        var user = new User(UserId.New(), firstName, lastName, email, passwordHash, passwordSalt, isAdmin);
 
         user.RaiseDomainEvent(new UserCreatedDomainEvent(user.Id));
 

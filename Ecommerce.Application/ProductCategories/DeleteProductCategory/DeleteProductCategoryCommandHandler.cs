@@ -16,13 +16,13 @@ internal sealed class DeleteProductCategoryCommandHandler : ICommandHandler<Dele
 
     public async Task<Result<Guid>> Handle(DeleteProductCategoryCommand request, CancellationToken cancellationToken)
     {
-        var productCategory = await _productCategoryRepository.GetByIdAsync(request.id);
+        var productCategory = await _productCategoryRepository.GetByIdAsync(new ProductCategoryId(request.id));
 
         _productCategoryRepository.Remove(productCategory);
 
         await _unitOfWork.SaveChangesAsync();
 
-        return productCategory.Id;
+        return productCategory.Id.Value;
 
     }
 }

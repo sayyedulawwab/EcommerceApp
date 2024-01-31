@@ -19,7 +19,7 @@ internal sealed class EditProductCategoryCommandHandler : ICommandHandler<EditPr
 
     public async Task<Result<Guid>> Handle(EditProductCategoryCommand request, CancellationToken cancellationToken)
     {
-        var productCategory = await _productCategoryRepository.GetByIdAsync(request.id);
+        var productCategory = await _productCategoryRepository.GetByIdAsync(new ProductCategoryId(request.id));
 
         if (productCategory is null)
         {
@@ -32,7 +32,7 @@ internal sealed class EditProductCategoryCommandHandler : ICommandHandler<EditPr
 
         await _unitOfWork.SaveChangesAsync();
 
-        return productCategory.Id;
+        return productCategory.Id.Value;
 
     }
 }

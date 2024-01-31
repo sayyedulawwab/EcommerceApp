@@ -3,9 +3,9 @@ using Ecommerce.Domain.ProductCategories.Events;
 
 namespace Ecommerce.Domain.ProductCategories;
 
-public sealed class ProductCategory : Entity
+public sealed class ProductCategory : Entity<ProductCategoryId>
 {
-    private ProductCategory(Guid id, CategoryName name, CategoryCode code, DateTime createdOn) : base(id)
+    private ProductCategory(ProductCategoryId id, CategoryName name, CategoryCode code, DateTime createdOn) : base(id)
     {
         Name = name;
         Code = code;
@@ -23,7 +23,7 @@ public sealed class ProductCategory : Entity
 
     public static ProductCategory Create(CategoryName name, CategoryCode code, DateTime createdOn)
     {
-        var productCategory = new ProductCategory(Guid.NewGuid(), name, code, createdOn);
+        var productCategory = new ProductCategory(ProductCategoryId.New(), name, code, createdOn);
 
         productCategory.RaiseDomainEvent(new ProductCategoryCreatedDomainEvent(productCategory.Id));
 

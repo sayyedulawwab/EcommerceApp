@@ -13,16 +13,16 @@ internal sealed class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQ
     }
     public async Task<Result<ProductResponse>> Handle(GetProductByIdQuery request, CancellationToken cancellationToken)
     {
-        var product = await _productRepository.GetByIdAsync(request.id, cancellationToken);
+        var product = await _productRepository.GetByIdAsync(new ProductId(request.id), cancellationToken);
 
         var productResponse = new ProductResponse()
         {
-            Id = product.Id,
+            Id = product.Id.Value,
             Name = product.Name,
             Description = product.Description,
             Price = product.Price,
             Quantity = product.Quantity,
-            ProductCategoryId = product.ProductCategoryId,
+            ProductCategoryId = product.ProductCategoryId.Value,
             CreatedOn = product.CreatedOn,
             UpdatedOn = product.UpdatedOn
         };

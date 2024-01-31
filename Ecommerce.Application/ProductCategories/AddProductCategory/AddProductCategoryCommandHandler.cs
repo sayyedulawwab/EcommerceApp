@@ -25,7 +25,7 @@ internal sealed class AddProductCommandHandler : ICommandHandler<AddProductCateg
 
         await _unitOfWork.SaveChangesAsync();
 
-        return productCategory.Id;
+        return productCategory.Id.Value;
 
     }
 }

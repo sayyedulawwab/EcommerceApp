@@ -17,7 +17,7 @@ internal sealed class GetAllProductCategoriesQueryHandler : IQueryHandler<GetAll
 
         var productCategoriesResponse = productCategories.Select(cat => new ProductCategoryResponse()
         {
-            Id = cat.Id,
+            Id = cat.Id.Value,
             Name = cat.Name,
             Code = cat.Code
         });

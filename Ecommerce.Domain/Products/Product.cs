@@ -1,13 +1,12 @@
 ﻿using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.ProductCategories;
 using Ecommerce.Domain.Products.Events;
-using System;
 
 namespace Ecommerce.Domain.Products;
 
-public sealed class Product : Entity
+public sealed partial class Product : Entity<ProductId>
 {
-    private Product(Guid id, ProductName name, ProductDescription description, Money price, int quantity, Guid productCategoryId, DateTime createdOn) : base(id)
+    private Product(ProductId id, ProductName name, ProductDescription description, Money price, int quantity, ProductCategoryId productCategoryId, DateTime createdOn) : base(id)
     {
         Name = name;
         Description = description;
@@ -21,7 +20,7 @@ public sealed class Product : Entity
     {
     }
 
-    public Guid ProductCategoryId { get; private set; }
+    public ProductCategoryId ProductCategoryId { get; private set; }
     public ProductName Name { get; private set; }
     public ProductDescription Description { get; private set; }
     public Money Price { get; private set; }
@@ -29,9 +28,9 @@ public sealed class Product : Entity
     public DateTime CreatedOn { get; private set; }
     public DateTime? UpdatedOn { get; private set; }
 
-    public static Product Create(ProductName name, ProductDescription description, Money price, int quantity, Guid productCategoryId, DateTime createdOn)
+    public static Product Create(ProductName name, ProductDescription description, Money price, int quantity, ProductCategoryId productCategoryId, DateTime createdOn)
     {
-        var product = new Product(Guid.NewGuid(), name, description, price, quantity, productCategoryId, createdOn);
+        var product = new Product(ProductId.New(), name, description, price, quantity, productCategoryId, createdOn);
 
         product.RaiseDomainEvent(new ProductCreatedDomainEvent(product.Id));
 
@@ -39,7 +38,7 @@ public sealed class Product : Entity
     }
 
 
-    public static Product Update(Product product, ProductName name, ProductDescription description, Money price, int quantity, Guid productCategoryId, DateTime updatedOn)
+    public static Product Update(Product product, ProductName name, ProductDescription description, Money price, int quantity, ProductCategoryId productCategoryId, DateTime updatedOn)
     {
 
         product.Name = name;

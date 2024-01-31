@@ -11,6 +11,9 @@ internal sealed class ProductCategoryConfiguration : IEntityTypeConfiguration<Pr
 
         builder.HasKey(category => category.Id);
 
+        builder.Property(category => category.Id)
+               .HasConversion(categoryId => categoryId.Value, value => new ProductCategoryId(value));
+
         builder.Property(category => category.Name)
                .HasMaxLength(200)
                .HasConversion(name => name.Value, value => new CategoryName(value));
