@@ -2,7 +2,6 @@
 using Ecommerce.Domain.Abstractions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using System.Data;
 
 namespace Ecommerce.Infrastructure;
