@@ -1,5 +1,6 @@
 ﻿using Ecommerce.Domain.ProductCategories;
 using Ecommerce.Domain.Products;
+using Ecommerce.Domain.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

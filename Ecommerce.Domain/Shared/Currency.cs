@@ -1,4 +1,4 @@
-﻿namespace Ecommerce.Domain.Products;
+﻿namespace Ecommerce.Domain.Shared;
 public record Currency
 {
     public static readonly Currency None = new("");

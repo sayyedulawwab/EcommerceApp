@@ -2,7 +2,6 @@
 using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
-using Ecommerce.Domain.Products;
 
 namespace Ecommerce.Application.Products.SearchProduct;
 internal sealed class SearchlProductsQueryHandler : IQueryHandler<SearchProductsQuery, IReadOnlyList<ProductResponse>>
@@ -22,19 +21,19 @@ internal sealed class SearchlProductsQueryHandler : IQueryHandler<SearchProducts
                 p.Id,
                 p.Name,
                 p.Description,
-                p.PriceAmount,
-                p.PriceCurrency,
+                p.Price_Amount AS PriceAmount,
+                p.Price_Currency AS PriceCurrency,
                 p.Quantity,
                 p.CreatedOn,
                 p.UpdatedOn,
-                p.ProductCategoryId,
+                p.ProductCategoryId
 
-            FROM products AS p
-            WHERE p.Name is LIKE '%@ProductName%'
+            FROM Products AS p
+            WHERE (@ProductName IS NULL OR p.Name LIKE @ProductName)
             """;
 
         var products = await connection
-            .QueryAsync<ProductResponse>(sql, new { request.name });
+            .QueryAsync<ProductResponse>(sql, new { ProductName = request.name });
 
         return products.ToList();
     }

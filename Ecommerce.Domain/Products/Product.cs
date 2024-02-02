@@ -1,10 +1,11 @@
 ﻿using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.ProductCategories;
 using Ecommerce.Domain.Products.Events;
+using Ecommerce.Domain.Shared;
 
 namespace Ecommerce.Domain.Products;
 
-public sealed partial class Product : Entity<ProductId>
+public sealed class Product : Entity<ProductId>
 {
     private Product(ProductId id, ProductName name, ProductDescription description, Money price, int quantity, ProductCategoryId productCategoryId, DateTime createdOn) : base(id)
     {

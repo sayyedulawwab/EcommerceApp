@@ -18,8 +18,8 @@ internal sealed class GetAllProductCategoriesQueryHandler : IQueryHandler<GetAll
         var productCategoriesResponse = productCategories.Select(cat => new ProductCategoryResponse()
         {
             Id = cat.Id.Value,
-            Name = cat.Name,
-            Code = cat.Code
+            Name = cat.Name.Value,
+            Code = cat.Code.Value
         });
 
         return productCategoriesResponse.ToList();

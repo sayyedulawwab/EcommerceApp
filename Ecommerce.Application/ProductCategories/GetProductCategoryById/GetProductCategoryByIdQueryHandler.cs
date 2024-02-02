@@ -19,8 +19,8 @@ internal sealed class GetProductCategoryByIdQueryHandler : IQueryHandler<GetProd
         var productCategoryResponse = new ProductCategoryResponse()
         {
             Id = productCategory.Id.Value,
-            Name = productCategory.Name,
-            Code = productCategory.Code
+            Name = productCategory.Name.Value,
+            Code = productCategory.Code.Value
         };
 
         return productCategoryResponse;

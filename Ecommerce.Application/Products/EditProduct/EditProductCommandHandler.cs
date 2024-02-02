@@ -3,6 +3,7 @@ using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.ProductCategories;
 using Ecommerce.Domain.Products;
+using Ecommerce.Domain.Shared;
 
 namespace Ecommerce.Application.Products.EditProduct;
 internal sealed class EditProductCommandHandler : ICommandHandler<EditProductCommand, Guid>

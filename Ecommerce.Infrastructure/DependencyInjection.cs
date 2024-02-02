@@ -2,6 +2,7 @@
 using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Email;
 using Ecommerce.Domain.Abstractions;
+using Ecommerce.Domain.Orders;
 using Ecommerce.Domain.ProductCategories;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Users;
@@ -31,6 +32,7 @@ public static class DependencyInjection
         services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IOrderRepository, OrderRepository>();
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<ApplicationDbContext>());
 

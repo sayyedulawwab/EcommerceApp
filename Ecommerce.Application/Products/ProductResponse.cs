@@ -1,12 +1,11 @@
-﻿using Ecommerce.Domain.Products;
-
-namespace Ecommerce.Application.Products;
+﻿namespace Ecommerce.Application.Products;
 public sealed class ProductResponse
 {
     public Guid Id { get; init; }
-    public ProductName Name { get; init; }
-    public ProductDescription Description { get; init; }
-    public Money Price { get; init; }
+    public string Name { get; init; }
+    public string Description { get; init; }
+    public decimal PriceAmount { get; init; }
+    public string PriceCurrency { get; init; }
     public int Quantity { get; init; }
     public DateTime CreatedOn { get; init; }
     public DateTime? UpdatedOn { get; init; }

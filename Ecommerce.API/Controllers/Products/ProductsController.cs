@@ -1,15 +1,8 @@
-﻿using Ecommerce.API.Controllers.ProductCategories;
-using Ecommerce.Application.ProductCategories.AddProductCategory;
-using Ecommerce.Application.ProductCategories.DeleteProductCategory;
-using Ecommerce.Application.ProductCategories.EditProductCategory;
-using Ecommerce.Application.ProductCategories.GetAllProductCategories;
-using Ecommerce.Application.ProductCategories.GetProductCategoryById;
-using Ecommerce.Application.Products.AddProduct;
+﻿using Ecommerce.Application.Products.AddProduct;
 using Ecommerce.Application.Products.DeleteProduct;
 using Ecommerce.Application.Products.EditProduct;
 using Ecommerce.Application.Products.GetProductById;
 using Ecommerce.Application.Products.SearchProduct;
-using Ecommerce.Domain.ProductCategories;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -26,7 +19,7 @@ public class ProductsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> Search(string name, CancellationToken cancellationToken)
+    public async Task<IActionResult> Search(string? name, CancellationToken cancellationToken)
     {
         var query = new SearchProductsQuery(name);
 

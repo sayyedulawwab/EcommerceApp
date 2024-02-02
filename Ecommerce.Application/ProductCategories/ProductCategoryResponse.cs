@@ -4,6 +4,6 @@ namespace Ecommerce.Application.ProductCategories;
 public sealed class ProductCategoryResponse
 {
     public Guid Id { get; init; }
-    public CategoryName Name { get; init; }
-    public CategoryCode Code { get; init; }
+    public string Name { get; init; }
+    public string Code { get; init; }
 }
