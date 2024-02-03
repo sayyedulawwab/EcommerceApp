@@ -11,6 +11,7 @@ namespace Ecommerce.API.Controllers.ProductCategories;
 
 [Route("api/productcategories")]
 [ApiController]
+[Authorize]
 public class ProductCategoriesController : ControllerBase
 {
     private readonly ISender _sender;

@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Ecommerce.API.Controllers.Users;
 [Route("api/users")]
 [ApiController]
+[Authorize]
 public class UsersController : ControllerBase
 {
     private readonly ISender _sender;
