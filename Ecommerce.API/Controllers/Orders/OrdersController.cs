@@ -1,12 +1,14 @@
 ﻿using Ecommerce.Application.Orders.GetAllOrders;
 using Ecommerce.Application.Orders.PlaceOrder;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
 namespace Ecommerce.API.Controllers.Orders;
 [Route("api/orders")]
 [ApiController]
+
 public class OrdersController : ControllerBase
 {
     private readonly ISender _sender;
@@ -24,7 +26,7 @@ public class OrdersController : ControllerBase
 
         return Ok(result.Value);
     }
-
+    [Authorize]
     [HttpPost]
     public async Task<IActionResult> PlaceOrder(PlaceOrderRequest request, CancellationToken cancellationToken)
     {

@@ -9,25 +9,32 @@ using System.Text;
 namespace Ecommerce.Infrastructure.Auth;
 internal sealed class JwtService : IJwtService
 {
-    private readonly AuthenticationOptions _authOptions;
-    public JwtService(IOptions<AuthenticationOptions> authOptions)
+    private readonly JwtOptions _jwtOptions;
+    public JwtService(IOptions<JwtOptions> jwtOptions)
     {
 
-        _authOptions = authOptions.Value;
+        _jwtOptions = jwtOptions.Value;
 
     }
     public Result<string> GetAccessToken(string email, Guid userId, CancellationToken cancellationToken = default)
     {
-        string secretKey = _authOptions.SecretKey;
-        var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
+       
+        var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.SecretKey));
 
-        var jwt = new JwtSecurityToken(
-            signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256),
-            claims: new[] {
+        var signingCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
+
+        var claims = new[] {
                 new Claim(ClaimTypes.Email, email),
                 new Claim(ClaimTypes.NameIdentifier, userId.ToString())
-            }
-        );
+            };
+
+        var jwt = new JwtSecurityToken(
+                    _jwtOptions.Issuer,
+                    _jwtOptions.Audience,
+                    claims,
+                    null,
+                    DateTime.UtcNow.AddHours(1),
+                    signingCredentials);
 
         var token = new JwtSecurityTokenHandler().WriteToken(jwt);
 

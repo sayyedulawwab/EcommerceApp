@@ -1,28 +1,31 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 namespace Ecommerce.Infrastructure.Auth;
-internal sealed class JwtBearerOptionsSetup : IConfigureNamedOptions<JwtBearerOptions>
+internal sealed class JwtBearerOptionsSetup : IConfigureOptions<JwtBearerOptions>
 {
-    private readonly AuthenticationOptions _authenticationOptions;
+    private readonly JwtOptions _jwtOptions;
 
-    public JwtBearerOptionsSetup(IOptions<AuthenticationOptions> authenticationOptions)
+    public JwtBearerOptionsSetup(IOptions<JwtOptions> jwtOptions)
     {
-        _authenticationOptions = authenticationOptions.Value;
+        _jwtOptions = jwtOptions.Value;
     }
 
     public void Configure(JwtBearerOptions options)
     {
-        options.Audience = _authenticationOptions.Audience;
-        options.MetadataAddress = _authenticationOptions.MetadataUrl;
-        options.RequireHttpsMetadata = _authenticationOptions.RequireHttpsMetadata;
-        options.TokenValidationParameters.ValidIssuer = _authenticationOptions.Issuer;
-    }
+        options.TokenValidationParameters = new()
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = _jwtOptions.Issuer,
+            ValidAudience = _jwtOptions.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(_jwtOptions.SecretKey))
 
-    public void Configure(string? name, JwtBearerOptions options)
-    {
-        Configure(options);
+        };
     }
-
-    
 }
