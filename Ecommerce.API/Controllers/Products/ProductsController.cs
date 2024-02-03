@@ -4,6 +4,7 @@ using Ecommerce.Application.Products.EditProduct;
 using Ecommerce.Application.Products.GetProductById;
 using Ecommerce.Application.Products.SearchProduct;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ecommerce.API.Controllers.Products;
@@ -17,7 +18,7 @@ public class ProductsController : ControllerBase
     {
         _sender = sender;
     }
-
+    [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> Search(string? name, CancellationToken cancellationToken)
     {
@@ -28,7 +29,7 @@ public class ProductsController : ControllerBase
         return result.IsSuccess ? Ok(result.Value) : NotFound();
     }
 
-
+    [AllowAnonymous]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetProduct(Guid id, CancellationToken cancellationToken)
     {

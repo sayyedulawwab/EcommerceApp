@@ -2,6 +2,7 @@
 using Ecommerce.Application.Orders.PlaceOrder;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Ecommerce.API.Controllers.Orders;
 [Route("api/orders")]
@@ -27,7 +28,9 @@ public class OrdersController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> PlaceOrder(PlaceOrderRequest request, CancellationToken cancellationToken)
     {
-        var command = new PlaceOrderCommand(request.userId, request.orderItems);
+        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+
+        var command = new PlaceOrderCommand(userId, request.orderItems);
 
         var result = await _sender.Send(command, cancellationToken);
 

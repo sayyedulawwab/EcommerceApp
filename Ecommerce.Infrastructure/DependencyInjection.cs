@@ -1,4 +1,5 @@
-﻿using Ecommerce.Application.Abstractions.Clock;
+﻿using Ecommerce.Application.Abstractions.Auth;
+using Ecommerce.Application.Abstractions.Clock;
 using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Email;
 using Ecommerce.Domain.Abstractions;
@@ -6,6 +7,7 @@ using Ecommerce.Domain.Orders;
 using Ecommerce.Domain.ProductCategories;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Users;
+using Ecommerce.Infrastructure.Auth;
 using Ecommerce.Infrastructure.Clock;
 using Ecommerce.Infrastructure.Data;
 using Ecommerce.Infrastructure.Email;
@@ -28,6 +30,13 @@ public static class DependencyInjection
         {
             options.UseSqlServer(connectionString);
         });
+
+        services.Configure<AuthenticationOptions>(configuration.GetSection("Authentication"));
+
+        services.ConfigureOptions<JwtBearerOptionsSetup>();
+
+        services.AddSingleton<IJwtService, JwtService>();
+        services.AddSingleton<IAuthService, AuthService>();
 
         services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();

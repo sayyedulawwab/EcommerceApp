@@ -4,6 +4,7 @@ using Ecommerce.Application.ProductCategories.EditProductCategory;
 using Ecommerce.Application.ProductCategories.GetAllProductCategories;
 using Ecommerce.Application.ProductCategories.GetProductCategoryById;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ecommerce.API.Controllers.ProductCategories;
@@ -17,7 +18,7 @@ public class ProductCategoriesController : ControllerBase
     {
         _sender = sender;
     }
-
+    [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> GetProductCategories(CancellationToken cancellationToken)
     {
@@ -27,7 +28,7 @@ public class ProductCategoriesController : ControllerBase
 
         return Ok(result.Value);
     }
-
+    [AllowAnonymous]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetProductCategory(Guid id, CancellationToken cancellationToken)
     {
