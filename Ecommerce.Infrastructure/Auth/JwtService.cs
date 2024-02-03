@@ -24,8 +24,8 @@ internal sealed class JwtService : IJwtService
         var jwt = new JwtSecurityToken(
             signingCredentials: new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256),
             claims: new[] {
-            new Claim(ClaimTypes.Email, email),
-            new Claim(ClaimTypes.NameIdentifier, userId.ToString())
+                new Claim(ClaimTypes.Email, email),
+                new Claim(ClaimTypes.NameIdentifier, userId.ToString())
             }
         );
 

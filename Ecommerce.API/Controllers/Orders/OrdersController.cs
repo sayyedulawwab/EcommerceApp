@@ -28,7 +28,8 @@ public class OrdersController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> PlaceOrder(PlaceOrderRequest request, CancellationToken cancellationToken)
     {
-        var userId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+        var userIdClaim = User?.FindFirst(ClaimTypes.NameIdentifier);
+        var userId = Guid.Parse(userIdClaim.Value);
 
         var command = new PlaceOrderCommand(userId, request.orderItems);
 
