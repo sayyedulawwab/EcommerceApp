@@ -8,7 +8,7 @@ using System.Security.Claims;
 namespace Ecommerce.API.Controllers.Orders;
 [Route("api/orders")]
 [ApiController]
-
+[Authorize]
 public class OrdersController : ControllerBase
 {
     private readonly ISender _sender;
