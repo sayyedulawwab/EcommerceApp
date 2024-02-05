@@ -26,7 +26,7 @@ public class OrdersController : ControllerBase
 
         return Ok(result.Value);
     }
-    [Authorize]
+    
     [HttpPost]
     public async Task<IActionResult> PlaceOrder(PlaceOrderRequest request, CancellationToken cancellationToken)
     {

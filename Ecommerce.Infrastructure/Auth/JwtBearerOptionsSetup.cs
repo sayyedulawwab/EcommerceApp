@@ -4,7 +4,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
 namespace Ecommerce.Infrastructure.Auth;
-internal sealed class JwtBearerOptionsSetup : IConfigureOptions<JwtBearerOptions>
+internal sealed class JwtBearerOptionsSetup : IConfigureNamedOptions<JwtBearerOptions>
 {
     private readonly JwtOptions _jwtOptions;
 
@@ -17,15 +17,20 @@ internal sealed class JwtBearerOptionsSetup : IConfigureOptions<JwtBearerOptions
     {
         options.TokenValidationParameters = new()
         {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = false,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = _jwtOptions.Issuer,
-            ValidAudience = _jwtOptions.Audience,
+            //ValidIssuer = _jwtOptions.Issuer,
+            //ValidAudience = _jwtOptions.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(_jwtOptions.SecretKey))
 
         };
+    }
+
+    public void Configure(string? name, JwtBearerOptions options)
+    {
+        Configure(options);
     }
 }
