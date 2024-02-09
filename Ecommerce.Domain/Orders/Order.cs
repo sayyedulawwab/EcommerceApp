@@ -33,6 +33,7 @@ public sealed class Order : Entity<OrderId>
     {
         var order = new Order(OrderId.New(), userId, Money.Zero(), status, createdOnUtc);
 
+        
         foreach (var (product, quantity) in orderItems)
         {
             Money productPrice = new Money(product.Price.Amount, product.Price.Currency);
@@ -41,12 +42,21 @@ public sealed class Order : Entity<OrderId>
 
             order.OrderItems.Add(orderItem);
 
-            if (order.TotalPrice.Currency != productPrice.Currency)
+            if (order.TotalPrice.IsZero())
             {
-                throw new InvalidOperationException("Currencies have to be equal");
+                order.TotalPrice = new Money(product.Price.Amount, product.Price.Currency); ;
+            }
+            else
+            {
+                //if (order.TotalPrice.Currency != productPrice.Currency)
+                //{
+                //    throw new InvalidOperationException("Currencies have to be equal");
+                //}
+
+                order.TotalPrice += new Money(productPrice.Amount * quantity, productPrice.Currency);
             }
 
-            order.TotalPrice += new Money(productPrice.Amount * quantity, productPrice.Currency);
+            
         }
 
 

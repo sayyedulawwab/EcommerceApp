@@ -25,7 +25,9 @@ internal sealed class PlaceOrderCommandHandler : ICommandHandler<PlaceOrderComma
     {
 
         // Fetch products from the repository based on productIds
-        var products = await _productRepository.GetProductsByIdsAsync(request.orderItems.Select(item => item.productId).ToList());
+        var productIds = request.orderItems.Select(item => item.productId).ToList();
+
+        var products = await _productRepository.GetProductsByIdsAsync(productIds);
 
         // Create order items using the fetched products and quantities
         var orderItems = request.orderItems.Select(item =>

@@ -1,4 +1,5 @@
 ﻿using Ecommerce.Application.Abstractions.Messaging;
 
 namespace Ecommerce.Application.Orders.PlaceOrder;
-public record PlaceOrderCommand(Guid userId, List<(Guid productId, int quantity)> orderItems) : ICommand<Guid>;
+public record PlaceOrderProductCommand(Guid productId, int quantity);
+public record PlaceOrderCommand(Guid userId, List<PlaceOrderProductCommand> orderItems) : ICommand<Guid>;

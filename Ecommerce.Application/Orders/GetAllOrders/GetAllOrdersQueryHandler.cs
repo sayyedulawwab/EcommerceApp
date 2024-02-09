@@ -1,8 +1,6 @@
 ﻿using Ecommerce.Application.Abstractions.Messaging;
-using Ecommerce.Application.ProductCategories;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Orders;
-using Ecommerce.Domain.ProductCategories;
 
 namespace Ecommerce.Application.Orders.GetAllOrders;
 internal sealed class GetAllOrdersQueryHandler : IQueryHandler<GetAllOrdersQuery, IReadOnlyList<OrderResponse>>
@@ -16,18 +14,28 @@ internal sealed class GetAllOrdersQueryHandler : IQueryHandler<GetAllOrdersQuery
     {
         var orders = await _orderRepository.GetAllAsync();
 
-        var ordersResponse = orders.Select(order => new OrderResponse()
+        var ordersResponse = orders.Select(order => new OrderResponse
         {
             Id = order.Id.Value,
             UserId = order.UserId.Value,
-            OrderItems = order.OrderItems,
+            OrderItems = order.OrderItems.Select(oi => new OrderItemResponse
+            {
+                OrderId = oi.OrderId.Value,
+                ProductId = oi.ProductId.Value,
+                Name = oi.Product.Name.Value,
+                Description = oi.Product.Description.Value,
+                PriceAmount = oi.Product.Price.Amount,
+                PriceCurrency = oi.Product.Price.Currency.Code,
+                ProductCategoryId = oi.Product.ProductCategoryId.Value, 
+                Quantity = oi.Quantity
+            }).ToList(),
             TotalPriceAmount = order.TotalPrice.Amount,
             TotalPriceCurrency = order.TotalPrice.Currency.Code,
             Status = order.Status.ToString(),
             CreatedOnUtc = order.CreatedOnUtc,
             ShippedOnUtc = order.ShippedOnUtc,
             DeliveredOnUtc = order.DeliveredOnUtc,
-            CancelledOnUtc = order.CancelledOnUtc            
+            CancelledOnUtc = order.CancelledOnUtc
         });
 
         return ordersResponse.ToList();

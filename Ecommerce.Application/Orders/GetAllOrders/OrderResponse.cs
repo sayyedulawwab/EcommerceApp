@@ -1,12 +1,10 @@
-﻿using Ecommerce.Domain.Orders;
-
-namespace Ecommerce.Application.Orders.GetAllOrders;
+﻿namespace Ecommerce.Application.Orders.GetAllOrders;
 
 public sealed class OrderResponse
 {
     public Guid Id { get; init; }
     public Guid UserId { get; init; }
-    public List<OrderItem> OrderItems { get; init; } = new List<OrderItem>();
+    public List<OrderItemResponse> OrderItems { get; init; } = new List<OrderItemResponse>();
     public decimal TotalPriceAmount { get; init; }
     public string TotalPriceCurrency { get; init; }
     public string Status { get; init; }
