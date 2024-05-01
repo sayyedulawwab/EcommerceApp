@@ -27,7 +27,7 @@ Welcome to the Ecommerce API repository! This API provides various functionaliti
   - Domain-driven design (DDD)
   - CQRS (Command Query Responsibility Segregation) by implementing Mediator pattern using MediatR package
 - **Validation:** 
-    - Validtaion using FluentValidation
+    - Validation using FluentValidation
 
 ## Getting Started
 
