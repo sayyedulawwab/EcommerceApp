@@ -1,5 +1,4 @@
 ﻿using Ecommerce.Domain.Orders;
-using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Shared;
 using Ecommerce.Domain.Users;
 using Microsoft.EntityFrameworkCore;

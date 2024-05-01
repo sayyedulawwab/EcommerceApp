@@ -6,6 +6,7 @@ using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Orders;
 using Ecommerce.Domain.ProductCategories;
 using Ecommerce.Domain.Products;
+using Ecommerce.Domain.Reviews;
 using Ecommerce.Domain.Users;
 using Ecommerce.Infrastructure.Auth;
 using Ecommerce.Infrastructure.Clock;
@@ -46,6 +47,7 @@ public static class DependencyInjection
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();
+        services.AddScoped<IReviewRepository, ReviewRepository>();
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<ApplicationDbContext>());
 

@@ -18,4 +18,13 @@ internal sealed class ProductRepository : Repository<Product, ProductId>, IProdu
         // Filter the products based on productIds in memory
         return products.Where(p => productIds.Contains(p.Id.Value)).ToList();
     }
+
+    public override async Task<Product?> GetByIdAsync(
+        ProductId id,
+        CancellationToken cancellationToken = default)
+    {
+        return await DbContext
+            .Set<Product>()
+            .FirstOrDefaultAsync(product => product.Id == id, cancellationToken);
+    }
 }

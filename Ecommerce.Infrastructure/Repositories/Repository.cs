@@ -20,7 +20,7 @@ internal abstract class Repository<TEntity, TEntityId>
             .Set<TEntity>().ToListAsync(cancellationToken);
     }
 
-    public async Task<TEntity?> GetByIdAsync(
+    public virtual async Task<TEntity?> GetByIdAsync(
         TEntityId id,
         CancellationToken cancellationToken = default)
     {
