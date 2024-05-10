@@ -9,7 +9,7 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
 {
     public void Configure(EntityTypeBuilder<Product> builder)
     {
-        builder.ToTable("Products");
+        builder.ToTable("products");
 
         builder.HasKey(product => product.Id);
 

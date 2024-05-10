@@ -7,7 +7,7 @@ internal sealed class ProductCategoryConfiguration : IEntityTypeConfiguration<Pr
 {
     public void Configure(EntityTypeBuilder<ProductCategory> builder)
     {
-        builder.ToTable("ProductCategories");
+        builder.ToTable("product_categories");
 
         builder.HasKey(category => category.Id);
 
