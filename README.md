@@ -20,14 +20,8 @@ Welcome to the Ecommerce API repository! This API provides various functionaliti
 
 ## Technologies Used
 
-- **Framework:** ASP.NET Core Web API
-- **.NET Core Version:** 8
-- **Architecture Patterns:**
-  - Clean architecture
-  - Domain-driven design (DDD)
-  - CQRS (Command Query Responsibility Segregation) by implementing Mediator pattern using MediatR package
-- **Validation:** 
-    - Validation using FluentValidation
+- ASP.NET Core 8 Web API, PostgreSQL, Entity Framework Core 8, Dapper, FluentValidation, MediatR, Docker
+- Architecture Patterns: Clean architecture, Domain-driven design (DDD), CQRS by implementing Mediator pattern using MediatR package
 
 ## Getting Started
 
