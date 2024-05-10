@@ -18,18 +18,18 @@ internal sealed class SearchlProductsQueryHandler : IQueryHandler<SearchProducts
 
         const string sql = """
             SELECT
-                p.Id,
-                p.Name,
-                p.Description,
-                p.Price_Amount AS PriceAmount,
-                p.Price_Currency AS PriceCurrency,
-                p.Quantity,
-                p.CreatedOn,
-                p.UpdatedOn,
-                p.ProductCategoryId
+                p.id AS Id,
+                p.name AS Name,
+                p.description AS Description,
+                p.price_amount AS PriceAmount,
+                p.price_currency AS PriceCurrency,
+                p.quantity AS Quantity,
+                p.created_on AS CreatedOn,
+                p.updated_on AS UpdatedOn,
+                p.product_category_id AS ProductCategoryId
 
-            FROM Products AS p
-            WHERE (@ProductName IS NULL OR p.Name LIKE @ProductName)
+            FROM products AS p
+            WHERE (@ProductName IS NULL OR p.name LIKE @ProductName)
             """;
 
         var products = await connection

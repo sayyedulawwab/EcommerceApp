@@ -10,7 +10,7 @@ internal sealed class OrderItemConfiguration : IEntityTypeConfiguration<OrderIte
 {
     public void Configure(EntityTypeBuilder<OrderItem> builder)
     {
-        builder.ToTable("OrderItems");
+        builder.ToTable("order_items");
 
         builder.HasKey(orderItem => orderItem.Id);
 
