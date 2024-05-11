@@ -28,9 +28,9 @@ Welcome to the Ecommerce API repository! This API provides various functionaliti
 To get started with the Ecommerce API, follow these steps:
 
 1. Clone this repository to your local machine.
-2. Install .NET Core SDK version 8 or higher.
+2. Install Docker Desktop for windows.
 3. Navigate to the project directory in your terminal.
-4. Run the API using the `dotnet run` command.
+4. Run the command `docker-compose up`.
 
 ## API Endpoints
 
