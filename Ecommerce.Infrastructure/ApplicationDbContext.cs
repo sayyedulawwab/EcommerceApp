@@ -1,9 +1,7 @@
-﻿using Ecommerce.Application.Abstractions.Clock;
-using Ecommerce.Application.Exceptions;
+﻿using Ecommerce.Application.Exceptions;
 using Ecommerce.Domain.Abstractions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
 using System.Data;
 
 namespace Ecommerce.Infrastructure;
