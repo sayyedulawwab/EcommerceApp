@@ -20,7 +20,7 @@ Welcome to the Ecommerce API repository! This API provides various functionaliti
 
 ## Technologies Used
 
-- ASP.NET Core 8 Web API, PostgreSQL, Entity Framework Core 8, Dapper, FluentValidation, MediatR, Docker
+- ASP.NET Core 8 Web API, PostgreSQL, Entity Framework Core 8, Dapper, FluentValidation, MediatR, Redis, Docker
 - Architecture Patterns: Clean architecture, Domain-driven design (DDD), CQRS by implementing Mediator pattern using MediatR package
 
 ## Getting Started
