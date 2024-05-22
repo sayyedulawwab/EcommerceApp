@@ -34,7 +34,7 @@ namespace Ecommerce.Infrastructure.Data
             }
 
             // Seed product categories
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 10; i++)
             {
                 var name = new CategoryName(faker.Commerce.Department());
                 var code = new CategoryCode(faker.Random.AlphaNumeric(5));
@@ -49,7 +49,7 @@ namespace Ecommerce.Infrastructure.Data
             var productCategoryGuids = context.Set<ProductCategory>().Select(pc => pc.Id).ToList();
 
             // Seed products
-            for (int i = 0; i < 20; i++)
+            for (int i = 0; i < 100; i++)
             {
                 var name = new ProductName(faker.Commerce.ProductName());
                 var description = new ProductDescription(faker.Commerce.ProductAdjective());

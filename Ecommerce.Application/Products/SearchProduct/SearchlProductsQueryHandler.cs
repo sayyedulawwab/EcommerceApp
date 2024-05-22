@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using Ecommerce.Application.Abstractions.Caching;
 using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
@@ -7,12 +8,24 @@ namespace Ecommerce.Application.Products.SearchProduct;
 internal sealed class SearchlProductsQueryHandler : IQueryHandler<SearchProductsQuery, PagedList<ProductResponse>>
 {
     private readonly ISqlConnectionFactory _sqlConnectionFactory;
-    public SearchlProductsQueryHandler(ISqlConnectionFactory sqlConnectionFactory)
+    private readonly ICacheService _cacheService;
+    public SearchlProductsQueryHandler(ISqlConnectionFactory sqlConnectionFactory, ICacheService cacheService)
     {
         _sqlConnectionFactory = sqlConnectionFactory;
+        _cacheService = cacheService;
     }
     public async Task<Result<PagedList<ProductResponse>>> Handle(SearchProductsQuery request, CancellationToken cancellationToken)
     {
+
+        IEnumerable<ProductResponse>? cachedProductResponses = await _cacheService.GetAsync<IEnumerable<ProductResponse>>($"products-{request.page}", cancellationToken);
+
+
+        if (cachedProductResponses is not null)
+        {
+            var totalRecordsFromCache = cachedProductResponses.FirstOrDefault()?.TotalRecords ?? 0;
+            var pagedProductsFromCache = await PagedList<ProductResponse>.CreateAsync(cachedProductResponses, request.page, request.pageSize, totalRecordsFromCache);
+            return pagedProductsFromCache;
+        }
 
         using var connection = _sqlConnectionFactory.CreateConnection();
 
@@ -44,7 +57,10 @@ internal sealed class SearchlProductsQueryHandler : IQueryHandler<SearchProducts
 
         var totalRecords = products.FirstOrDefault()?.TotalRecords ?? 0;
 
+        await _cacheService.SetAsync($"products-{request.page}", products, cancellationToken);
+
         var pagedProducts = await PagedList<ProductResponse>.CreateAsync(products, request.page, request.pageSize, totalRecords);
+
         return pagedProducts;
     }
 }

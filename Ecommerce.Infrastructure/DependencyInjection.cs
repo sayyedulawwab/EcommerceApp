@@ -1,5 +1,6 @@
 ﻿using Dapper;
 using Ecommerce.Application.Abstractions.Auth;
+using Ecommerce.Application.Abstractions.Caching;
 using Ecommerce.Application.Abstractions.Clock;
 using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Email;
@@ -10,6 +11,7 @@ using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Reviews;
 using Ecommerce.Domain.Users;
 using Ecommerce.Infrastructure.Auth;
+using Ecommerce.Infrastructure.Caching;
 using Ecommerce.Infrastructure.Clock;
 using Ecommerce.Infrastructure.Data;
 using Ecommerce.Infrastructure.Email;
@@ -27,7 +29,14 @@ public static class DependencyInjection
         services.AddTransient<IDateTimeProvider, DateTimeProvider>();
         services.AddTransient<IEmailService, EmailService>();
 
-        
+        services.AddStackExchangeRedisCache(redisOptions => {
+
+            string connection = configuration.GetConnectionString("Redis");
+
+            redisOptions.Configuration = connection;
+        });
+
+        services.AddSingleton<ICacheService, CacheService>();
 
         AddPersistence(services, configuration);
         AddAuthentication(services, configuration);
