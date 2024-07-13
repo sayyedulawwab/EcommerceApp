@@ -1,4 +1,5 @@
-﻿using Ecommerce.Application.Abstractions.Clock;
+﻿using Ecommerce.Application.Abstractions.Caching;
+using Ecommerce.Application.Abstractions.Clock;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.ProductCategories;
@@ -11,12 +12,14 @@ internal sealed class EditProductCommandHandler : ICommandHandler<EditProductCom
     private readonly IProductRepository _productRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly ICacheService _cacheService;
 
-    public EditProductCommandHandler(IProductRepository productRepository, IUnitOfWork unitOfWork, IDateTimeProvider dateTimeProvider)
+    public EditProductCommandHandler(IProductRepository productRepository, IUnitOfWork unitOfWork, IDateTimeProvider dateTimeProvider, ICacheService cacheService)
     {
         _productRepository = productRepository;
         _unitOfWork = unitOfWork;
         _dateTimeProvider = dateTimeProvider;
+        _cacheService = cacheService;
     }
 
     public async Task<Result<Guid>> Handle(EditProductCommand request, CancellationToken cancellationToken)
@@ -31,8 +34,9 @@ internal sealed class EditProductCommandHandler : ICommandHandler<EditProductCom
         product = Product.Update(product, new ProductName(request.name), new ProductDescription(request.description), new Money(request.priceAmount, Currency.Create(request.priceCurrency)), request.quantity, new ProductCategoryId(request.productCategoryId), _dateTimeProvider.UtcNow);
 
         _productRepository.Update(product);
-
         await _unitOfWork.SaveChangesAsync();
+
+        await _cacheService.RemoveByPrefixAsync("products", cancellationToken);
 
         return product.Id.Value;
 

@@ -1,5 +1,6 @@
 ﻿using Ecommerce.API.Middleware;
 using Ecommerce.Infrastructure;
+using Ecommerce.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.API.Extensions;
@@ -13,6 +14,7 @@ public static class ApplicationBuilderExtensions
         using var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         dbContext.Database.Migrate();
+        DataSeeder.SeedData(dbContext);
     }
 
     public static void UseCustomExceptionHandler(this IApplicationBuilder app)

@@ -20,23 +20,17 @@ Welcome to the Ecommerce API repository! This API provides various functionaliti
 
 ## Technologies Used
 
-- **Framework:** ASP.NET Core Web API
-- **.NET Core Version:** 8
-- **Architecture Patterns:**
-  - Clean architecture
-  - Domain-driven design (DDD)
-  - CQRS (Command Query Responsibility Segregation) by implementing Mediator pattern using MediatR package
-- **Validation:** 
-    - Validation using FluentValidation
+- ASP.NET Core 8 Web API, PostgreSQL, Entity Framework Core 8, Dapper, FluentValidation, MediatR, Redis, Docker
+- Architecture Patterns: Clean architecture, Domain-driven design (DDD), CQRS by implementing Mediator pattern using MediatR package
 
 ## Getting Started
 
 To get started with the Ecommerce API, follow these steps:
 
 1. Clone this repository to your local machine.
-2. Install .NET Core SDK version 8 or higher.
+2. Install Docker Desktop for windows.
 3. Navigate to the project directory in your terminal.
-4. Run the API using the `dotnet run` command.
+4. Run the command `docker-compose up`.
 
 ## API Endpoints
 

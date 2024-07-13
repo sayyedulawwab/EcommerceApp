@@ -13,4 +13,5 @@ public sealed class ProductResponse
     public DateTime? UpdatedOn { get; init; }
     public Guid ProductCategoryId { get; init; }
     public List<ReviewResponse> Reviews { get; init; } = new List<ReviewResponse>();
+    public long TotalRecords { get; init; }
 }

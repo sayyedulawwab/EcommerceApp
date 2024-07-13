@@ -21,9 +21,9 @@ public class ProductsController : ControllerBase
     }
     [AllowAnonymous]
     [HttpGet]
-    public async Task<IActionResult> Search(string? name, CancellationToken cancellationToken)
+    public async Task<IActionResult> Search(string? keyword, int page, int pageSize, CancellationToken cancellationToken)
     {
-        var query = new SearchProductsQuery(name);
+        var query = new SearchProductsQuery(keyword, page, pageSize);
 
         var result = await _sender.Send(query, cancellationToken);
 

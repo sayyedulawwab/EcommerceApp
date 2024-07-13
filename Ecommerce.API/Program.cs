@@ -2,8 +2,14 @@ using Ecommerce.API.Extensions;
 using Ecommerce.Application;
 using Ecommerce.Infrastructure;
 using Microsoft.OpenApi.Models;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((context, loggerConfig) =>
+{
+    loggerConfig.ReadFrom.Configuration(context.Configuration);
+});
 
 builder.Services.AddControllers();
 

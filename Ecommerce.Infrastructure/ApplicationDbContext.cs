@@ -1,27 +1,19 @@
-﻿using Ecommerce.Application.Abstractions.Clock;
-using Ecommerce.Application.Exceptions;
+﻿using Ecommerce.Application.Exceptions;
 using Ecommerce.Domain.Abstractions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Newtonsoft.Json;
 using System.Data;
 
 namespace Ecommerce.Infrastructure;
 public sealed class ApplicationDbContext : DbContext, IUnitOfWork
 {
     private readonly IPublisher _publisher;
-    private static readonly JsonSerializerSettings JsonSerializerSettings = new()
-    {
-        TypeNameHandling = TypeNameHandling.All
-    };
-    private readonly IDateTimeProvider _dateTimeProvider;
 
     public ApplicationDbContext(
-        DbContextOptions options,
-        IDateTimeProvider dateTimeProvider)
+        DbContextOptions options, IPublisher publisher)
         : base(options)
     {
-        _dateTimeProvider = dateTimeProvider;
+        _publisher = publisher;
     }
 
 

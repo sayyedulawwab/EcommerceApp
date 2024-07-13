@@ -1,21 +1,31 @@
 version: '3.4'
 
 services:
-  ecommerce.api:
-    image: ${DOCKER_REGISTRY-}ecommerceapi
-    build:
-      context: .
-      dockerfile: Ecommerce.API/Dockerfile
-    depends_on:
-      - ecommerce.db
-  ecommerce.db:
-    image: postgres:latest
-    container_name: ecommerce.db
-    environment:
-      - POSTGRES_DB=ecommercedb
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-    volumes:
-      - ./.containers/database:/var/lib/postgresql/data
-    ports:
-      - 5432:5432
+    ecommerce.api:
+        image: ${DOCKER_REGISTRY-}ecommerceapi
+        container_name: ecommerce.api
+        build:
+            context: .
+            dockerfile: Ecommerce.API/Dockerfile
+        depends_on:
+            - ecommerce.db
+        ports:
+            - "5000:5000"
+            - "5002:5002"
+    ecommerce.db:
+        image: postgres:latest
+        container_name: ecommerce.db
+        environment:
+            - POSTGRES_DB=ecommercedb
+            - POSTGRES_USER=postgres
+            - POSTGRES_PASSWORD=postgres
+        volumes:
+            - ./.containers/database/:/var/lib/postgresql/data
+        ports:
+            - 5432:5432
+    ecommerce.cache:
+        image: redis:latest
+        container_name:  ecommerce.cache
+        restart: always
+        ports:
+            - 6379:6379
