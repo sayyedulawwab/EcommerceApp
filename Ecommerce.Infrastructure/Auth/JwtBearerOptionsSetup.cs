@@ -17,12 +17,12 @@ internal sealed class JwtBearerOptionsSetup : IConfigureNamedOptions<JwtBearerOp
     {
         options.TokenValidationParameters = new()
         {
-            ValidateIssuer = false,
-            ValidateAudience = false,
+            ValidateIssuer = true,
+            ValidateAudience = true,
             ValidateLifetime = false,
             ValidateIssuerSigningKey = true,
-            //ValidIssuer = _jwtOptions.Issuer,
-            //ValidAudience = _jwtOptions.Audience,
+            ValidIssuer = _jwtOptions.Issuer,
+            ValidAudience = _jwtOptions.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(_jwtOptions.SecretKey))
 
