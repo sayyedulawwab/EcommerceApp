@@ -30,17 +30,21 @@ internal sealed class PlaceOrderCommandHandler : ICommandHandler<PlaceOrderComma
         var products = await _productRepository.GetProductsByIdsAsync(productIds);
 
         // Create order items using the fetched products and quantities
-        var orderItems = request.orderItems.Select(item =>
+        var orderItems = new List<(Product product, int quantity)>(); // Assuming there's an OrderItem class to hold order details
+
+        foreach (var item in request.orderItems)
         {
             var product = products.FirstOrDefault(p => p.Id.Value == item.productId);
             if (product == null)
             {
-                // Handle the case where a product with the given ID was not found
-                // You may want to log an error, throw an exception, or handle it appropriately
+                // Return failure if any product is not found
+                return Result.Failure<Guid>(Error.NotFound);
             }
 
-            return (product, item.quantity);
-        }).ToList();
+            // Assuming OrderItem has a constructor or factory method that takes product and quantity
+            var orderItem = (product, item.quantity);
+            orderItems.Add(orderItem);
+        }
 
 
         var order = Order.PlaceOrder(new UserId(request.userId), orderItems, OrderStatus.Pending, _dateTimeProvider.UtcNow);
