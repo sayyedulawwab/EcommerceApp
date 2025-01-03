@@ -1,7 +1,7 @@
-﻿using Ecommerce.Application.Reviews.AddReview;
+﻿using System.Security.Claims;
+using Ecommerce.Application.Reviews.AddReview;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace Ecommerce.API.Controllers.Reviews;
 [Route("api/reviews")]
@@ -17,19 +17,18 @@ public class ReviewsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> GiveReview([FromBody] GiveReviewRequest request, CancellationToken cancellationToken)
     {
-        var userIdClaim = User?.FindFirst(ClaimTypes.NameIdentifier);
+        Claim? userIdClaim = User?.FindFirst(ClaimTypes.NameIdentifier);
 
-        if (userIdClaim is null)
+        if (userIdClaim?.Value is null)
         {
             return Unauthorized();
         }
 
-        var userId = Guid.Parse(userIdClaim?.Value);
+        var userId = Guid.Parse(userIdClaim.Value);
 
+        var command = new AddReviewCommand(request.ProductId, userId, request.Rating, request.Comment);
 
-        var command = new AddReviewCommand(request.productId, userId, request.rating, request.comment);
-
-        var result = await _sender.Send(command, cancellationToken);
+        Domain.Abstractions.Result<Guid> result = await _sender.Send(command, cancellationToken);
 
         if (result.IsFailure)
         {

@@ -1,3 +1,3 @@
 ﻿namespace Ecommerce.API.Controllers.ProductCategories;
 
-public record AddProductCategoryRequest(string name, string code);
+public record AddProductCategoryRequest(string Name, string Code);

@@ -2,4 +2,4 @@
 
 namespace Ecommerce.Application.Reviews.AddReview;
 
-public record AddReviewCommand(Guid productId, Guid userId, int rating, string comment) : ICommand<Guid>;
+public record AddReviewCommand(Guid ProductId, Guid UserId, int Rating, string Comment) : ICommand<Guid>;

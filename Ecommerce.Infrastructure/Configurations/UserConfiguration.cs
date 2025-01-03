@@ -1,5 +1,4 @@
-﻿using Ecommerce.Domain.Products;
-using Ecommerce.Domain.Users;
+﻿using Ecommerce.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

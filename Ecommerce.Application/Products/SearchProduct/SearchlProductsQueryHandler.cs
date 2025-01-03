@@ -1,12 +1,14 @@
-﻿using Dapper;
+﻿using System.ComponentModel;
+using System.Data;
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using Dapper;
 using Ecommerce.Application.Abstractions.Caching;
 using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
-using Ecommerce.Domain.ProductCategories;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
 
 namespace Ecommerce.Application.Products.SearchProduct;
 internal sealed class SearchlProductsQueryHandler : IQueryHandler<SearchProductsQuery, PagedList<ProductResponse>>
@@ -22,21 +24,18 @@ internal sealed class SearchlProductsQueryHandler : IQueryHandler<SearchProducts
     {
         //await _cacheService.RemoveByPrefixAsync("products", cancellationToken);
 
-        var cacheKey = $"products-{GenerateCacheKey(request)}";
+        string cacheKey = $"products-{GenerateCacheKey(request)}";
 
         IEnumerable<ProductResponse>? cachedProductResponses = await _cacheService.GetAsync<IEnumerable<ProductResponse>?>(cacheKey, cancellationToken);
 
-
         if (cachedProductResponses is not null && cachedProductResponses.Any())
         {
-            var totalRecordsFromCache = cachedProductResponses.FirstOrDefault()?.TotalRecords ?? 0;
-            var pagedProductsFromCache = await PagedList<ProductResponse>.CreateAsync(cachedProductResponses, request.page, request.pageSize, totalRecordsFromCache);
+            long totalRecordsFromCache = cachedProductResponses.FirstOrDefault()?.TotalRecords ?? 0;
+            var pagedProductsFromCache = PagedList<ProductResponse>.Create(cachedProductResponses, request.Page, request.PageSize, totalRecordsFromCache);
             return pagedProductsFromCache;
         }
 
-
-
-        using var connection = _sqlConnectionFactory.CreateConnection();
+        using IDbConnection connection = _sqlConnectionFactory.CreateConnection();
 
         // Start building the base query
         var sqlBuilder = new StringBuilder(@"
@@ -57,19 +56,19 @@ internal sealed class SearchlProductsQueryHandler : IQueryHandler<SearchProducts
         var conditions = new List<string>();
 
         // Dynamic filtering conditions
-        if (request.productCategoryId.HasValue)
+        if (request.ProductCategoryId.HasValue)
         {
             conditions.Add("p.product_category_id = @ProductCategoryId");
         }
-        if (request.minPrice.HasValue)
+        if (request.MinPrice.HasValue)
         {
             conditions.Add("p.price_amount >= @MinPrice");
         }
-        if (request.maxPrice.HasValue)
+        if (request.MaxPrice.HasValue)
         {
             conditions.Add("p.price_amount <= @MaxPrice");
         }
-        if (!string.IsNullOrEmpty(request.keyword))
+        if (!string.IsNullOrEmpty(request.Keyword))
         {
             conditions.Add("p.name LIKE '%' || @Keyword || '%'");
         }
@@ -81,36 +80,36 @@ internal sealed class SearchlProductsQueryHandler : IQueryHandler<SearchProducts
         }
 
         // Handle sorting
-        var allowedSortColumns = new[] { "Name", "PriceAmount", "CreatedOn" }; // Add all allowed columns here
-        var sortColumn = allowedSortColumns.Contains(request.sortColumn) ? request.sortColumn : "CreatedOn"; // Default to CreatedOn if invalid
-        var sortOrder = request.sortOrder?.ToLower() == "desc" ? "DESC" : "ASC"; // Default to ASC if invalid
+        string[] allowedSortColumns = ["Name", "PriceAmount", "CreatedOn"]; // Add all allowed columns here
+        string sortColumn = allowedSortColumns.Contains(request.SortColumn) ? request.SortColumn : "CreatedOn"; // Default to CreatedOn if invalid
+        string sortOrder = request.SortOrder?.ToLower(CultureInfo.CurrentCulture) == "desc" ? "DESC" : "ASC"; // Default to ASC if invalid
 
-        sqlBuilder.Append($" ORDER BY {sortColumn} {sortOrder}");
+        sqlBuilder.AppendFormat(CultureInfo.InvariantCulture, " ORDER BY {0} {1}", sortColumn, sortOrder);
 
         // Add pagination
         sqlBuilder.Append(" OFFSET (@PageSize * (@Page - 1)) ROWS FETCH NEXT @PageSize ROWS ONLY;");
 
-        var sql = sqlBuilder.ToString();
+        string sql = sqlBuilder.ToString();
 
-        int page = request.page > 0 ? request.page : 1;
-        int pageSize = request.pageSize > 0 ? request.pageSize : 10;
+        int page = request.Page > 0 ? request.Page : 1;
+        int pageSize = request.PageSize > 0 ? request.PageSize : 10;
 
         // Execute query with parameters
-        var products = await connection.QueryAsync<ProductResponse>(sql, new
+        IEnumerable<ProductResponse> products = await connection.QueryAsync<ProductResponse>(sql, new
         {
-            ProductCategoryId = request.productCategoryId,
-            MinPrice = request.minPrice,
-            MaxPrice = request.maxPrice,
-            Keyword = request.keyword,
+            request.ProductCategoryId,
+            request.MinPrice,
+            request.MaxPrice,
+            request.Keyword,
             Page = page,
             PageSize = pageSize
         });
 
-        var totalRecords = products.FirstOrDefault()?.TotalRecords ?? 0;
+        long totalRecords = products.FirstOrDefault()?.TotalRecords ?? 0;
 
         await _cacheService.SetAsync(cacheKey, products, cancellationToken);
 
-        var pagedProducts = await PagedList<ProductResponse>.CreateAsync(products, page, pageSize, totalRecords);
+        var pagedProducts = PagedList<ProductResponse>.Create(products, page, pageSize, totalRecords);
 
         return pagedProducts;
     }
@@ -121,24 +120,21 @@ internal sealed class SearchlProductsQueryHandler : IQueryHandler<SearchProducts
         // Create an anonymous object with all the necessary parameters
         var parameters = new
         {
-            request.page,
-            request.pageSize,
-            request.productCategoryId,
-            request.minPrice,
-            request.maxPrice,
-            request.keyword,
-            request.sortOrder,
-            request.sortColumn
+            request.Page,
+            request.PageSize,
+            request.ProductCategoryId,
+            request.MinPrice,
+            request.MaxPrice,
+            request.Keyword,
+            request.SortOrder,
+            request.SortColumn
         };
 
         // Serialize to JSON
-        var serializedParams = JsonSerializer.Serialize(parameters);
+        string serializedParams = JsonSerializer.Serialize(parameters);
 
         // Hash the serialized string (SHA256 example)
-        using (var sha256 = SHA256.Create())
-        {
-            byte[] hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(serializedParams));
-            return Convert.ToBase64String(hashBytes);
-        }
+        byte[] hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(serializedParams));
+        return Convert.ToBase64String(hashBytes);
     }
 }

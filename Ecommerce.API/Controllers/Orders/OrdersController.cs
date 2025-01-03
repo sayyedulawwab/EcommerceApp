@@ -1,9 +1,10 @@
-﻿using Ecommerce.Application.Orders.GetAllOrders;
+﻿using System.Security.Claims;
+using Ecommerce.Application.Orders.GetAllOrders;
 using Ecommerce.Application.Orders.PlaceOrder;
+using Ecommerce.Domain.Abstractions;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace Ecommerce.API.Controllers.Orders;
 [Route("api/orders")]
@@ -22,24 +23,28 @@ public class OrdersController : ControllerBase
     {
         var query = new GetAllOrdersQuery();
 
-        var result = await _sender.Send(query, cancellationToken);
+        Result<IReadOnlyList<OrderResponse>> result = await _sender.Send(query, cancellationToken);
 
         return Ok(result.Value);
     }
-    
+
     [HttpPost]
     public async Task<IActionResult> PlaceOrder([FromBody] PlaceOrderRequest request, CancellationToken cancellationToken)
     {
-        var userIdClaim = User?.FindFirst(ClaimTypes.NameIdentifier);
+        Claim? userIdClaim = User?.FindFirst(ClaimTypes.NameIdentifier);
+        if (userIdClaim == null || string.IsNullOrEmpty(userIdClaim.Value))
+        {
+            return Unauthorized("User ID claim is missing.");
+        }
         var userId = Guid.Parse(userIdClaim.Value);
 
-        var orderItems = request.orderItems.Select(item =>
-            new PlaceOrderProductCommand(item.productId, item.quantity))
+        var orderItems = request.OrderItems.Select(item =>
+            new PlaceOrderProductCommand(item.ProductId, item.Quantity))
             .ToList();
 
         var command = new PlaceOrderCommand(userId, orderItems);
 
-        var result = await _sender.Send(command, cancellationToken);
+        Result<Guid> result = await _sender.Send(command, cancellationToken);
 
         if (result.IsFailure)
         {

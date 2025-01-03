@@ -2,4 +2,4 @@
 
 namespace Ecommerce.Application.Users.Register;
 
-public record RegisterUserCommand(string firstName, string lastName, string email, string password) : ICommand<Guid>;
+public record RegisterUserCommand(string FirstName, string LastName, string Email, string Password) : ICommand<Guid>;

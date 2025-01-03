@@ -12,7 +12,7 @@ internal sealed class ProductRepository : Repository<Product, ProductId>, IProdu
     public async Task<List<Product>> GetProductsByIdsAsync(List<Guid> productIds)
     {
         // Materialize the initial query by calling ToListAsync()
-        var products = await DbContext.Set<Product>()
+        List<Product> products = await DbContext.Set<Product>()
             .ToListAsync();
 
         // Filter the products based on productIds in memory

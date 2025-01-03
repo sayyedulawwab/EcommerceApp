@@ -38,7 +38,7 @@ public sealed class Review : Entity<ReviewId>
         Comment comment,
         DateTime createdOnUtc)
     {
-       
+
         var review = new Review(
             ReviewId.New(),
             product.Id,

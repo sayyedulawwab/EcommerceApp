@@ -1,6 +1,7 @@
 ﻿using Ecommerce.Application.Abstractions.Caching;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
+using Ecommerce.Domain.ProductCategories;
 using Ecommerce.Domain.Products;
 
 namespace Ecommerce.Application.Products.DeleteProduct;
@@ -19,10 +20,16 @@ internal sealed class DeleteProductCommandHandler : ICommandHandler<DeleteProduc
 
     public async Task<Result<Guid>> Handle(DeleteProductCommand request, CancellationToken cancellationToken)
     {
-        var product = await _productRepository.GetByIdAsync(new ProductId(request.id));
+        Product? product = await _productRepository.GetByIdAsync(new ProductId(request.Id), cancellationToken);
+
+        if (product is null)
+        {
+            return Result.Failure<Guid>(ProductErrors.NotFound);
+        }
+
 
         _productRepository.Remove(product);
-        await _unitOfWork.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         await _cacheService.RemoveByPrefixAsync("products", cancellationToken);
 

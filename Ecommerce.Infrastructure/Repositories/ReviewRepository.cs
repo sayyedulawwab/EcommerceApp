@@ -9,7 +9,7 @@ internal sealed class ReviewRepository : Repository<Review, ReviewId>, IReviewRe
     {
     }
 
-    public async Task<IReadOnlyList<Review?>> GetByProductAsync(ProductId productId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Review>> GetByProductAsync(ProductId productId, CancellationToken cancellationToken = default)
     {
         return await DbContext
             .Set<Review>().Where(review => review.ProductId == productId).ToListAsync(cancellationToken);

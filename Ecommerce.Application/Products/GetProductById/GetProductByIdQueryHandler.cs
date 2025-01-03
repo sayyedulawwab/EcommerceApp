@@ -1,8 +1,6 @@
 ﻿using Ecommerce.Application.Abstractions.Messaging;
-using Ecommerce.Application.Orders.GetAllOrders;
 using Ecommerce.Application.Reviews;
 using Ecommerce.Domain.Abstractions;
-using Ecommerce.Domain.Orders;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Reviews;
 
@@ -19,10 +17,14 @@ internal sealed class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQ
     }
     public async Task<Result<ProductResponse>> Handle(GetProductByIdQuery request, CancellationToken cancellationToken)
     {
-        var product = await _productRepository.GetByIdAsync(new ProductId(request.id), cancellationToken);
+        Product? product = await _productRepository.GetByIdAsync(new ProductId(request.Id), cancellationToken);
 
+        if (product is null)
+        {
+            return Result.Failure<ProductResponse>(ProductErrors.NotFound);
+        }
 
-        var reviews = await _reviewRepository.GetByProductAsync(product.Id, cancellationToken);
+        IReadOnlyList<Review> reviews = await _reviewRepository.GetByProductAsync(product.Id, cancellationToken);
 
         var productResponse = new ProductResponse()
         {

@@ -3,7 +3,7 @@
 namespace Ecommerce.Domain.ProductCategories;
 public static class ProductCategoryErrors
 {
-    public static Error NotFound = new(
+    public static readonly Error NotFound = new(
        "ProductCategory.NotFound",
        "Product category not found");
 }

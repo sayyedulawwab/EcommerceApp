@@ -1,6 +1,6 @@
-﻿using Ecommerce.Application.Abstractions.Data;
+﻿using System.Data;
+using Ecommerce.Application.Abstractions.Data;
 using Npgsql;
-using System.Data;
 
 namespace Ecommerce.Infrastructure.Data;
 

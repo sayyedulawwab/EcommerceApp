@@ -1,10 +1,10 @@
-﻿using Ecommerce.Application.Abstractions.Auth;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using Ecommerce.Application.Abstractions.Auth;
 using Ecommerce.Domain.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace Ecommerce.Infrastructure.Auth;
 internal sealed class JwtService : IJwtService
@@ -18,15 +18,15 @@ internal sealed class JwtService : IJwtService
     }
     public Result<string> GetAccessToken(string email, Guid userId, CancellationToken cancellationToken = default)
     {
-       
+
         var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.SecretKey));
 
         var signingCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
 
-        var claims = new[] {
+        Claim[] claims = [
                 new Claim(ClaimTypes.Email, email),
                 new Claim(ClaimTypes.NameIdentifier, userId.ToString())
-            };
+            ];
 
         var jwt = new JwtSecurityToken(
                     _jwtOptions.Issuer,
@@ -36,11 +36,11 @@ internal sealed class JwtService : IJwtService
                     DateTime.UtcNow.AddHours(1),
                     signingCredentials);
 
-        var token = new JwtSecurityTokenHandler().WriteToken(jwt);
+        string token = new JwtSecurityTokenHandler().WriteToken(jwt);
 
 
         return Result.Success(token);
 
     }
-    
+
 }

@@ -17,7 +17,7 @@ namespace Ecommerce.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.4")
+                .HasAnnotation("ProductVersion", "9.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -28,21 +28,9 @@ namespace Ecommerce.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<DateTime?>("CancelledOnUtc")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("cancelled_on_utc");
-
                     b.Property<DateTime>("CreatedOnUtc")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_on_utc");
-
-                    b.Property<DateTime?>("DeliveredOnUtc")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("delivered_on_utc");
-
-                    b.Property<DateTime?>("ShippedOnUtc")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("shipped_on_utc");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer")
@@ -82,10 +70,6 @@ namespace Ecommerce.Infrastructure.Migrations
                     b.Property<int>("Quantity")
                         .HasColumnType("integer")
                         .HasColumnName("quantity");
-
-                    b.Property<DateTime?>("UpdatedOn")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_on");
 
                     b.HasKey("Id")
                         .HasName("pk_order_items");

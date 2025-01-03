@@ -1,6 +1,6 @@
-﻿using Ecommerce.Application.Abstractions.Auth;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
+using Ecommerce.Application.Abstractions.Auth;
 
 namespace Ecommerce.Infrastructure.Auth;
 internal sealed class AuthService : IAuthService
@@ -15,7 +15,6 @@ internal sealed class AuthService : IAuthService
 
     public string HashPassword(string password, string salt)
     {
-        SHA256 sha256Hash = SHA256.Create();
-        return Convert.ToBase64String(sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(password + salt)));
+        return Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(password + salt)));
     }
 }

@@ -1,7 +1,6 @@
 ﻿using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.ProductCategories;
-using System.Net;
 
 namespace Ecommerce.Application.ProductCategories.GetProductCategoryById;
 internal sealed class GetProductCategoryByIdQueryHandler : IQueryHandler<GetProductCategoryByIdQuery, ProductCategoryResponse>
@@ -14,7 +13,12 @@ internal sealed class GetProductCategoryByIdQueryHandler : IQueryHandler<GetProd
     }
     public async Task<Result<ProductCategoryResponse>> Handle(GetProductCategoryByIdQuery request, CancellationToken cancellationToken)
     {
-        var productCategory = await _productCategoryRepository.GetByIdAsync(new ProductCategoryId(request.id), cancellationToken);
+        ProductCategory? productCategory = await _productCategoryRepository.GetByIdAsync(new ProductCategoryId(request.Id), cancellationToken);
+
+        if (productCategory is null)
+        {
+            return Result.Failure<ProductCategoryResponse>(ProductCategoryErrors.NotFound);
+        }
 
         var productCategoryResponse = new ProductCategoryResponse()
         {

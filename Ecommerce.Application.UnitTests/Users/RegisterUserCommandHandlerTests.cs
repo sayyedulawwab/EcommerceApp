@@ -60,22 +60,12 @@ public class RegisterUserCommandHandlerTests
     public async Task Handle_Should_ReturnSuccessResult_WhenEmailIsUnique()
     {
         // Arrange
-        var existingUser = User.Create(
-                new FirstName("Existing"),
-                new LastName("User"),
-                new Email("test@gmail.com"),
-                "existingPasswordHash",
-                "existingPasswordSalt",
-                isAdmin: false);
-
-
         var command = new RegisterUserCommand("Uniquer", "User", "unique@gmail.com", "testunique12345");
 
         _userRepositoryMock.Setup(
             x => x.GetByEmail(
                 It.IsAny<string>()))
             .ReturnsAsync((User?)null);
-
 
         var handler = new RegisterUserCommandHandler(
             _authServiceMock.Object,
@@ -97,22 +87,12 @@ public class RegisterUserCommandHandlerTests
     public async Task Handle_Should_CallAddOnRepository_WhenEmailIsUnique()
     {
         // Arrange
-        var existingUser = User.Create(
-                new FirstName("Existing"),
-                new LastName("User"),
-                new Email("test@gmail.com"),
-                "existingPasswordHash",
-                "existingPasswordSalt",
-                isAdmin: false);
-
-
         var command = new RegisterUserCommand("Uniquer", "User", "unique@gmail.com", "testunique12345");
 
         _userRepositoryMock.Setup(
             x => x.GetByEmail(
                 It.IsAny<string>()))
             .ReturnsAsync((User?)null);
-
 
         var handler = new RegisterUserCommandHandler(
             _authServiceMock.Object,
@@ -163,6 +143,8 @@ public class RegisterUserCommandHandlerTests
         Result<Guid> result = await handler.Handle(command, default);
 
         // Assert
+        result.IsSuccess.Should().BeTrue();
+
         _unitOfWorkMock.Verify(
             x => x.SaveChangesAsync(It.IsAny<CancellationToken>()),
             Times.Never

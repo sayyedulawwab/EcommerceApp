@@ -5,13 +5,13 @@ public class EditProductCommandValidator : AbstractValidator<EditProductCommand>
 {
     public EditProductCommandValidator()
     {
-        RuleFor(c => c.id).NotEmpty();
-        RuleFor(c => c.name).NotEmpty();
-        RuleFor(c => c.description).NotEmpty();
-        RuleFor(c => c.priceCurrency).NotEmpty();
-        RuleFor(c => c.priceAmount).NotEmpty();
-        RuleFor(c => c.quantity).NotEmpty();
-        RuleFor(c => c.productCategoryId).NotEmpty();
+        RuleFor(c => c.Id).NotEmpty();
+        RuleFor(c => c.Name).NotEmpty();
+        RuleFor(c => c.Description).NotEmpty();
+        RuleFor(c => c.PriceCurrency).NotEmpty();
+        RuleFor(c => c.PriceAmount).NotEmpty();
+        RuleFor(c => c.Quantity).NotEmpty();
+        RuleFor(c => c.ProductCategoryId).NotEmpty();
 
     }
 }

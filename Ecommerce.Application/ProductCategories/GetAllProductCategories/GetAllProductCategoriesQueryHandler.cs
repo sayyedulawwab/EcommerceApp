@@ -13,9 +13,9 @@ internal sealed class GetAllProductCategoriesQueryHandler : IQueryHandler<GetAll
     public async Task<Result<IReadOnlyList<ProductCategoryResponse>>> Handle(GetAllProductCategoriesQuery request, CancellationToken cancellationToken)
     {
 
-        var productCategories = await _productCategoryRepository.GetAllAsync();
+        IReadOnlyList<ProductCategory> productCategories = await _productCategoryRepository.GetAllAsync(cancellationToken);
 
-        var productCategoriesResponse = productCategories.Select(cat => new ProductCategoryResponse()
+        IEnumerable<ProductCategoryResponse> productCategoriesResponse = productCategories.Select(cat => new ProductCategoryResponse()
         {
             Id = cat.Id.Value,
             Name = cat.Name.Value,

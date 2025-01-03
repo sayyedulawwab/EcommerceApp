@@ -1,6 +1,4 @@
-﻿using Ecommerce.Domain.ProductCategories;
-
-namespace Ecommerce.Application.ProductCategories;
+﻿namespace Ecommerce.Application.ProductCategories;
 public sealed class ProductCategoryResponse
 {
     public Guid Id { get; init; }

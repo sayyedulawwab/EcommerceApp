@@ -5,9 +5,9 @@ public class EditProductCategoryCommandValidator : AbstractValidator<EditProduct
 {
     public EditProductCategoryCommandValidator()
     {
-        RuleFor(c => c.id).NotEmpty();
-        RuleFor(c => c.name).NotEmpty();
-        RuleFor(c => c.code).NotEmpty();
+        RuleFor(c => c.Id).NotEmpty();
+        RuleFor(c => c.Name).NotEmpty();
+        RuleFor(c => c.Code).NotEmpty();
 
     }
 }

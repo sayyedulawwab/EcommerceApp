@@ -6,7 +6,7 @@ using Ecommerce.Domain.Users;
 namespace Ecommerce.Application.Users.Login;
 internal sealed class LoginUserQueryHandler : IQueryHandler<LoginUserQuery, AccessTokenResponse>
 {
-    
+
     private readonly IUserRepository _userRepository;
     private readonly IAuthService _authService;
     private readonly IJwtService _jwtService;
@@ -21,15 +21,15 @@ internal sealed class LoginUserQueryHandler : IQueryHandler<LoginUserQuery, Acce
         LoginUserQuery request,
         CancellationToken cancellationToken)
     {
-       
-        var user = await _userRepository.GetByEmail(request.email);
+
+        User? user = await _userRepository.GetByEmail(request.Email);
 
         if (user is null)
         {
             return Result.Failure<AccessTokenResponse>(UserErrors.NotFound);
         }
 
-        var hashedPassword = _authService.HashPassword(request.password, user.PasswordSalt);
+        string hashedPassword = _authService.HashPassword(request.Password, user.PasswordSalt);
 
         if (hashedPassword != user.PasswordHash)
         {
@@ -37,8 +37,8 @@ internal sealed class LoginUserQueryHandler : IQueryHandler<LoginUserQuery, Acce
         }
 
 
-        var result = _jwtService.GetAccessToken(
-            request.email,
+        Result<string> result = _jwtService.GetAccessToken(
+            request.Email,
             user.Id.Value,
             cancellationToken);
 
@@ -49,5 +49,5 @@ internal sealed class LoginUserQueryHandler : IQueryHandler<LoginUserQuery, Acce
 
         return new AccessTokenResponse(result.Value);
     }
-    
+
 }

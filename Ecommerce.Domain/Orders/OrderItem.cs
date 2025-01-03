@@ -18,14 +18,14 @@ public sealed class OrderItem : Entity<OrderItemId>
     public Product Product { get; private set; }
     public int Quantity { get; private set; }
     public DateTime CreatedOn { get; private set; }
-    public DateTime? UpdatedOn { get; private set; }
 
 
     public static OrderItem Create(OrderId orderId, Product product, int quantity, DateTime createdOn)
     {
-        var orderItem = new OrderItem(OrderItemId.New(), orderId, product.Id, quantity, createdOn);
-       
-        orderItem.Product = product;
+        var orderItem = new OrderItem(OrderItemId.New(), orderId, product.Id, quantity, createdOn)
+        {
+            Product = product
+        };
 
         return orderItem;
     }

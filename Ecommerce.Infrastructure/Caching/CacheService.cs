@@ -1,7 +1,7 @@
-﻿using Ecommerce.Application.Abstractions.Caching;
+﻿using System.Collections.Concurrent;
+using Ecommerce.Application.Abstractions.Caching;
 using Microsoft.Extensions.Caching.Distributed;
 using Newtonsoft.Json;
-using System.Collections.Concurrent;
 
 namespace Ecommerce.Infrastructure.Caching;
 
@@ -15,25 +15,25 @@ public class CacheService : ICacheService
         _distributedCache = distributedCache;
     }
 
-    public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default) where T : class
+    public async Task<T?> GetAsync<T>(string key, CancellationToken cancellationToken = default)
     {
         string? cachedValue = await _distributedCache.GetStringAsync(key, cancellationToken);
 
         if (cachedValue is null)
         {
-            return null;
+            return default;
         }
 
         T? value = JsonConvert.DeserializeObject<T>(cachedValue, new JsonSerializerSettings
         {
             ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
             ContractResolver = new PrivateResolver()
-        }); 
+        });
 
         return value;
     }
 
-    public async Task SetAsync<T>(string key, T value, CancellationToken cancellationToken = default) where T : class
+    public async Task SetAsync<T>(string key, T value, CancellationToken cancellationToken = default)
     {
         string cachedValue = JsonConvert.SerializeObject(value);
 
@@ -50,21 +50,13 @@ public class CacheService : ICacheService
         CachedKeys.TryRemove(key, out bool _);
     }
 
-    public async Task RemoveByPrefixAsync(string prefixKey, CancellationToken cancellationToken = default)
+    public Task RemoveByPrefixAsync(string prefixKey, CancellationToken cancellationToken = default)
     {
-        //foreach (var key in CachedKeys.Keys)
-        //{
-        //    if (key.StartsWith(prefixKey))
-        //    {
-        //        await _distributedCache.RemoveAsync(key, cancellationToken);
-        //    }
-        //}
-
         IEnumerable<Task> tasks = CachedKeys
             .Keys
-            .Where(k => k.StartsWith(prefixKey))
+            .Where(k => k.StartsWith(prefixKey, StringComparison.Ordinal))
             .Select(k => RemoveAsync(k, cancellationToken));
 
-        Task.WhenAll(tasks);
+        return Task.WhenAll(tasks);
     }
 }

@@ -1,8 +1,10 @@
-﻿using Ecommerce.Application.Products.AddProduct;
+﻿using Ecommerce.Application.Products;
+using Ecommerce.Application.Products.AddProduct;
 using Ecommerce.Application.Products.DeleteProduct;
 using Ecommerce.Application.Products.EditProduct;
 using Ecommerce.Application.Products.GetProductById;
 using Ecommerce.Application.Products.SearchProduct;
+using Ecommerce.Domain.Abstractions;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -23,9 +25,9 @@ public class ProductsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> Search([FromQuery] SearchProductRequest request, CancellationToken cancellationToken)
     {
-        var query = new SearchProductsQuery(request.productCategoryId, request.minPrice, request.maxPrice, request.keyword, request.page, request.pageSize, request.sortColumn, request.sortOrder);
+        var query = new SearchProductsQuery(request.ProductCategoryId, request.MinPrice, request.MaxPrice, request.Keyword, request.Page, request.PageSize, request.SortColumn, request.SortOrder);
 
-        var result = await _sender.Send(query, cancellationToken);
+        Result<PagedList<ProductResponse>> result = await _sender.Send(query, cancellationToken);
 
         return result.IsSuccess ? Ok(result.Value) : NotFound();
     }
@@ -36,7 +38,7 @@ public class ProductsController : ControllerBase
     {
         var query = new GetProductByIdQuery(id);
 
-        var result = await _sender.Send(query, cancellationToken);
+        Result<ProductResponse> result = await _sender.Send(query, cancellationToken);
 
         return Ok(result.Value);
     }
@@ -44,9 +46,9 @@ public class ProductsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> AddProduct(AddProductRequest request, CancellationToken cancellationToken)
     {
-        var command = new AddProductCommand(request.name, request.description, request.priceCurrency, request.priceAmount, request.quantity, request.productCategoryId);
+        var command = new AddProductCommand(request.Name, request.Description, request.PriceCurrency, request.PriceAmount, request.Quantity, request.ProductCategoryId);
 
-        var result = await _sender.Send(command, cancellationToken);
+        Result<Guid> result = await _sender.Send(command, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -59,9 +61,9 @@ public class ProductsController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> EditProduct(Guid id, EditProductRequest request, CancellationToken cancellationToken)
     {
-        var command = new EditProductCommand(id, request.name, request.description, request.priceCurrency, request.priceAmount, request.quantity, request.productCategoryId);
+        var command = new EditProductCommand(id, request.Name, request.Description, request.PriceCurrency, request.PriceAmount, request.Quantity, request.ProductCategoryId);
 
-        var result = await _sender.Send(command, cancellationToken);
+        Result<Guid> result = await _sender.Send(command, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -77,7 +79,7 @@ public class ProductsController : ControllerBase
     {
         var command = new DeleteProductCommand(id);
 
-        var result = await _sender.Send(command, cancellationToken);
+        Result<Guid> result = await _sender.Send(command, cancellationToken);
 
         if (result.IsFailure)
         {

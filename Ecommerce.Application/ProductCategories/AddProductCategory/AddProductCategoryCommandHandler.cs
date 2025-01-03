@@ -19,11 +19,11 @@ internal sealed class AddProductCommandHandler : ICommandHandler<AddProductCateg
 
     public async Task<Result<Guid>> Handle(AddProductCategoryCommand request, CancellationToken cancellationToken)
     {
-        var productCategory = ProductCategory.Create(new CategoryName(request.name), new CategoryCode(request.code), _dateTimeProvider.UtcNow);
+        var productCategory = ProductCategory.Create(new CategoryName(request.Name), new CategoryCode(request.Code), _dateTimeProvider.UtcNow);
 
         _productCategoryRepository.Add(productCategory);
 
-        await _unitOfWork.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return productCategory.Id.Value;
 

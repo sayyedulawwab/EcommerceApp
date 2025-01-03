@@ -1,8 +1,10 @@
-﻿using Ecommerce.Application.ProductCategories.AddProductCategory;
+﻿using Ecommerce.Application.ProductCategories;
+using Ecommerce.Application.ProductCategories.AddProductCategory;
 using Ecommerce.Application.ProductCategories.DeleteProductCategory;
 using Ecommerce.Application.ProductCategories.EditProductCategory;
 using Ecommerce.Application.ProductCategories.GetAllProductCategories;
 using Ecommerce.Application.ProductCategories.GetProductCategoryById;
+using Ecommerce.Domain.Abstractions;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -25,7 +27,7 @@ public class ProductCategoriesController : ControllerBase
     {
         var query = new GetAllProductCategoriesQuery();
 
-        var result = await _sender.Send(query, cancellationToken);
+        Result<IReadOnlyList<ProductCategoryResponse>> result = await _sender.Send(query, cancellationToken);
 
         return Ok(result.Value);
     }
@@ -35,7 +37,7 @@ public class ProductCategoriesController : ControllerBase
     {
         var query = new GetProductCategoryByIdQuery(id);
 
-        var result = await _sender.Send(query, cancellationToken);
+        Result<ProductCategoryResponse> result = await _sender.Send(query, cancellationToken);
 
         return Ok(result.Value);
     }
@@ -43,9 +45,9 @@ public class ProductCategoriesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> AddProductCategory(AddProductCategoryRequest request, CancellationToken cancellationToken)
     {
-        var command = new AddProductCategoryCommand(request.name, request.code);
+        var command = new AddProductCategoryCommand(request.Name, request.Code);
 
-        var result = await _sender.Send(command, cancellationToken);
+        Result<Guid> result = await _sender.Send(command, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -58,9 +60,9 @@ public class ProductCategoriesController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> EditProductCategory(Guid id, EditProductCategoryRequest request, CancellationToken cancellationToken)
     {
-        var command = new EditProductCategoryCommand(id, request.name, request.code);
+        var command = new EditProductCategoryCommand(id, request.Name, request.Code);
 
-        var result = await _sender.Send(command, cancellationToken);
+        Result<Guid> result = await _sender.Send(command, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -75,7 +77,7 @@ public class ProductCategoriesController : ControllerBase
     {
         var command = new DeleteProductCategoryCommand(id);
 
-        var result = await _sender.Send(command, cancellationToken);
+        Result<Guid> result = await _sender.Send(command, cancellationToken);
 
         if (result.IsFailure)
         {

@@ -1,4 +1,4 @@
 ﻿namespace Ecommerce.API.Controllers.Orders;
 
-public record PlaceOrderProductRequest(Guid productId, int quantity);
-public record PlaceOrderRequest(List<PlaceOrderProductRequest> orderItems);
+public record PlaceOrderProductRequest(Guid ProductId, int Quantity);
+public record PlaceOrderRequest(List<PlaceOrderProductRequest> OrderItems);

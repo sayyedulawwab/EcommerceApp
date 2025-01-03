@@ -1,5 +1,6 @@
 ﻿using Ecommerce.Application.Users.Login;
 using Ecommerce.Application.Users.Register;
+using Ecommerce.Domain.Abstractions;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -24,12 +25,12 @@ public class UsersController : ControllerBase
         CancellationToken cancellationToken)
     {
         var command = new RegisterUserCommand(
-            request.firstName,
-            request.lastName,
-            request.email,
-            request.password);
+            request.FirstName,
+            request.LastName,
+            request.Email,
+            request.Password);
 
-        var result = await _sender.Send(command, cancellationToken);
+        Result<Guid> result = await _sender.Send(command, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -45,9 +46,9 @@ public class UsersController : ControllerBase
         LoginUserRequest request,
         CancellationToken cancellationToken)
     {
-        var query = new LoginUserQuery(request.email, request.password);
+        var query = new LoginUserQuery(request.Email, request.Password);
 
-        var result = await _sender.Send(query, cancellationToken);
+        Result<AccessTokenResponse> result = await _sender.Send(query, cancellationToken);
 
         if (result.IsFailure)
         {

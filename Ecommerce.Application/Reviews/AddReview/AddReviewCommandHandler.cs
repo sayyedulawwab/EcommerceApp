@@ -23,18 +23,23 @@ internal sealed class AddReviewCommandHandler : ICommandHandler<AddReviewCommand
     public async Task<Result<Guid>> Handle(AddReviewCommand request, CancellationToken cancellationToken)
     {
 
-        var product = await _productRepository.GetByIdAsync(new ProductId(request.productId));
+        Product? product = await _productRepository.GetByIdAsync(new ProductId(request.ProductId), cancellationToken);
 
-        var rating = Rating.Create(request.rating);
+        if (product is null)
+        {
+            return Result.Failure<Guid>(ProductErrors.NotFound);
+        }
+
+        Result<Rating> rating = Rating.Create(request.Rating);
         var review = Review.Create(product,
-                                   new UserId(request.userId),
+                                   new UserId(request.UserId),
                                    rating.Value,
-                                   new Comment(request.comment),
+                                   new Comment(request.Comment),
                                    _dateTimeProvider.UtcNow);
 
         _reviewRepository.Add(review);
 
-        await _unitOfWork.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return review.Id.Value;
 

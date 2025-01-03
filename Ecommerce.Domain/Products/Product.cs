@@ -1,8 +1,6 @@
 ﻿using Ecommerce.Domain.Abstractions;
-using Ecommerce.Domain.Orders;
 using Ecommerce.Domain.ProductCategories;
 using Ecommerce.Domain.Products.Events;
-using Ecommerce.Domain.Reviews;
 using Ecommerce.Domain.Shared;
 
 namespace Ecommerce.Domain.Products;

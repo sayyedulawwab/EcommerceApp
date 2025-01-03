@@ -1,4 +1,4 @@
 ﻿using Ecommerce.Application.Abstractions.Messaging;
 
 namespace Ecommerce.Application.ProductCategories.AddProductCategory;
-public record AddProductCategoryCommand(string name, string code) : ICommand<Guid>;
+public record AddProductCategoryCommand(string Name, string Code) : ICommand<Guid>;

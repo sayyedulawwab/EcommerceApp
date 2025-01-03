@@ -17,7 +17,7 @@ internal sealed class ReviewConfiguration : IEntityTypeConfiguration<Review>
                .HasConversion(reviewId => reviewId.Value, value => new ReviewId(value));
 
         builder.Property(review => review.Rating)
-               .HasConversion(rating => rating.Value, value =>  Rating.Create(value).Value);
+               .HasConversion(rating => rating.Value, value => Rating.Create(value).Value);
 
         builder.Property(review => review.Comment)
                .HasConversion(comment => comment.Value, value => new Comment(value));

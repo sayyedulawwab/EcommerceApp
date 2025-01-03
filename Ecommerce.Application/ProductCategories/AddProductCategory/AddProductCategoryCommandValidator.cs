@@ -5,7 +5,7 @@ public class AddProductCategoryCommandValidator : AbstractValidator<AddProductCa
 {
     public AddProductCategoryCommandValidator()
     {
-        RuleFor(c => c.name).NotEmpty();
-        RuleFor(c => c.code).NotEmpty();
+        RuleFor(c => c.Name).NotEmpty();
+        RuleFor(c => c.Code).NotEmpty();
     }
 }

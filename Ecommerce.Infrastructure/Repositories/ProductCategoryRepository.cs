@@ -11,7 +11,7 @@ internal sealed class ProductCategoryRepository : Repository<ProductCategory, Pr
     public async Task<List<ProductCategoryId>> GetProductCategoryGuidsAsync()
     {
         // Query the database to retrieve product category GUIDs
-        var productCategoryGuids = await DbContext.Set<ProductCategory>().Select(pc => pc.Id).ToListAsync();
+        List<ProductCategoryId> productCategoryGuids = await DbContext.Set<ProductCategory>().Select(pc => pc.Id).ToListAsync();
         return productCategoryGuids;
     }
 }

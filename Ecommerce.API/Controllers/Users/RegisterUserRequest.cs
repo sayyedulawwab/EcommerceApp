@@ -1,3 +1,3 @@
 ﻿namespace Ecommerce.API.Controllers.Users;
 
-public record RegisterUserRequest(string firstName, string lastName, string email, string password);
+public record RegisterUserRequest(string FirstName, string LastName, string Email, string Password);

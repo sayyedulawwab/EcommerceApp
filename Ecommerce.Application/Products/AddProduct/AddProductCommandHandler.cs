@@ -24,11 +24,11 @@ internal sealed class AddProductCommandHandler : ICommandHandler<AddProductComma
 
     public async Task<Result<Guid>> Handle(AddProductCommand request, CancellationToken cancellationToken)
     {
-        var product = Product.Create(new ProductName(request.name), new ProductDescription(request.description), new Money(request.priceAmount, Currency.Create(request.priceCurrency)), request.quantity, new ProductCategoryId(request.productCategoryId), _dateTimeProvider.UtcNow);
+        var product = Product.Create(new ProductName(request.Name), new ProductDescription(request.Description), new Money(request.PriceAmount, Currency.Create(request.PriceCurrency)), request.Quantity, new ProductCategoryId(request.ProductCategoryId), _dateTimeProvider.UtcNow);
 
         _productRepository.Add(product);
 
-        await _unitOfWork.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         await _cacheService.RemoveByPrefixAsync("products", cancellationToken);
 

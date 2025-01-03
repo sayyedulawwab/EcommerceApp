@@ -19,18 +19,18 @@ internal sealed class EditProductCategoryCommandHandler : ICommandHandler<EditPr
 
     public async Task<Result<Guid>> Handle(EditProductCategoryCommand request, CancellationToken cancellationToken)
     {
-        var productCategory = await _productCategoryRepository.GetByIdAsync(new ProductCategoryId(request.id));
+        ProductCategory? productCategory = await _productCategoryRepository.GetByIdAsync(new ProductCategoryId(request.Id), cancellationToken);
 
         if (productCategory is null)
         {
             return Result.Failure<Guid>(ProductCategoryErrors.NotFound);
         }
 
-        productCategory = ProductCategory.Update(productCategory, new CategoryName(request.name), new CategoryCode(request.code), _dateTimeProvider.UtcNow);
+        productCategory = ProductCategory.Update(productCategory, new CategoryName(request.Name), new CategoryCode(request.Code), _dateTimeProvider.UtcNow);
 
         _productCategoryRepository.Update(productCategory);
 
-        await _unitOfWork.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return productCategory.Id.Value;
 

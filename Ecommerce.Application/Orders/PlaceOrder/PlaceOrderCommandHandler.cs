@@ -23,35 +23,30 @@ internal sealed class PlaceOrderCommandHandler : ICommandHandler<PlaceOrderComma
 
     public async Task<Result<Guid>> Handle(PlaceOrderCommand request, CancellationToken cancellationToken)
     {
+        var productIds = request.OrderItems.Select(item => item.ProductId).ToList();
 
-        // Fetch products from the repository based on productIds
-        var productIds = request.orderItems.Select(item => item.productId).ToList();
+        List<Product> products = await _productRepository.GetProductsByIdsAsync(productIds);
 
-        var products = await _productRepository.GetProductsByIdsAsync(productIds);
+        var orderItems = new List<(Product product, int quantity)>();
 
-        // Create order items using the fetched products and quantities
-        var orderItems = new List<(Product product, int quantity)>(); // Assuming there's an OrderItem class to hold order details
-
-        foreach (var item in request.orderItems)
+        foreach (PlaceOrderProductCommand item in request.OrderItems)
         {
-            var product = products.FirstOrDefault(p => p.Id.Value == item.productId);
+            Product? product = products.FirstOrDefault(p => p.Id.Value == item.ProductId);
             if (product == null)
             {
-                // Return failure if any product is not found
                 return Result.Failure<Guid>(Error.NotFound);
             }
 
-            // Assuming OrderItem has a constructor or factory method that takes product and quantity
-            var orderItem = (product, item.quantity);
+            (Product product, int Quantity) orderItem = (product, item.Quantity);
             orderItems.Add(orderItem);
         }
 
 
-        var order = Order.PlaceOrder(new UserId(request.userId), orderItems, OrderStatus.Pending, _dateTimeProvider.UtcNow);
+        var order = Order.PlaceOrder(new UserId(request.UserId), orderItems, OrderStatus.Pending, _dateTimeProvider.UtcNow);
 
         _orderRepository.Add(order);
 
-        await _unitOfWork.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return order.Id.Value;
     }
