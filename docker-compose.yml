@@ -1,31 +1,54 @@
 version: '3.4'
 
 services:
-    ecommerce.api:
-        image: ${DOCKER_REGISTRY-}ecommerceapi
-        container_name: ecommerce.api
-        build:
-            context: .
-            dockerfile: Ecommerce.API/Dockerfile
-        depends_on:
-            - ecommerce.db
-        ports:
-            - "5000:5000"
-            - "5002:5002"
-    ecommerce.db:
+    database-postgres:
         image: postgres:latest
-        container_name: ecommerce.db
+        container_name: database-postgres
         environment:
             - POSTGRES_DB=ecommercedb
             - POSTGRES_USER=postgres
             - POSTGRES_PASSWORD=postgres
         volumes:
             - ./.containers/database/:/var/lib/postgresql/data
+        networks:
+            - app-network
         ports:
             - 5432:5432
-    ecommerce.cache:
+    cache-redis:
         image: redis:latest
-        container_name:  ecommerce.cache
+        container_name:  cache-redis
         restart: always
+        networks:
+            - app-network
         ports:
             - 6379:6379
+
+    logging-seq:
+        image: datalust/seq:latest
+        container_name: logging-seq
+        environment:
+          - ACCEPT_EULA=Y
+        networks:
+          - app-network
+        ports:
+          - 5341:5341
+          - 8081:80
+
+    ecommerce-api:
+        image: ${DOCKER_REGISTRY-}ecommerceapi
+        container_name: ecommerce-api
+        build:
+            context: .
+            dockerfile: Ecommerce.API/Dockerfile
+        depends_on:
+            - database-postgres
+            - cache-redis
+            - logging-seq
+        networks:
+            - app-network
+        ports:
+            - "5000:5000"
+            - "5002:5002"
+networks:
+  app-network:
+    driver: bridge

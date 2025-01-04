@@ -45,8 +45,11 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 
-
 WebApplication app = builder.Build();
+
+app.UseRequestContextLogging();
+
+app.UseSerilogRequestLogging();
 
 if (app.Environment.IsDevelopment())
 {
