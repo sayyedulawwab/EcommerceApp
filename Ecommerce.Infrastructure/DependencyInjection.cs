@@ -5,8 +5,8 @@ using Ecommerce.Application.Abstractions.Clock;
 using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Email;
 using Ecommerce.Domain.Abstractions;
+using Ecommerce.Domain.Categories;
 using Ecommerce.Domain.Orders;
-using Ecommerce.Domain.ProductCategories;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Reviews;
 using Ecommerce.Domain.Users;
@@ -51,7 +51,7 @@ public static class DependencyInjection
 
         services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
 
-        services.AddScoped<IProductCategoryRepository, ProductCategoryRepository>();
+        services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IOrderRepository, OrderRepository>();

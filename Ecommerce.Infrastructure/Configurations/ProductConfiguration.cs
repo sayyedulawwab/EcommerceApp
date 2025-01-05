@@ -1,4 +1,4 @@
-﻿using Ecommerce.Domain.ProductCategories;
+﻿using Ecommerce.Domain.Categories;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Shared;
 using Microsoft.EntityFrameworkCore;
@@ -42,7 +42,7 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(product => product.CreatedOn);
         builder.Property(product => product.UpdatedOn);
 
-        builder.HasOne<ProductCategory>()
+        builder.HasOne<Category>()
                .WithMany()
                .HasForeignKey(product => product.ProductCategoryId);
 

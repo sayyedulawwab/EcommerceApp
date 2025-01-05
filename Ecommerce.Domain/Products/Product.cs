@@ -1,5 +1,5 @@
 ﻿using Ecommerce.Domain.Abstractions;
-using Ecommerce.Domain.ProductCategories;
+using Ecommerce.Domain.Categories;
 using Ecommerce.Domain.Products.Events;
 using Ecommerce.Domain.Shared;
 
@@ -7,7 +7,7 @@ namespace Ecommerce.Domain.Products;
 
 public sealed class Product : Entity<ProductId>
 {
-    private Product(ProductId id, ProductName name, ProductDescription description, Money price, int quantity, ProductCategoryId productCategoryId, DateTime createdOn) : base(id)
+    private Product(ProductId id, ProductName name, ProductDescription description, Money price, int quantity, CategoryId productCategoryId, DateTime createdOn) : base(id)
     {
         Name = name;
         Description = description;
@@ -21,7 +21,7 @@ public sealed class Product : Entity<ProductId>
     {
     }
 
-    public ProductCategoryId ProductCategoryId { get; private set; }
+    public CategoryId ProductCategoryId { get; private set; }
     public ProductName Name { get; private set; }
     public ProductDescription Description { get; private set; }
     public Money Price { get; private set; }
@@ -29,7 +29,7 @@ public sealed class Product : Entity<ProductId>
     public DateTime CreatedOn { get; private set; }
     public DateTime? UpdatedOn { get; private set; }
 
-    public static Product Create(ProductName name, ProductDescription description, Money price, int quantity, ProductCategoryId productCategoryId, DateTime createdOn)
+    public static Product Create(ProductName name, ProductDescription description, Money price, int quantity, CategoryId productCategoryId, DateTime createdOn)
     {
         var product = new Product(ProductId.New(), name, description, price, quantity, productCategoryId, createdOn);
 
@@ -39,7 +39,7 @@ public sealed class Product : Entity<ProductId>
     }
 
 
-    public static Product Update(Product product, ProductName name, ProductDescription description, Money price, int quantity, ProductCategoryId productCategoryId, DateTime updatedOn)
+    public static Product Update(Product product, ProductName name, ProductDescription description, Money price, int quantity, CategoryId productCategoryId, DateTime updatedOn)
     {
 
         product.Name = name;

@@ -1,5 +1,5 @@
 ﻿using Bogus;
-using Ecommerce.Domain.ProductCategories;
+using Ecommerce.Domain.Categories;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Shared;
 using Ecommerce.Domain.Users;
@@ -39,14 +39,14 @@ public static class DataSeeder
             var name = new CategoryName(faker.Commerce.Department());
             var code = new CategoryCode(faker.Random.AlphaNumeric(5));
 
-            var category = ProductCategory.Create(name, code, DateTime.UtcNow);
+            var category = Category.Create(name, code, DateTime.UtcNow);
 
-            context.Set<ProductCategory>().Add(category);
+            context.Set<Category>().Add(category);
         }
 
         context.SaveChanges();
 
-        var productCategoryGuids = context.Set<ProductCategory>().Select(pc => pc.Id).ToList();
+        var productCategoryGuids = context.Set<Category>().Select(pc => pc.Id).ToList();
 
         // Seed products
         for (int i = 0; i < 100; i++)
@@ -55,7 +55,7 @@ public static class DataSeeder
             var description = new ProductDescription(faker.Commerce.ProductAdjective());
             int quantity = faker.Random.Number(1, 100);
             var price = new Money(faker.Finance.Amount(), Currency.Create("BDT"));
-            ProductCategoryId productCategoryId = productCategoryGuids[i % productCategoryGuids.Count];
+            CategoryId productCategoryId = productCategoryGuids[i % productCategoryGuids.Count];
 
             var product = Product.Create(name, description, price, quantity, productCategoryId, DateTime.UtcNow);
 

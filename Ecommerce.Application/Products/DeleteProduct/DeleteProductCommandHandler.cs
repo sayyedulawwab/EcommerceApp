@@ -1,7 +1,6 @@
 ﻿using Ecommerce.Application.Abstractions.Caching;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
-using Ecommerce.Domain.ProductCategories;
 using Ecommerce.Domain.Products;
 
 namespace Ecommerce.Application.Products.DeleteProduct;

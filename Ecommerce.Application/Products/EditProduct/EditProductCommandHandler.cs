@@ -2,7 +2,7 @@
 using Ecommerce.Application.Abstractions.Clock;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
-using Ecommerce.Domain.ProductCategories;
+using Ecommerce.Domain.Categories;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Shared;
 
@@ -31,7 +31,7 @@ internal sealed class EditProductCommandHandler : ICommandHandler<EditProductCom
             return Result.Failure<Guid>(ProductErrors.NotFound);
         }
 
-        product = Product.Update(product, new ProductName(request.Name), new ProductDescription(request.Description), new Money(request.PriceAmount, Currency.Create(request.PriceCurrency)), request.Quantity, new ProductCategoryId(request.ProductCategoryId), _dateTimeProvider.UtcNow);
+        product = Product.Update(product, new ProductName(request.Name), new ProductDescription(request.Description), new Money(request.PriceAmount, Currency.Create(request.PriceCurrency)), request.Quantity, new CategoryId(request.ProductCategoryId), _dateTimeProvider.UtcNow);
 
         _productRepository.Update(product);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
