@@ -10,21 +10,14 @@ using Ecommerce.API.Extensions;
 namespace Ecommerce.API.Controllers.Products.SearchProduct;
 [Route("api/products")]
 [ApiController]
-public class SearchProductController : ControllerBase
+public class SearchProductController(ISender sender) : ControllerBase
 {
-    private readonly ISender _sender;
-
-    public SearchProductController(ISender sender)
-    {
-        _sender = sender;
-    }
-
     [HttpGet]
     public async Task<IActionResult> SearchProduct([FromQuery] SearchProductRequest request, CancellationToken cancellationToken)
     {
         var query = new SearchProductQuery(request.CategoryId, request.MinPrice, request.MaxPrice, request.Keyword, request.Page, request.PageSize, request.SortColumn, request.SortOrder);
 
-        Result<PagedList<ProductResponse>> result = await _sender.Send(query, cancellationToken);
+        Result<PagedList<ProductResponse>> result = await sender.Send(query, cancellationToken);
 
         if (result.IsFailure)
         {

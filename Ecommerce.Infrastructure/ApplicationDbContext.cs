@@ -5,19 +5,9 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Infrastructure;
-public sealed class ApplicationDbContext : DbContext, IUnitOfWork
+public sealed class ApplicationDbContext(DbContextOptions options, IPublisher publisher) 
+    : DbContext(options), IUnitOfWork
 {
-    private readonly IPublisher _publisher;
-
-    public ApplicationDbContext(
-        DbContextOptions options, IPublisher publisher)
-        : base(options)
-    {
-        _publisher = publisher;
-    }
-
-
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
@@ -58,7 +48,7 @@ public sealed class ApplicationDbContext : DbContext, IUnitOfWork
 
         foreach (IDomainEvent? domainEvent in domainEvents)
         {
-            await _publisher.Publish(domainEvent);
+            await publisher.Publish(domainEvent);
         }
     }
 }

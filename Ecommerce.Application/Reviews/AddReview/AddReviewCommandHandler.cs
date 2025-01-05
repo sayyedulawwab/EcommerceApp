@@ -7,23 +7,17 @@ using Ecommerce.Domain.Users;
 
 namespace Ecommerce.Application.Reviews.AddReview;
 
-internal sealed class AddReviewCommandHandler : ICommandHandler<AddReviewCommand, Guid>
+internal sealed class AddReviewCommandHandler(
+    IProductRepository productRepository, 
+    IReviewRepository reviewRepository, 
+    IUnitOfWork unitOfWork, 
+    IDateTimeProvider dateTimeProvider)
+    : ICommandHandler<AddReviewCommand, Guid>
 {
-    private readonly IProductRepository _productRepository;
-    private readonly IReviewRepository _reviewRepository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IDateTimeProvider _dateTimeProvider;
-    public AddReviewCommandHandler(IProductRepository productRepository, IReviewRepository reviewRepository, IUnitOfWork unitOfWork, IDateTimeProvider dateTimeProvider)
-    {
-        _productRepository = productRepository;
-        _reviewRepository = reviewRepository;
-        _unitOfWork = unitOfWork;
-        _dateTimeProvider = dateTimeProvider;
-    }
     public async Task<Result<Guid>> Handle(AddReviewCommand request, CancellationToken cancellationToken)
     {
 
-        Product? product = await _productRepository.GetByIdAsync(new ProductId(request.ProductId), cancellationToken);
+        Product? product = await productRepository.GetByIdAsync(new ProductId(request.ProductId), cancellationToken);
 
         if (product is null)
         {
@@ -35,13 +29,12 @@ internal sealed class AddReviewCommandHandler : ICommandHandler<AddReviewCommand
                                    new UserId(request.UserId),
                                    rating.Value,
                                    new Comment(request.Comment),
-                                   _dateTimeProvider.UtcNow);
+                                   dateTimeProvider.UtcNow);
 
-        _reviewRepository.Add(review);
+        reviewRepository.Add(review);
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return review.Id.Value;
-
     }
 }

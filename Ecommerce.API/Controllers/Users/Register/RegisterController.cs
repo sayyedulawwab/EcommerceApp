@@ -9,15 +9,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace Ecommerce.API.Controllers.Users.Register;
 [Route("api/auth/register")]
 [ApiController]
-public class RegisterController : ControllerBase
+public class RegisterController(ISender sender) : ControllerBase
 {
-    private readonly ISender _sender;
-
-    public RegisterController(ISender sender)
-    {
-        _sender = sender;
-    }
-
     [HttpPost]
     public async Task<IActionResult> Register(
         RegisterUserRequest request,
@@ -29,7 +22,7 @@ public class RegisterController : ControllerBase
             request.Email,
             request.Password);
 
-        Result<Guid> result = await _sender.Send(command, cancellationToken);
+        Result<Guid> result = await sender.Send(command, cancellationToken);
 
         if (result.IsFailure)
         {

@@ -3,16 +3,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Infrastructure.Repositories;
 
-internal abstract class Repository<TEntity, TEntityId>
+internal abstract class Repository<TEntity, TEntityId>(ApplicationDbContext dbContext)
     where TEntity : Entity<TEntityId>
     where TEntityId : class
 {
-    protected readonly ApplicationDbContext DbContext;
-
-    protected Repository(ApplicationDbContext dbContext)
-    {
-        DbContext = dbContext;
-    }
+    protected readonly ApplicationDbContext DbContext = dbContext;
 
     public virtual async Task<IReadOnlyList<TEntity>> GetAllAsync(CancellationToken cancellationToken = default)
     {

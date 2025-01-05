@@ -9,22 +9,15 @@ using Microsoft.AspNetCore.Mvc;
 namespace Ecommerce.API.Controllers.Categories.GetCategories;
 [Route("api/categories")]
 [ApiController]
-public class GetCategoriesController : ControllerBase
+public class GetCategoriesController(ISender sender) : ControllerBase
 {
-    private readonly ISender _sender;
-
-    public GetCategoriesController(ISender sender)
-    {
-        _sender = sender;
-    }
-
     [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> GetCategories(CancellationToken cancellationToken)
     {
         var query = new GetCategoriesQuery();
 
-        Result<IReadOnlyList<CategoryResponse>> result = await _sender.Send(query, cancellationToken);
+        Result<IReadOnlyList<CategoryResponse>> result = await sender.Send(query, cancellationToken);
 
         if (result.IsFailure)
         {

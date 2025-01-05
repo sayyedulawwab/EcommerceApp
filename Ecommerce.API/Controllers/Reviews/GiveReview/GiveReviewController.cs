@@ -11,15 +11,8 @@ namespace Ecommerce.API.Controllers.Reviews.GiveReview;
 [Route("api/reviews")]
 [ApiController]
 [Authorize]
-public class GiveReviewController : ControllerBase
+public class GiveReviewController(ISender sender) : ControllerBase
 {
-    private readonly ISender _sender;
-
-    public GiveReviewController(ISender sender)
-    {
-        _sender = sender;
-    }
-
     [HttpPost]
     public async Task<IActionResult> GiveReview([FromBody] GiveReviewRequest request, CancellationToken cancellationToken)
     {
@@ -34,7 +27,7 @@ public class GiveReviewController : ControllerBase
 
         var command = new AddReviewCommand(request.ProductId, userId, request.Rating, request.Comment);
 
-        Result<Guid> result = await _sender.Send(command, cancellationToken);
+        Result<Guid> result = await sender.Send(command, cancellationToken);
 
         if (result.IsFailure)
         {

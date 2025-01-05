@@ -2,9 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Infrastructure.Repositories;
-internal sealed class CategoryRepository : Repository<Category, CategoryId>, ICategoryRepository
+internal sealed class CategoryRepository(ApplicationDbContext dbContext) 
+    : Repository<Category, CategoryId>(dbContext), ICategoryRepository
 {
-    public CategoryRepository(ApplicationDbContext dbContext) : base(dbContext)
-    {
-    }
 }

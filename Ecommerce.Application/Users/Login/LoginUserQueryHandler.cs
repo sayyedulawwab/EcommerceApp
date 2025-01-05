@@ -4,32 +4,25 @@ using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Users;
 
 namespace Ecommerce.Application.Users.Login;
-internal sealed class LoginUserQueryHandler : IQueryHandler<LoginUserQuery, AccessTokenResponse>
+internal sealed class LoginUserQueryHandler(
+    IUserRepository userRepository, 
+    IAuthService authService, 
+    IJwtService jwtService)
+    : IQueryHandler<LoginUserQuery, AccessTokenResponse>
 {
-
-    private readonly IUserRepository _userRepository;
-    private readonly IAuthService _authService;
-    private readonly IJwtService _jwtService;
-    public LoginUserQueryHandler(IUserRepository userRepository, IAuthService authService, IJwtService jwtService)
-    {
-        _userRepository = userRepository;
-        _authService = authService;
-        _jwtService = jwtService;
-    }
-
     public async Task<Result<AccessTokenResponse>> Handle(
         LoginUserQuery request,
         CancellationToken cancellationToken)
     {
 
-        User? user = await _userRepository.GetByEmail(request.Email);
+        User? user = await userRepository.GetByEmail(request.Email);
 
         if (user is null)
         {
             return Result.Failure<AccessTokenResponse>(UserErrors.NotFound);
         }
 
-        string hashedPassword = _authService.HashPassword(request.Password, user.PasswordSalt);
+        string hashedPassword = authService.HashPassword(request.Password, user.PasswordSalt);
 
         if (hashedPassword != user.PasswordHash)
         {
@@ -37,7 +30,7 @@ internal sealed class LoginUserQueryHandler : IQueryHandler<LoginUserQuery, Acce
         }
 
 
-        Result<string> result = _jwtService.GetAccessToken(
+        Result<string> result = jwtService.GetAccessToken(
             request.Email,
             user.Id.Value,
             cancellationToken);
@@ -49,5 +42,4 @@ internal sealed class LoginUserQueryHandler : IQueryHandler<LoginUserQuery, Acce
 
         return new AccessTokenResponse(result.Value);
     }
-
 }

@@ -11,22 +11,18 @@ using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
 
 namespace Ecommerce.Application.Products.SearchProduct;
-internal sealed class SearchProductQueryHandler : IQueryHandler<SearchProductQuery, PagedList<ProductResponse>>
+internal sealed class SearchProductQueryHandler(
+    ISqlConnectionFactory sqlConnectionFactory, 
+    ICacheService cacheService) 
+    : IQueryHandler<SearchProductQuery, PagedList<ProductResponse>>
 {
-    private readonly ISqlConnectionFactory _sqlConnectionFactory;
-    private readonly ICacheService _cacheService;
-    public SearchProductQueryHandler(ISqlConnectionFactory sqlConnectionFactory, ICacheService cacheService)
-    {
-        _sqlConnectionFactory = sqlConnectionFactory;
-        _cacheService = cacheService;
-    }
     public async Task<Result<PagedList<ProductResponse>>> Handle(SearchProductQuery request, CancellationToken cancellationToken)
     {
         //await _cacheService.RemoveByPrefixAsync("products", cancellationToken);
 
         string cacheKey = $"products-{GenerateCacheKey(request)}";
 
-        IEnumerable<ProductResponse>? cachedProductResponses = await _cacheService.GetAsync<IEnumerable<ProductResponse>?>(cacheKey, cancellationToken);
+        IEnumerable<ProductResponse>? cachedProductResponses = await cacheService.GetAsync<IEnumerable<ProductResponse>?>(cacheKey, cancellationToken);
 
         if (cachedProductResponses is not null && cachedProductResponses.Any())
         {
@@ -35,7 +31,7 @@ internal sealed class SearchProductQueryHandler : IQueryHandler<SearchProductQue
             return pagedProductsFromCache;
         }
 
-        using IDbConnection connection = _sqlConnectionFactory.CreateConnection();
+        using IDbConnection connection = sqlConnectionFactory.CreateConnection();
 
         // Start building the base query
         var sqlBuilder = new StringBuilder(@"
@@ -46,9 +42,9 @@ internal sealed class SearchProductQueryHandler : IQueryHandler<SearchProductQue
             p.price_amount AS PriceAmount,
             p.price_currency AS PriceCurrency,
             p.quantity AS Quantity,
-            p.created_on AS CreatedOnUtc,
-            p.updated_on AS UpdatedOnUtc,
-            p.product_category_id AS CategoryId,
+            p.created_on_utc AS CreatedOnUtc,
+            p.updated_on_utc AS UpdatedOnUtc,
+            p.category_id AS CategoryId,
             COUNT(*) OVER () AS TotalRecords
         FROM products AS p");
 
@@ -58,7 +54,7 @@ internal sealed class SearchProductQueryHandler : IQueryHandler<SearchProductQue
         // Dynamic filtering conditions
         if (request.CategoryId.HasValue)
         {
-            conditions.Add("p.product_category_id = @CategoryId");
+            conditions.Add("p.category_id = @CategoryId");
         }
         if (request.MinPrice.HasValue)
         {
@@ -107,7 +103,7 @@ internal sealed class SearchProductQueryHandler : IQueryHandler<SearchProductQue
 
         long totalRecords = products.FirstOrDefault()?.TotalRecords ?? 0;
 
-        await _cacheService.SetAsync(cacheKey, products, cancellationToken);
+        await cacheService.SetAsync(cacheKey, products, cancellationToken);
 
         var pagedProducts = PagedList<ProductResponse>.Create(products, page, pageSize, totalRecords);
 

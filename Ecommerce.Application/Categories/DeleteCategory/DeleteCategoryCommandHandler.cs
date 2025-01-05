@@ -4,31 +4,25 @@ using Ecommerce.Domain.Categories;
 using Ecommerce.Domain.Products;
 
 namespace Ecommerce.Application.Categories.DeleteCategory;
-internal sealed class DeleteCategoryCommandHandler : ICommandHandler<DeleteCategoryCommand, Guid>
+internal sealed class DeleteCategoryCommandHandler(
+    ICategoryRepository categoryRepository, 
+    IUnitOfWork unitOfWork) 
+    : ICommandHandler<DeleteCategoryCommand, Guid>
 {
-    private readonly ICategoryRepository _productCategoryRepository;
-    private readonly IUnitOfWork _unitOfWork;
-
-    public DeleteCategoryCommandHandler(ICategoryRepository productCategoryRepository, IUnitOfWork unitOfWork)
-    {
-        _productCategoryRepository = productCategoryRepository;
-        _unitOfWork = unitOfWork;
-    }
-
     public async Task<Result<Guid>> Handle(DeleteCategoryCommand request, CancellationToken cancellationToken)
     {
-        Category? productCategory = await _productCategoryRepository.GetByIdAsync(new CategoryId(request.Id), cancellationToken);
+        Category? category = await categoryRepository.GetByIdAsync(new CategoryId(request.Id), cancellationToken);
 
-        if (productCategory is null)
+        if (category is null)
         {
             return Result.Failure<Guid>(CategoryErrors.NotFound);
         }
 
-        _productCategoryRepository.Remove(productCategory);
+        categoryRepository.Remove(category);
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return productCategory.Id.Value;
+        return category.Id.Value;
 
     }
 }

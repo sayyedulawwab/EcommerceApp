@@ -2,12 +2,9 @@
 using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Infrastructure.Repositories;
-internal sealed class OrderRepository : Repository<Order, OrderId>, IOrderRepository
+internal sealed class OrderRepository(ApplicationDbContext dbContext) 
+    : Repository<Order, OrderId>(dbContext), IOrderRepository
 {
-    public OrderRepository(ApplicationDbContext dbContext) : base(dbContext)
-    {
-    }
-
     public override async Task<IReadOnlyList<Order>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         return await DbContext

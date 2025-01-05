@@ -3,7 +3,7 @@ public interface ICategoryRepository
 {
     Task<IReadOnlyList<Category>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<Category?> GetByIdAsync(CategoryId id, CancellationToken cancellationToken = default);
-    void Add(Category productCategory);
-    void Update(Category productCategory);
-    void Remove(Category productCategory);
+    void Add(Category category);
+    void Update(Category category);
+    void Remove(Category category);
 }

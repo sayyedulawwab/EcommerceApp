@@ -10,21 +10,14 @@ namespace Ecommerce.API.Controllers.Products.DeleteProduct;
 [Route("api/products")]
 [ApiController]
 [Authorize]
-public class DeleteProductController : ControllerBase
+public class DeleteProductController(ISender sender) : ControllerBase
 {
-    private readonly ISender _sender;
-
-    public DeleteProductController(ISender sender)
-    {
-        _sender = sender;
-    }
-
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteProduct(Guid id, CancellationToken cancellationToken)
     {
         var command = new DeleteProductCommand(id);
 
-        Result<Guid> result = await _sender.Send(command, cancellationToken);
+        Result<Guid> result = await sender.Send(command, cancellationToken);
 
         if (result.IsFailure)
         {

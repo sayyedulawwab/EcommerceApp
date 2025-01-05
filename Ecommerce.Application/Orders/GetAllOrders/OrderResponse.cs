@@ -12,6 +12,4 @@ public sealed class OrderResponse
     public DateTime? ShippedOnUtc { get; init; }
     public DateTime? DeliveredOnUtc { get; init; }
     public DateTime? CancelledOnUtc { get; init; }
-
-
 }

@@ -3,15 +3,9 @@ using Serilog.Context;
 
 namespace Ecommerce.API.Middleware;
 
-public class RequestContextLoggingMiddleware
+public class RequestContextLoggingMiddleware(RequestDelegate next)
 {
     private const string CorrelationIdHeaderName = "X-Correlation-Id";
-    private readonly RequestDelegate _next;
-
-    public RequestContextLoggingMiddleware(RequestDelegate next)
-    {
-        _next = next;
-    }
 
     public Task Invoke(HttpContext context)
     {
@@ -19,7 +13,7 @@ public class RequestContextLoggingMiddleware
 
         using (LogContext.PushProperty("CorrelationId", correlationId))
         {
-            return _next.Invoke(context);
+            return next.Invoke(context);
         }
     }
 

@@ -10,20 +10,14 @@ namespace Ecommerce.API.Controllers.Orders.GetOrders;
 [Route("api/orders")]
 [ApiController]
 [Authorize]
-public class GetOrdersController : ControllerBase
+public class GetOrdersController(ISender sender) : ControllerBase
 {
-    private readonly ISender _sender;
-    public GetOrdersController(ISender sender)
-    {
-        _sender = sender;
-    }
-
     [HttpGet]
     public async Task<IActionResult> GetOrders(CancellationToken cancellationToken)
     {
         var query = new GetAllOrdersQuery();
 
-        Result<IReadOnlyList<OrderResponse>> result = await _sender.Send(query, cancellationToken);
+        Result<IReadOnlyList<OrderResponse>> result = await sender.Send(query, cancellationToken);
 
         if (result.IsFailure)
         {

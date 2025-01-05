@@ -11,14 +11,8 @@ namespace Ecommerce.API.Controllers.Orders.PlaceOrder;
 [Route("api/orders")]
 [ApiController]
 [Authorize]
-public class PlaceOrderController : ControllerBase
+public class PlaceOrderController(ISender sender) : ControllerBase
 {
-    private readonly ISender _sender;
-    public PlaceOrderController(ISender sender)
-    {
-        _sender = sender;
-    }
-
     [HttpPost]
     public async Task<IActionResult> PlaceOrder([FromBody] PlaceOrderRequest request, CancellationToken cancellationToken)
     {
@@ -35,7 +29,7 @@ public class PlaceOrderController : ControllerBase
 
         var command = new PlaceOrderCommand(userId, orderItems);
 
-        Result<Guid> result = await _sender.Send(command, cancellationToken);
+        Result<Guid> result = await sender.Send(command, cancellationToken);
 
         if (result.IsFailure)
         {

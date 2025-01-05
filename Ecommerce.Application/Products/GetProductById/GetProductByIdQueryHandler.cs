@@ -5,26 +5,21 @@ using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Reviews;
 
 namespace Ecommerce.Application.Products.GetProductById;
-internal sealed class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQuery, ProductResponse>
+internal sealed class GetProductByIdQueryHandler(
+    IProductRepository productRepository, 
+    IReviewRepository reviewRepository) 
+    : IQueryHandler<GetProductByIdQuery, ProductResponse>
 {
-    private readonly IProductRepository _productRepository;
-    private readonly IReviewRepository _reviewRepository;
-
-    public GetProductByIdQueryHandler(IProductRepository productRepository, IReviewRepository reviewRepository)
-    {
-        _productRepository = productRepository;
-        _reviewRepository = reviewRepository;
-    }
     public async Task<Result<ProductResponse>> Handle(GetProductByIdQuery request, CancellationToken cancellationToken)
     {
-        Product? product = await _productRepository.GetByIdAsync(new ProductId(request.Id), cancellationToken);
+        Product? product = await productRepository.GetByIdAsync(new ProductId(request.Id), cancellationToken);
 
         if (product is null)
         {
             return Result.Failure<ProductResponse>(ProductErrors.NotFound);
         }
 
-        IReadOnlyList<Review> reviews = await _reviewRepository.GetByProductAsync(product.Id, cancellationToken);
+        IReadOnlyList<Review> reviews = await reviewRepository.GetByProductAsync(product.Id, cancellationToken);
 
         var productResponse = new ProductResponse()
         {

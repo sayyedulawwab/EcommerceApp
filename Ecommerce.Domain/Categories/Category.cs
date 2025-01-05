@@ -23,11 +23,11 @@ public sealed class Category : Entity<CategoryId>
 
     public static Category Create(CategoryName name, CategoryCode code, DateTime createdOnUtc)
     {
-        var productCategory = new Category(CategoryId.New(), name, code, createdOnUtc);
+        var category = new Category(CategoryId.New(), name, code, createdOnUtc);
 
-        productCategory.RaiseDomainEvent(new CategoryCreatedDomainEvent(productCategory.Id));
+        category.RaiseDomainEvent(new CategoryCreatedDomainEvent(category.Id));
 
-        return productCategory;
+        return category;
     }
 
     public static Category Update(Category category, CategoryName name, CategoryCode code, DateTime updatedOnUtc)
