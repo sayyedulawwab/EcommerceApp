@@ -1,37 +1,22 @@
-﻿using System.Security.Claims;
-using Ecommerce.API.Extensions;
-using Ecommerce.Application.Orders.GetAllOrders;
-using Ecommerce.Application.Orders.PlaceOrder;
+﻿using Ecommerce.Application.Orders.PlaceOrder;
 using Ecommerce.Domain.Abstractions;
+using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Ecommerce.API.Extensions;
 
-namespace Ecommerce.API.Controllers.Orders;
+namespace Ecommerce.API.Controllers.Orders.PlaceOrder;
 [Route("api/orders")]
 [ApiController]
 [Authorize]
-public class OrdersController : ControllerBase
+public class PlaceOrderController : ControllerBase
 {
     private readonly ISender _sender;
-    public OrdersController(ISender sender)
+    public PlaceOrderController(ISender sender)
     {
         _sender = sender;
-    }
-
-    [HttpGet]
-    public async Task<IActionResult> GetAllOrders(CancellationToken cancellationToken)
-    {
-        var query = new GetAllOrdersQuery();
-
-        Result<IReadOnlyList<OrderResponse>> result = await _sender.Send(query, cancellationToken);
-
-        if (result.IsFailure)
-        {
-            return result.Error.ToActionResult();
-        }
-
-        return Ok(result.Value);
     }
 
     [HttpPost]
@@ -59,5 +44,4 @@ public class OrdersController : ControllerBase
 
         return Created(string.Empty, result.Value);
     }
-
 }

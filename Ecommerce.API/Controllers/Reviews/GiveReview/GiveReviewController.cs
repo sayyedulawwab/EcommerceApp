@@ -1,17 +1,21 @@
-﻿using System.Security.Claims;
-using Ecommerce.API.Extensions;
-using Ecommerce.Application.Reviews.AddReview;
+﻿using Ecommerce.Application.Reviews.AddReview;
 using Ecommerce.Domain.Abstractions;
+using System.Security.Claims;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Ecommerce.API.Extensions;
 
-namespace Ecommerce.API.Controllers.Reviews;
+namespace Ecommerce.API.Controllers.Reviews.GiveReview;
 [Route("api/reviews")]
 [ApiController]
-public class ReviewsController : ControllerBase
+[Authorize]
+public class GiveReviewController : ControllerBase
 {
     private readonly ISender _sender;
-    public ReviewsController(ISender sender)
+
+    public GiveReviewController(ISender sender)
     {
         _sender = sender;
     }
@@ -39,5 +43,4 @@ public class ReviewsController : ControllerBase
 
         return Created(string.Empty, result.Value);
     }
-
 }

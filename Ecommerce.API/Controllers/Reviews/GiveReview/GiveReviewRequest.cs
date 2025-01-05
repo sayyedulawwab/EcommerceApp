@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Ecommerce.API.Controllers.Reviews;
+namespace Ecommerce.API.Controllers.Reviews.GiveReview;
 
 public record GiveReviewRequest
 {

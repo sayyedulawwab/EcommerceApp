@@ -1,3 +1,3 @@
-﻿namespace Ecommerce.API.Controllers.Users;
+﻿namespace Ecommerce.API.Controllers.Users.Login;
 
 public record LoginUserRequest(string Email, string Password);

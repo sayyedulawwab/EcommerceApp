@@ -11,6 +11,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Controllers\ProductCategories\EditCategory\EditCategoryController.cs~RF1b97f50.TMP" />
+    <None Remove="Controllers\ProductCategories\GetCategories\GetCategoriesController.cs~RF1ae67a7.TMP" />
+    <None Remove="Controllers\Users\Login\LoginController.cs~RF1ca7e63.TMP" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.5" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.0">
       <PrivateAssets>all</PrivateAssets>

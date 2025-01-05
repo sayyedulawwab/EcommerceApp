@@ -1,8 +1,8 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Ecommerce.API.Controllers.Products;
+namespace Ecommerce.API.Controllers.Products.AddProduct;
 
-public record EditProductRequest
+public record AddProductRequest
 {
     [JsonRequired] public string Name { get; init; }
     [JsonRequired] public string Description { get; init; }
