@@ -1,4 +1,5 @@
-﻿using Ecommerce.Application.Users.Login;
+﻿using Ecommerce.API.Extensions;
+using Ecommerce.Application.Users.Login;
 using Ecommerce.Domain.Abstractions;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
