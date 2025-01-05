@@ -14,6 +14,15 @@ tab_width = 4
 end_of_line = crlf
 insert_final_newline = true
 
+# Ignore all files in the Migrations folder
+[/**/Migrations/**]
+charset = unset
+end_of_line = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+indent_style = unset
+indent_size = unset
+
 #### .NET Coding Conventions ####
 
 # Organize usings

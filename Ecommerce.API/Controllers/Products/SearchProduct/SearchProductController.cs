@@ -22,7 +22,7 @@ public class SearchProductController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> SearchProduct([FromQuery] SearchProductRequest request, CancellationToken cancellationToken)
     {
-        var query = new SearchProductQuery(request.ProductCategoryId, request.MinPrice, request.MaxPrice, request.Keyword, request.Page, request.PageSize, request.SortColumn, request.SortOrder);
+        var query = new SearchProductQuery(request.CategoryId, request.MinPrice, request.MaxPrice, request.Keyword, request.Page, request.PageSize, request.SortColumn, request.SortOrder);
 
         Result<PagedList<ProductResponse>> result = await _sender.Send(query, cancellationToken);
 

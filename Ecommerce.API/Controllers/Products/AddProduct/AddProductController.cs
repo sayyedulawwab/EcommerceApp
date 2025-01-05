@@ -22,7 +22,7 @@ public class AddProductController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> AddProduct(AddProductRequest request, CancellationToken cancellationToken)
     {
-        var command = new AddProductCommand(request.Name, request.Description, request.PriceCurrency, request.PriceAmount, request.Quantity, request.ProductCategoryId);
+        var command = new AddProductCommand(request.Name, request.Description, request.PriceCurrency, request.PriceAmount, request.Quantity, request.CategoryId);
 
         Result<Guid> result = await _sender.Send(command, cancellationToken);
 

@@ -3,6 +3,7 @@ using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Orders;
 using Ecommerce.Domain.Products;
+using Ecommerce.Domain.Shared;
 using Ecommerce.Domain.Users;
 
 namespace Ecommerce.Application.Orders.PlaceOrder;
@@ -23,27 +24,19 @@ internal sealed class PlaceOrderCommandHandler : ICommandHandler<PlaceOrderComma
 
     public async Task<Result<Guid>> Handle(PlaceOrderCommand request, CancellationToken cancellationToken)
     {
-        var productIds = request.OrderItems.Select(item => item.ProductId).ToList();
+        var order = Order.Create(new UserId(request.UserId), OrderStatus.Placed, _dateTimeProvider.UtcNow);
 
-        List<Product> products = await _productRepository.GetProductsByIdsAsync(productIds);
-
-        var orderItems = new List<(Product product, int quantity)>();
-
-        foreach (PlaceOrderProductCommand item in request.OrderItems)
+        foreach (OrderStockItem item in request.OrderStockItems)
         {
-            Product? product = products.FirstOrDefault(p => p.Id.Value == item.ProductId);
+            Product? product = await _productRepository.GetByIdAsync(new ProductId(item.ProductId), cancellationToken);
 
             if (product is null)
             {
                 return Result.Failure<Guid>(ProductErrors.NotFound);
             }
 
-            (Product product, int Quantity) orderItem = (product, item.Quantity);
-            orderItems.Add(orderItem);
+            order.AddOrderItem(order.Id, product, item.Quantity, _dateTimeProvider.UtcNow);
         }
-
-
-        var order = Order.PlaceOrder(new UserId(request.UserId), orderItems, OrderStatus.Pending, _dateTimeProvider.UtcNow);
 
         _orderRepository.Add(order);
 

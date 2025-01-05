@@ -5,11 +5,11 @@ namespace Ecommerce.Domain.Categories;
 
 public sealed class Category : Entity<CategoryId>
 {
-    private Category(CategoryId id, CategoryName name, CategoryCode code, DateTime createdOn) : base(id)
+    private Category(CategoryId id, CategoryName name, CategoryCode code, DateTime createdOnUtc) : base(id)
     {
         Name = name;
         Code = code;
-        CreatedOn = createdOn;
+        CreatedOnUtc = createdOnUtc;
     }
     private Category()
     {
@@ -17,25 +17,25 @@ public sealed class Category : Entity<CategoryId>
 
     public CategoryName Name { get; private set; }
     public CategoryCode Code { get; private set; }
-    public DateTime CreatedOn { get; private set; }
-    public DateTime? UpdatedOn { get; private set; }
+    public DateTime CreatedOnUtc { get; private set; }
+    public DateTime? UpdatedOnUtc { get; private set; }
 
 
-    public static Category Create(CategoryName name, CategoryCode code, DateTime createdOn)
+    public static Category Create(CategoryName name, CategoryCode code, DateTime createdOnUtc)
     {
-        var productCategory = new Category(CategoryId.New(), name, code, createdOn);
+        var productCategory = new Category(CategoryId.New(), name, code, createdOnUtc);
 
         productCategory.RaiseDomainEvent(new CategoryCreatedDomainEvent(productCategory.Id));
 
         return productCategory;
     }
 
-    public static Category Update(Category productCategory, CategoryName name, CategoryCode code, DateTime updatedOn)
+    public static Category Update(Category category, CategoryName name, CategoryCode code, DateTime updatedOnUtc)
     {
-        productCategory.Name = name;
-        productCategory.Code = code;
-        productCategory.UpdatedOn = updatedOn;
+        category.Name = name;
+        category.Code = code;
+        category.UpdatedOnUtc = updatedOnUtc;
 
-        return productCategory;
+        return category;
     }
 }

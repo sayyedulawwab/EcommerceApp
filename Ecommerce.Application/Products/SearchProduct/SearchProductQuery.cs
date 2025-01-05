@@ -1,7 +1,7 @@
 ﻿using Ecommerce.Application.Abstractions.Messaging;
 
 namespace Ecommerce.Application.Products.SearchProduct;
-public record SearchProductQuery(Guid? ProductCategoryId,
+public record SearchProductQuery(Guid? CategoryId,
                                     decimal? MinPrice,
                                     decimal? MaxPrice,
                                     string? Keyword,

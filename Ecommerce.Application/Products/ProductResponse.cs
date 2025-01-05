@@ -9,9 +9,9 @@ public sealed class ProductResponse
     public decimal PriceAmount { get; init; }
     public string PriceCurrency { get; init; }
     public int Quantity { get; init; }
-    public DateTime CreatedOn { get; init; }
-    public DateTime? UpdatedOn { get; init; }
-    public Guid ProductCategoryId { get; init; }
+    public DateTime CreatedOnUtc { get; init; }
+    public DateTime? UpdatedOnUtc { get; init; }
+    public Guid CategoryId { get; init; }
     public List<ReviewResponse> Reviews { get; init; } = [];
     public long TotalRecords { get; init; }
 }

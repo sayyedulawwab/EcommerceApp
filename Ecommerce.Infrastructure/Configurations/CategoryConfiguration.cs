@@ -22,9 +22,9 @@ internal sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
                .HasMaxLength(200)
                .HasConversion(code => code.Value, value => new CategoryCode(value));
 
-        builder.Property(category => category.CreatedOn);
+        builder.Property(category => category.CreatedOnUtc);
 
-        builder.Property(category => category.UpdatedOn);
+        builder.Property(category => category.UpdatedOnUtc);
 
     }
 }

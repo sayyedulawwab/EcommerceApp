@@ -16,7 +16,7 @@ internal sealed class OrderItemConfiguration : IEntityTypeConfiguration<OrderIte
 
         builder.Property(orderItem => orderItem.Quantity);
 
-        builder.Property(orderItem => orderItem.CreatedOn);
+        builder.Property(orderItem => orderItem.CreatedOnUtc);
 
         builder.HasOne<Order>()
             .WithMany(order => order.OrderItems)

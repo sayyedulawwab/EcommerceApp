@@ -30,7 +30,7 @@ public class PlaceOrderController : ControllerBase
         var userId = Guid.Parse(userIdClaim.Value);
 
         var orderItems = request.OrderItems.Select(item =>
-            new PlaceOrderProductCommand(item.ProductId, item.Quantity))
+            new OrderStockItem(item.ProductId, item.Quantity))
             .ToList();
 
         var command = new PlaceOrderCommand(userId, orderItems);

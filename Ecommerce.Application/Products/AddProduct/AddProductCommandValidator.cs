@@ -10,7 +10,7 @@ public class AddProductCommandValidator : AbstractValidator<AddProductCommand>
         RuleFor(c => c.PriceCurrency).NotEmpty();
         RuleFor(c => c.PriceAmount).NotEmpty();
         RuleFor(c => c.Quantity).NotEmpty();
-        RuleFor(c => c.ProductCategoryId).NotEmpty();
+        RuleFor(c => c.CategoryId).NotEmpty();
 
     }
 }

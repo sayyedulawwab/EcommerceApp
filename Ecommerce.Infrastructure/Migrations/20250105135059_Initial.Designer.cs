@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Ecommerce.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250105131056_Initial")]
+    [Migration("20250105135059_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -37,9 +37,9 @@ namespace Ecommerce.Infrastructure.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("code");
 
-                    b.Property<DateTime>("CreatedOn")
+                    b.Property<DateTime>("CreatedOnUtc")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_on");
+                        .HasColumnName("created_on_utc");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -47,9 +47,9 @@ namespace Ecommerce.Infrastructure.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("name");
 
-                    b.Property<DateTime?>("UpdatedOn")
+                    b.Property<DateTime?>("UpdatedOnUtc")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_on");
+                        .HasColumnName("updated_on_utc");
 
                     b.HasKey("Id")
                         .HasName("pk_categories");
@@ -71,6 +71,10 @@ namespace Ecommerce.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("status");
 
+                    b.Property<DateTime>("UpdatedOnUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_on_utc");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
@@ -90,9 +94,9 @@ namespace Ecommerce.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<DateTime>("CreatedOn")
+                    b.Property<DateTime>("CreatedOnUtc")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_on");
+                        .HasColumnName("created_on_utc");
 
                     b.Property<Guid>("OrderId")
                         .HasColumnType("uuid")
@@ -124,9 +128,9 @@ namespace Ecommerce.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<DateTime>("CreatedOn")
+                    b.Property<DateTime>("CreatedOnUtc")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_on");
+                        .HasColumnName("created_on_utc");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -140,7 +144,7 @@ namespace Ecommerce.Infrastructure.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("name");
 
-                    b.Property<Guid>("ProductCategoryId")
+                    b.Property<Guid>("CategoryId")
                         .HasColumnType("uuid")
                         .HasColumnName("product_category_id");
 
@@ -148,14 +152,14 @@ namespace Ecommerce.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("quantity");
 
-                    b.Property<DateTime?>("UpdatedOn")
+                    b.Property<DateTime?>("UpdatedOnUtc")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_on");
+                        .HasColumnName("updated_on_utc");
 
                     b.HasKey("Id")
                         .HasName("pk_products");
 
-                    b.HasIndex("ProductCategoryId")
+                    b.HasIndex("CategoryId")
                         .HasDatabaseName("ix_products_product_category_id");
 
                     b.ToTable("products", (string)null);
@@ -306,7 +310,7 @@ namespace Ecommerce.Infrastructure.Migrations
                 {
                     b.HasOne("Ecommerce.Domain.Categories.Category", null)
                         .WithMany()
-                        .HasForeignKey("ProductCategoryId")
+                        .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_products_categories_product_category_id");

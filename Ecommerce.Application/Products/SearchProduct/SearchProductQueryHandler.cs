@@ -46,9 +46,9 @@ internal sealed class SearchProductQueryHandler : IQueryHandler<SearchProductQue
             p.price_amount AS PriceAmount,
             p.price_currency AS PriceCurrency,
             p.quantity AS Quantity,
-            p.created_on AS CreatedOn,
-            p.updated_on AS UpdatedOn,
-            p.product_category_id AS ProductCategoryId,
+            p.created_on AS CreatedOnUtc,
+            p.updated_on AS UpdatedOnUtc,
+            p.product_category_id AS CategoryId,
             COUNT(*) OVER () AS TotalRecords
         FROM products AS p");
 
@@ -56,9 +56,9 @@ internal sealed class SearchProductQueryHandler : IQueryHandler<SearchProductQue
         var conditions = new List<string>();
 
         // Dynamic filtering conditions
-        if (request.ProductCategoryId.HasValue)
+        if (request.CategoryId.HasValue)
         {
-            conditions.Add("p.product_category_id = @ProductCategoryId");
+            conditions.Add("p.product_category_id = @CategoryId");
         }
         if (request.MinPrice.HasValue)
         {
@@ -80,8 +80,8 @@ internal sealed class SearchProductQueryHandler : IQueryHandler<SearchProductQue
         }
 
         // Handle sorting
-        string[] allowedSortColumns = ["Name", "PriceAmount", "CreatedOn"]; // Add all allowed columns here
-        string sortColumn = allowedSortColumns.Contains(request.SortColumn) ? request.SortColumn : "CreatedOn"; // Default to CreatedOn if invalid
+        string[] allowedSortColumns = ["Name", "PriceAmount", "CreatedOnUtc"]; // Add all allowed columns here
+        string sortColumn = allowedSortColumns.Contains(request.SortColumn) ? request.SortColumn : "CreatedOnUtc"; // Default to CreatedOnUtc if invalid
         string sortOrder = request.SortOrder?.ToLower(CultureInfo.CurrentCulture) == "desc" ? "DESC" : "ASC"; // Default to ASC if invalid
 
         sqlBuilder.AppendFormat(CultureInfo.InvariantCulture, " ORDER BY {0} {1}", sortColumn, sortOrder);
@@ -97,7 +97,7 @@ internal sealed class SearchProductQueryHandler : IQueryHandler<SearchProductQue
         // Execute query with parameters
         IEnumerable<ProductResponse> products = await connection.QueryAsync<ProductResponse>(sql, new
         {
-            request.ProductCategoryId,
+            request.CategoryId,
             request.MinPrice,
             request.MaxPrice,
             request.Keyword,
@@ -122,7 +122,7 @@ internal sealed class SearchProductQueryHandler : IQueryHandler<SearchProductQue
         {
             request.Page,
             request.PageSize,
-            request.ProductCategoryId,
+            request.CategoryId,
             request.MinPrice,
             request.MaxPrice,
             request.Keyword,

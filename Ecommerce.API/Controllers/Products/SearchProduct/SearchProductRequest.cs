@@ -4,7 +4,7 @@ namespace Ecommerce.API.Controllers.Products.SearchProduct;
 
 public record SearchProductRequest
 {
-    public Guid? ProductCategoryId { get; init; }
+    public Guid? CategoryId { get; init; }
     public decimal? MinPrice { get; init; }
     public decimal? MaxPrice { get; init; }
     public string? Keyword { get; init; }

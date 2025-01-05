@@ -34,9 +34,9 @@ internal sealed class GetProductByIdQueryHandler : IQueryHandler<GetProductByIdQ
             PriceAmount = product.Price.Amount,
             PriceCurrency = product.Price.Currency.Code,
             Quantity = product.Quantity,
-            ProductCategoryId = product.ProductCategoryId.Value,
-            CreatedOn = product.CreatedOn,
-            UpdatedOn = product.UpdatedOn,
+            CategoryId = product.CategoryId.Value,
+            CreatedOnUtc = product.CreatedOnUtc,
+            UpdatedOnUtc = product.UpdatedOnUtc,
             Reviews = reviews.Select(review => new ReviewResponse
             {
                 ReviewId = review.Id.Value,
