@@ -1,5 +1,7 @@
 ﻿using System.Security.Claims;
+using Ecommerce.API.Extensions;
 using Ecommerce.Application.Reviews.AddReview;
+using Ecommerce.Domain.Abstractions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -28,12 +30,13 @@ public class ReviewsController : ControllerBase
 
         var command = new AddReviewCommand(request.ProductId, userId, request.Rating, request.Comment);
 
-        Domain.Abstractions.Result<Guid> result = await _sender.Send(command, cancellationToken);
+        Result<Guid> result = await _sender.Send(command, cancellationToken);
 
         if (result.IsFailure)
         {
-            return BadRequest(result.Error);
+            return result.Error.ToActionResult();
         }
+
         return Created(string.Empty, result.Value);
     }
 

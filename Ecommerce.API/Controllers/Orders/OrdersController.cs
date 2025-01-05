@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Ecommerce.API.Extensions;
 using Ecommerce.Application.Orders.GetAllOrders;
 using Ecommerce.Application.Orders.PlaceOrder;
 using Ecommerce.Domain.Abstractions;
@@ -25,6 +26,11 @@ public class OrdersController : ControllerBase
 
         Result<IReadOnlyList<OrderResponse>> result = await _sender.Send(query, cancellationToken);
 
+        if (result.IsFailure)
+        {
+            return result.Error.ToActionResult();
+        }
+
         return Ok(result.Value);
     }
 
@@ -48,8 +54,9 @@ public class OrdersController : ControllerBase
 
         if (result.IsFailure)
         {
-            return BadRequest(result.Error);
+            return result.Error.ToActionResult();
         }
+
         return Created(string.Empty, result.Value);
     }
 

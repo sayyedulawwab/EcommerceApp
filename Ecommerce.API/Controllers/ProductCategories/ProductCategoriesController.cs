@@ -1,4 +1,5 @@
-﻿using Ecommerce.Application.ProductCategories;
+﻿using Ecommerce.API.Extensions;
+using Ecommerce.Application.ProductCategories;
 using Ecommerce.Application.ProductCategories.AddProductCategory;
 using Ecommerce.Application.ProductCategories.DeleteProductCategory;
 using Ecommerce.Application.ProductCategories.EditProductCategory;
@@ -29,6 +30,11 @@ public class ProductCategoriesController : ControllerBase
 
         Result<IReadOnlyList<ProductCategoryResponse>> result = await _sender.Send(query, cancellationToken);
 
+        if (result.IsFailure)
+        {
+            return result.Error.ToActionResult();
+        }
+
         return Ok(result.Value);
     }
     [AllowAnonymous]
@@ -38,6 +44,11 @@ public class ProductCategoriesController : ControllerBase
         var query = new GetProductCategoryByIdQuery(id);
 
         Result<ProductCategoryResponse> result = await _sender.Send(query, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return result.Error.ToActionResult();
+        }
 
         return Ok(result.Value);
     }
@@ -51,7 +62,7 @@ public class ProductCategoriesController : ControllerBase
 
         if (result.IsFailure)
         {
-            return BadRequest(result.Error);
+            return result.Error.ToActionResult();
         }
 
         return CreatedAtAction(nameof(GetProductCategory), new { id = result.Value }, result.Value);
@@ -66,7 +77,7 @@ public class ProductCategoriesController : ControllerBase
 
         if (result.IsFailure)
         {
-            return BadRequest(result.Error);
+            return result.Error.ToActionResult();
         }
 
         return Ok(new { id = result.Value });
@@ -81,7 +92,7 @@ public class ProductCategoriesController : ControllerBase
 
         if (result.IsFailure)
         {
-            return BadRequest(result.Error);
+            return result.Error.ToActionResult();
         }
 
         return Ok(new { id = result.Value });

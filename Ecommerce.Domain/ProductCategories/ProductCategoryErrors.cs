@@ -5,5 +5,6 @@ public static class ProductCategoryErrors
 {
     public static readonly Error NotFound = new(
        "ProductCategory.NotFound",
-       "Product category not found");
+       "Product category not found",
+       HttpResponseStatusCodes.NotFound);
 }

@@ -1,4 +1,5 @@
-﻿using Ecommerce.Application.Users.Login;
+﻿using Ecommerce.API.Extensions;
+using Ecommerce.Application.Users.Login;
 using Ecommerce.Application.Users.Register;
 using Ecommerce.Domain.Abstractions;
 using MediatR;
@@ -34,7 +35,7 @@ public class UsersController : ControllerBase
 
         if (result.IsFailure)
         {
-            return BadRequest(result.Error);
+            return result.Error.ToActionResult();
         }
 
         return Ok(result.Value);
@@ -52,7 +53,7 @@ public class UsersController : ControllerBase
 
         if (result.IsFailure)
         {
-            return Unauthorized(result.Error);
+            return result.Error.ToActionResult();
         }
 
         return Ok(result.Value);

@@ -1,4 +1,5 @@
-﻿using Ecommerce.Application.Products;
+﻿using Ecommerce.API.Extensions;
+using Ecommerce.Application.Products;
 using Ecommerce.Application.Products.AddProduct;
 using Ecommerce.Application.Products.DeleteProduct;
 using Ecommerce.Application.Products.EditProduct;
@@ -29,7 +30,12 @@ public class ProductsController : ControllerBase
 
         Result<PagedList<ProductResponse>> result = await _sender.Send(query, cancellationToken);
 
-        return result.IsSuccess ? Ok(result.Value) : NotFound();
+        if (result.IsFailure)
+        {
+            return result.Error.ToActionResult();
+        }
+
+        return Ok(result.Value);
     }
 
     [AllowAnonymous]
@@ -39,6 +45,11 @@ public class ProductsController : ControllerBase
         var query = new GetProductByIdQuery(id);
 
         Result<ProductResponse> result = await _sender.Send(query, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return result.Error.ToActionResult();
+        }
 
         return Ok(result.Value);
     }
@@ -52,7 +63,7 @@ public class ProductsController : ControllerBase
 
         if (result.IsFailure)
         {
-            return BadRequest(result.Error);
+            return result.Error.ToActionResult();
         }
 
         return CreatedAtAction(nameof(GetProduct), new { id = result.Value }, result.Value);
@@ -67,7 +78,7 @@ public class ProductsController : ControllerBase
 
         if (result.IsFailure)
         {
-            return BadRequest(result.Error);
+            return result.Error.ToActionResult();
         }
 
         return Ok(new { id = result.Value });
@@ -83,7 +94,7 @@ public class ProductsController : ControllerBase
 
         if (result.IsFailure)
         {
-            return BadRequest(result.Error);
+            return result.Error.ToActionResult();
         }
 
         return Ok(new { id = result.Value });

@@ -3,7 +3,7 @@
 namespace Ecommerce.Domain.Reviews;
 public record Rating
 {
-    public static readonly Error Invalid = new("Rating.Invalid", "The rating is invalid");
+    public static readonly Error Invalid = new("Rating.Invalid", "The rating is invalid", HttpResponseStatusCodes.BadRequest);
 
     private Rating(int value)
     {

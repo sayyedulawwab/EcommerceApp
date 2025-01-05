@@ -32,9 +32,10 @@ internal sealed class PlaceOrderCommandHandler : ICommandHandler<PlaceOrderComma
         foreach (PlaceOrderProductCommand item in request.OrderItems)
         {
             Product? product = products.FirstOrDefault(p => p.Id.Value == item.ProductId);
-            if (product == null)
+
+            if (product is null)
             {
-                return Result.Failure<Guid>(Error.NotFound);
+                return Result.Failure<Guid>(ProductErrors.NotFound);
             }
 
             (Product product, int Quantity) orderItem = (product, item.Quantity);
