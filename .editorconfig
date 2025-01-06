@@ -4,7 +4,7 @@ root = true
 [*.cs]
 
 # Ignore paths
-[*/Migrations/*]
+[**/Migrations/**]
 generated_code = true
 
 #### Core EditorConfig Options ####
