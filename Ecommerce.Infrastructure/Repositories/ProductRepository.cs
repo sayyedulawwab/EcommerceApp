@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Infrastructure.Repositories;
-internal sealed class ProductRepository(ApplicationDbContext dbContext) 
+internal sealed class ProductRepository(ApplicationDbContext dbContext)
     : Repository<Product, ProductId>(dbContext), IProductRepository
 {
 }

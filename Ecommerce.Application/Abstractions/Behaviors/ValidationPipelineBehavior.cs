@@ -5,7 +5,7 @@ using MediatR;
 
 namespace Ecommerce.Application.Abstractions.Behaviors;
 public class ValidationPipelineBehavior<TRequest, TResponse>(
-    IEnumerable<IValidator<TRequest>> validators) 
+    IEnumerable<IValidator<TRequest>> validators)
     : IPipelineBehavior<TRequest, TResponse>
     where TRequest : IBaseCommand
 {

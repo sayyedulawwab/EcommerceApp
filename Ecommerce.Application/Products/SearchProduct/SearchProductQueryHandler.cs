@@ -12,8 +12,8 @@ using Ecommerce.Domain.Abstractions;
 
 namespace Ecommerce.Application.Products.SearchProduct;
 internal sealed class SearchProductQueryHandler(
-    ISqlConnectionFactory sqlConnectionFactory, 
-    ICacheService cacheService) 
+    ISqlConnectionFactory sqlConnectionFactory,
+    ICacheService cacheService)
     : IQueryHandler<SearchProductQuery, PagedList<ProductResponse>>
 {
     public async Task<Result<PagedList<ProductResponse>>> Handle(SearchProductQuery request, CancellationToken cancellationToken)

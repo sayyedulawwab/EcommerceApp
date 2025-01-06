@@ -5,8 +5,8 @@ using Ecommerce.Domain.Users;
 
 namespace Ecommerce.Application.Users.Login;
 internal sealed class LoginUserQueryHandler(
-    IUserRepository userRepository, 
-    IAuthService authService, 
+    IUserRepository userRepository,
+    IAuthService authService,
     IJwtService jwtService)
     : IQueryHandler<LoginUserQuery, AccessTokenResponse>
 {

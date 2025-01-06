@@ -6,8 +6,8 @@ using Ecommerce.Domain.Reviews;
 
 namespace Ecommerce.Application.Products.GetProductById;
 internal sealed class GetProductByIdQueryHandler(
-    IProductRepository productRepository, 
-    IReviewRepository reviewRepository) 
+    IProductRepository productRepository,
+    IReviewRepository reviewRepository)
     : IQueryHandler<GetProductByIdQuery, ProductResponse>
 {
     public async Task<Result<ProductResponse>> Handle(GetProductByIdQuery request, CancellationToken cancellationToken)

@@ -3,7 +3,7 @@ using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Orders;
 
 namespace Ecommerce.Application.Orders.GetAllOrders;
-internal sealed class GetAllOrdersQueryHandler(IOrderRepository orderRepository) 
+internal sealed class GetAllOrdersQueryHandler(IOrderRepository orderRepository)
     : IQueryHandler<GetAllOrdersQuery, IReadOnlyList<OrderResponse>>
 {
     public async Task<Result<IReadOnlyList<OrderResponse>>> Handle(GetAllOrdersQuery request, CancellationToken cancellationToken)

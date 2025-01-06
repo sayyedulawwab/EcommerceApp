@@ -8,10 +8,10 @@ using Ecommerce.Domain.Shared;
 
 namespace Ecommerce.Application.Products.EditProduct;
 internal sealed class EditProductCommandHandler(
-    IProductRepository productRepository, 
-    IUnitOfWork unitOfWork, 
-    IDateTimeProvider dateTimeProvider, 
-    ICacheService cacheService) 
+    IProductRepository productRepository,
+    IUnitOfWork unitOfWork,
+    IDateTimeProvider dateTimeProvider,
+    ICacheService cacheService)
     : ICommandHandler<EditProductCommand, Guid>
 {
     public async Task<Result<Guid>> Handle(EditProductCommand request, CancellationToken cancellationToken)
@@ -24,12 +24,12 @@ internal sealed class EditProductCommandHandler(
         }
 
         product = Product.Update(
-            product, 
-            new ProductName(request.Name), 
-            new ProductDescription(request.Description), 
-            new Money(request.PriceAmount, 
-            Currency.Create(request.PriceCurrency)), 
-            request.Quantity, 
+            product,
+            new ProductName(request.Name),
+            new ProductDescription(request.Description),
+            new Money(request.PriceAmount,
+            Currency.Create(request.PriceCurrency)),
+            request.Quantity,
             new CategoryId(request.CategoryId),
             dateTimeProvider.UtcNow);
 

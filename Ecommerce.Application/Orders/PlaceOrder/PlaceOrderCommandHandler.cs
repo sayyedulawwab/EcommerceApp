@@ -8,9 +8,9 @@ using Ecommerce.Domain.Users;
 
 namespace Ecommerce.Application.Orders.PlaceOrder;
 internal sealed class PlaceOrderCommandHandler(
-    IProductRepository productRepository, 
-    IOrderRepository orderRepository, 
-    IUnitOfWork unitOfWork, 
+    IProductRepository productRepository,
+    IOrderRepository orderRepository,
+    IUnitOfWork unitOfWork,
     IDateTimeProvider dateTimeProvider)
     : ICommandHandler<PlaceOrderCommand, Guid>
 {

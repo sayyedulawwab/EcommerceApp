@@ -5,7 +5,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Infrastructure;
-public sealed class ApplicationDbContext(DbContextOptions options, IPublisher publisher) 
+public sealed class ApplicationDbContext(DbContextOptions options, IPublisher publisher)
     : DbContext(options), IUnitOfWork
 {
     protected override void OnModelCreating(ModelBuilder modelBuilder)

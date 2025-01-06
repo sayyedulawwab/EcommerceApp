@@ -5,8 +5,8 @@ using Ecommerce.Domain.Products;
 
 namespace Ecommerce.Application.Categories.DeleteCategory;
 internal sealed class DeleteCategoryCommandHandler(
-    ICategoryRepository categoryRepository, 
-    IUnitOfWork unitOfWork) 
+    ICategoryRepository categoryRepository,
+    IUnitOfWork unitOfWork)
     : ICommandHandler<DeleteCategoryCommand, Guid>
 {
     public async Task<Result<Guid>> Handle(DeleteCategoryCommand request, CancellationToken cancellationToken)

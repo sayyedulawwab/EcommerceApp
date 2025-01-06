@@ -5,8 +5,8 @@ using Ecommerce.Domain.Categories;
 
 namespace Ecommerce.Application.Categories.EditCategory;
 internal sealed class EditCategoryCommandHandler(
-    ICategoryRepository categoryRepository, 
-    IUnitOfWork unitOfWork, 
+    ICategoryRepository categoryRepository,
+    IUnitOfWork unitOfWork,
     IDateTimeProvider dateTimeProvider)
     : ICommandHandler<EditCategoryCommand, Guid>
 {
@@ -20,8 +20,8 @@ internal sealed class EditCategoryCommandHandler(
         }
 
         category = Category.Update(
-            category, 
-            new CategoryName(request.Name), 
+            category,
+            new CategoryName(request.Name),
             new CategoryCode(request.Code),
             dateTimeProvider.UtcNow);
 

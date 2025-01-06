@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Infrastructure.Repositories;
-internal sealed class UserRepository(ApplicationDbContext dbContext) 
+internal sealed class UserRepository(ApplicationDbContext dbContext)
     : Repository<User, UserId>(dbContext), IUserRepository
 {
     public async Task<User?> GetByEmail(string email)

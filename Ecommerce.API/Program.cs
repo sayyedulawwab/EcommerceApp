@@ -6,12 +6,12 @@ using Serilog;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-builder.Host.UseSerilog((context, loggerConfig) => 
+builder.Host.UseSerilog((context, loggerConfig) =>
             loggerConfig.ReadFrom.Configuration(context.Configuration));
 
 builder.Services.AddApplication()
-                .AddPresentation()
-                .AddInfrastructure(builder.Configuration);
+    .AddPresentation()
+    .AddInfrastructure(builder.Configuration);
 
 WebApplication app = builder.Build();
 

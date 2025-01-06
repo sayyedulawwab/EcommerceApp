@@ -5,9 +5,9 @@ using Ecommerce.Domain.Users;
 
 namespace Ecommerce.Application.Users.Register;
 internal sealed class RegisterUserCommandHandler(
-    IAuthService authService, 
-    IUserRepository userRepository, 
-    IUnitOfWork unitOfWork) 
+    IAuthService authService,
+    IUserRepository userRepository,
+    IUnitOfWork unitOfWork)
     : ICommandHandler<RegisterUserCommand, Guid>
 {
     public async Task<Result<Guid>> Handle(RegisterUserCommand request, CancellationToken cancellationToken)

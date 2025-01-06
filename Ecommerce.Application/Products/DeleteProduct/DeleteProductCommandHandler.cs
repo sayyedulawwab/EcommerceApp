@@ -5,9 +5,9 @@ using Ecommerce.Domain.Products;
 
 namespace Ecommerce.Application.Products.DeleteProduct;
 internal sealed class DeleteProductCommandHandler(
-    IProductRepository productRepository, 
-    IUnitOfWork unitOfWork, 
-    ICacheService cacheService) 
+    IProductRepository productRepository,
+    IUnitOfWork unitOfWork,
+    ICacheService cacheService)
     : ICommandHandler<DeleteProductCommand, Guid>
 {
     public async Task<Result<Guid>> Handle(DeleteProductCommand request, CancellationToken cancellationToken)

@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Ecommerce.Infrastructure.Auth;
-internal sealed class JwtBearerOptionsSetup(IOptions<JwtOptions> jwtOptions) 
+internal sealed class JwtBearerOptionsSetup(IOptions<JwtOptions> jwtOptions)
     : IConfigureNamedOptions<JwtBearerOptions>
 {
     public void Configure(JwtBearerOptions options)

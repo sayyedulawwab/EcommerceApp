@@ -5,9 +5,9 @@ using Ecommerce.Domain.Categories;
 
 namespace Ecommerce.Application.Categories.AddCategory;
 internal sealed class AddCategoryCommandHandler(
-    ICategoryRepository categoryRepository, 
-    IUnitOfWork unitOfWork, 
-    IDateTimeProvider dateTimeProvider) 
+    ICategoryRepository categoryRepository,
+    IUnitOfWork unitOfWork,
+    IDateTimeProvider dateTimeProvider)
     : ICommandHandler<AddCategoryCommand, Guid>
 {
     public async Task<Result<Guid>> Handle(AddCategoryCommand request, CancellationToken cancellationToken)

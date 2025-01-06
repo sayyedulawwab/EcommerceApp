@@ -8,9 +8,9 @@ using Ecommerce.Domain.Users;
 namespace Ecommerce.Application.Reviews.AddReview;
 
 internal sealed class AddReviewCommandHandler(
-    IProductRepository productRepository, 
-    IReviewRepository reviewRepository, 
-    IUnitOfWork unitOfWork, 
+    IProductRepository productRepository,
+    IReviewRepository reviewRepository,
+    IUnitOfWork unitOfWork,
     IDateTimeProvider dateTimeProvider)
     : ICommandHandler<AddReviewCommand, Guid>
 {

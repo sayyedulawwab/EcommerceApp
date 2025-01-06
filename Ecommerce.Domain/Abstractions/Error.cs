@@ -2,10 +2,10 @@
 
 public record Error(string Name, string Description, HttpResponseStatusCodes Code)
 {
-    public static readonly Error None = 
+    public static readonly Error None =
         new(string.Empty, string.Empty, HttpResponseStatusCodes.InternalServerError);
 
-    public static readonly Error NullValue = 
+    public static readonly Error NullValue =
         new("Error.NullValue", "Null value was provided", HttpResponseStatusCodes.BadRequest);
 
     public static Error InternalServerError(string name, string description) =>

@@ -4,7 +4,7 @@ using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Categories;
 
 namespace Ecommerce.Application.Categories.GetCategoryById;
-internal sealed class GetCategoryByIdQueryHandler(ICategoryRepository categoryRepository) 
+internal sealed class GetCategoryByIdQueryHandler(ICategoryRepository categoryRepository)
     : IQueryHandler<GetCategoryByIdQuery, CategoryResponse>
 {
     public async Task<Result<CategoryResponse>> Handle(GetCategoryByIdQuery request, CancellationToken cancellationToken)

@@ -10,12 +10,12 @@ public static class MigrationExtensions
     {
         using IServiceScope scope = app.ApplicationServices.CreateScope();
 
-        using ApplicationDbContext dbContext = 
+        using ApplicationDbContext dbContext =
             scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         // I have manually removed the migration files.
         // So I needed this to delete the previous test database.
-        dbContext.Database.EnsureDeleted(); 
+        dbContext.Database.EnsureDeleted();
 
         dbContext.Database.Migrate();
         DataSeeder.SeedData(dbContext);
