@@ -3,6 +3,10 @@ root = true
 # C# files
 [*.cs]
 
+# Ignore paths
+[*/Migrations/*]
+generated_code = true
+
 #### Core EditorConfig Options ####
 
 # Indentation and spacing
@@ -13,10 +17,6 @@ tab_width = 4
 # New line preferences
 end_of_line = crlf
 insert_final_newline = true
-
-# Ignore paths
-[*/Migrations/*]
-generated_code = true
 
 #### .NET Coding Conventions ####
 
@@ -100,7 +100,7 @@ csharp_style_expression_bodied_constructors = false:silent
 csharp_style_expression_bodied_indexers = true:error
 csharp_style_expression_bodied_lambdas = true:error
 csharp_style_expression_bodied_local_functions = true:error
-csharp_style_expression_bodied_methods = false:silent
+csharp_style_expression_bodied_methods = false:none
 csharp_style_expression_bodied_operators = true:error
 csharp_style_expression_bodied_properties = true:error
 
@@ -353,6 +353,9 @@ dotnet_diagnostic.CS8618.severity = none
 
 # IDE0005
 dotnet_diagnostic.IDE0005.severity = none
+
+# IDE0022: Use block body for method
+dotnet_diagnostic.IDE0022.severity = none
 
 # IDE0046: Convert to conditional expression
 dotnet_diagnostic.IDE0046.severity = none
