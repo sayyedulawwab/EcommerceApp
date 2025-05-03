@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Ecommerce.API.Controllers.Products.SearchProduct;
+namespace Ecommerce.API.Controllers.Products;
 
 public record SearchProductRequest
 {

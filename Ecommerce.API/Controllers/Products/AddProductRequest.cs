@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Ecommerce.API.Controllers.Products.AddProduct;
+namespace Ecommerce.API.Controllers.Products;
 
 public record AddProductRequest
 {

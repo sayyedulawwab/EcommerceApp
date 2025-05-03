@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Ecommerce.API.Controllers.Products.EditProduct;
+namespace Ecommerce.API.Controllers.Products;
 
 public record EditProductRequest
 {

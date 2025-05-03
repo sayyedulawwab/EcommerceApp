@@ -1,18 +1,20 @@
-﻿using Ecommerce.Application.Reviews.AddReview;
+﻿using Asp.Versioning;
+using Ecommerce.API.Extensions;
+using Ecommerce.Application.Reviews.AddReview;
 using Ecommerce.Domain.Abstractions;
-using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Ecommerce.API.Extensions;
+using System.Security.Claims;
 
-namespace Ecommerce.API.Controllers.Reviews.GiveReview;
-[Route("api/reviews")]
+namespace Ecommerce.API.Controllers.Reviews;
+[Route("api/v{v:apiVersion}/reviews")]
 [ApiController]
 [Authorize]
-public class GiveReviewController(ISender sender) : ControllerBase
+public class ReviewsController(ISender sender) : ControllerBase
 {
+    [MapToApiVersion(1)]
     [HttpPost]
     public async Task<IActionResult> GiveReview([FromBody] GiveReviewRequest request, CancellationToken cancellationToken)
     {

@@ -1,18 +1,21 @@
-﻿using Ecommerce.Application.Orders.PlaceOrder;
+﻿using Asp.Versioning;
+using Ecommerce.API.Extensions;
+using Ecommerce.Application.Orders.GetAllOrders;
+using Ecommerce.Application.Orders.PlaceOrder;
 using Ecommerce.Domain.Abstractions;
-using System.Security.Claims;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Ecommerce.API.Extensions;
+using System.Security.Claims;
 
-namespace Ecommerce.API.Controllers.Orders.PlaceOrder;
-[Route("api/orders")]
+namespace Ecommerce.API.Controllers.Orders;
+[Route("api/v{v:apiVersion}/orders")]
 [ApiController]
 [Authorize]
-public class PlaceOrderController(ISender sender) : ControllerBase
+public class OrdersController(ISender sender) : ControllerBase
 {
+    [MapToApiVersion(1)]
     [HttpPost]
     public async Task<IActionResult> PlaceOrder([FromBody] PlaceOrderRequest request, CancellationToken cancellationToken)
     {
@@ -37,5 +40,21 @@ public class PlaceOrderController(ISender sender) : ControllerBase
         }
 
         return Created(string.Empty, result.Value);
+    }
+
+    [MapToApiVersion(1)]
+    [HttpGet]
+    public async Task<IActionResult> GetOrders(CancellationToken cancellationToken)
+    {
+        var query = new GetAllOrdersQuery();
+
+        Result<IReadOnlyList<OrderResponse>> result = await sender.Send(query, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return result.Error.ToActionResult();
+        }
+
+        return Ok(result.Value);
     }
 }
