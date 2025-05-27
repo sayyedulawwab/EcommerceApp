@@ -1,11 +1,11 @@
-﻿using System.Data;
-using Ecommerce.Application.Exceptions;
+﻿using Ecommerce.Application.Exceptions;
 using Ecommerce.Domain.Abstractions;
-using MediatR;
+using Ecommerce.Infrastructure.DomainEvents;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 
 namespace Ecommerce.Infrastructure;
-public sealed class ApplicationDbContext(DbContextOptions options, IPublisher publisher)
+public sealed class ApplicationDbContext(DbContextOptions options, IDomainEventsDispatcher domainEventsDispatcher)
     : DbContext(options), IUnitOfWork
 {
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -46,9 +46,6 @@ public sealed class ApplicationDbContext(DbContextOptions options, IPublisher pu
             })
             .ToList();
 
-        foreach (IDomainEvent? domainEvent in domainEvents)
-        {
-            await publisher.Publish(domainEvent);
-        }
+        await domainEventsDispatcher.DispatchAsync(domainEvents);
     }
 }

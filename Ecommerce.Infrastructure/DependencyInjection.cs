@@ -14,6 +14,7 @@ using Ecommerce.Infrastructure.Auth;
 using Ecommerce.Infrastructure.Caching;
 using Ecommerce.Infrastructure.Clock;
 using Ecommerce.Infrastructure.Data;
+using Ecommerce.Infrastructure.DomainEvents;
 using Ecommerce.Infrastructure.Emails;
 using Ecommerce.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -28,6 +29,7 @@ public static class DependencyInjection
     {
         services.AddTransient<IDateTimeProvider, DateTimeProvider>();
         services.AddTransient<IEmailService, EmailService>();
+        services.AddTransient<IDomainEventsDispatcher, DomainEventsDispatcher>();
 
         services.AddStackExchangeRedisCache(redisOptions =>
         {

@@ -100,7 +100,7 @@ csharp_style_expression_bodied_constructors = false:silent
 csharp_style_expression_bodied_indexers = true:error
 csharp_style_expression_bodied_lambdas = true:error
 csharp_style_expression_bodied_local_functions = true:error
-csharp_style_expression_bodied_methods = false:none
+csharp_style_expression_bodied_methods = false:silent
 csharp_style_expression_bodied_operators = true:error
 csharp_style_expression_bodied_properties = true:error
 
@@ -354,9 +354,6 @@ dotnet_diagnostic.CS8618.severity = none
 # IDE0005
 dotnet_diagnostic.IDE0005.severity = none
 
-# IDE0022: Use block body for method
-dotnet_diagnostic.IDE0022.severity = none
-
 # IDE0046: Convert to conditional expression
 dotnet_diagnostic.IDE0046.severity = none
 
@@ -391,6 +388,9 @@ dotnet_diagnostic.S2094.severity = none
 
 # S2325: Methods and properties that don't access instance data should be static
 dotnet_diagnostic.S2325.severity = none
+
+# S2326: Generic type parameter is not used in interface
+dotnet_diagnostic.S2326.severity = none
 
 # S2365: Properties should not make collection or array copies
 dotnet_diagnostic.S2365.severity = none

@@ -42,7 +42,7 @@ app.UseRequestContextLogging();
 
 app.UseSerilogRequestLogging();
 
-app.UseCustomExceptionHandler();
+app.UseExceptionHandler();
 
 app.UseAuthentication();
 

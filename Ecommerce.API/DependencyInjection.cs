@@ -1,4 +1,5 @@
-﻿using Microsoft.OpenApi.Models;
+﻿using Ecommerce.API.Infrastructure;
+using Microsoft.OpenApi.Models;
 
 namespace Ecommerce.API;
 
@@ -37,6 +38,9 @@ public static class DependencyInjection
 
         services.AddControllers();
         services.AddEndpointsApiExplorer();
+
+        services.AddExceptionHandler<ExceptionHandler>();
+        services.AddProblemDetails();
 
         return services;
     }

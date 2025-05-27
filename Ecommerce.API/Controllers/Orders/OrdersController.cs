@@ -1,11 +1,10 @@
 ﻿using Asp.Versioning;
 using Ecommerce.API.Extensions;
+using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Application.Orders.GetAllOrders;
 using Ecommerce.Application.Orders.PlaceOrder;
 using Ecommerce.Domain.Abstractions;
-using MediatR;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -13,11 +12,11 @@ namespace Ecommerce.API.Controllers.Orders;
 [Route("api/v{v:apiVersion}/orders")]
 [ApiController]
 [Authorize]
-public class OrdersController(ISender sender) : ControllerBase
+public class OrdersController() : ControllerBase
 {
     [MapToApiVersion(1)]
     [HttpPost]
-    public async Task<IActionResult> PlaceOrder([FromBody] PlaceOrderRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> PlaceOrder([FromBody] PlaceOrderRequest request, ICommandHandler<PlaceOrderCommand, Guid> handler, CancellationToken cancellationToken)
     {
         Claim? userIdClaim = User?.FindFirst(ClaimTypes.NameIdentifier);
         if (userIdClaim == null || string.IsNullOrEmpty(userIdClaim.Value))
@@ -32,7 +31,7 @@ public class OrdersController(ISender sender) : ControllerBase
 
         var command = new PlaceOrderCommand(userId, orderItems);
 
-        Result<Guid> result = await sender.Send(command, cancellationToken);
+        Result<Guid> result = await handler.Handle(command, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -44,11 +43,11 @@ public class OrdersController(ISender sender) : ControllerBase
 
     [MapToApiVersion(1)]
     [HttpGet]
-    public async Task<IActionResult> GetOrders(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetOrders(IQueryHandler<GetAllOrdersQuery, IReadOnlyList<OrderResponse>> handler, CancellationToken cancellationToken)
     {
         var query = new GetAllOrdersQuery();
 
-        Result<IReadOnlyList<OrderResponse>> result = await sender.Send(query, cancellationToken);
+        Result<IReadOnlyList<OrderResponse>> result = await handler.Handle(query, cancellationToken);
 
         if (result.IsFailure)
         {
