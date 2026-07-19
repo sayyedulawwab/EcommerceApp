@@ -1,0 +1,41 @@
+version: '3.4'
+
+services:
+  database-postgres:
+    image: postgres:latest
+    container_name: database-postgres
+    environment:
+      POSTGRES_DB: ecommercedb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ./.containers/database/:/var/lib/postgresql/18/docker
+    ports:
+      - "5432:5432"
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  cache-redis:
+    image: redis:latest
+    container_name: cache-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+networks:
+  app-network:
+    name: ecommerce-network
+    driver: bridge
