@@ -1,0 +1,12 @@
+services:
+  ecommerce-api:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+
+    restart: unless-stopped
+
+    ports:
+      - "80:8080"
+
+    volumes:
+      - /opt/ecommerce/logs:/logs
