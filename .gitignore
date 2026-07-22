@@ -478,3 +478,11 @@ $RECYCLE.BIN/
 
 .vscode
 .containers
+
+grafana/data/
+prometheus/data/
+loki/data/
+loki/chunks/
+loki/rules/
+loki/retention/
+tempo/data/
