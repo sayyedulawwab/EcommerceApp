@@ -1,20 +1,41 @@
 services:
-  ecommerce-api:
-    image: ${DOCKER_REGISTRY-}ecommerceapi
-    container_name: ecommerce-api
 
+  ecommerce-api:
+
+    image: ecommerceapi:${IMAGE_TAG:-latest}
+    container_name: ecommerce-api
     build:
       context: .
       dockerfile: Ecommerce.API/Dockerfile
 
+    environment:
+      ASPNETCORE_HTTP_PORTS: 8080
+      POSTGRES_DB: ecommercedb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      IMAGE_TAG: latest
+
+    expose:
+      - "8080"
+
     networks:
-      - app-network
+      - ecommerce-network
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
 
     ports:
-      - "5000:5000"
-      - "5002:5002"
+      - "8080:80"
+
+    volumes:
+      - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro
+
+    depends_on:
+      - ecommerce-api
+    networks:
+      - ecommerce-network
 
 networks:
-  app-network:
+  ecommerce-network:
     external: true
     name: ecommerce-network

@@ -5,8 +5,31 @@ services:
 
     restart: unless-stopped
 
-    ports:
-      - "80:8080"
-
     volumes:
       - /opt/ecommerce/logs:/logs
+
+  nginx:
+    image: nginx:alpine
+
+    container_name: nginx
+
+    restart: unless-stopped
+
+    depends_on:
+      - ecommerce-api
+
+    ports:
+      - "8080:80"
+      - "8443:443"
+
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+
+    networks:
+      - ecommerce-network
+
+networks:
+  ecommerce-network:
+    external: true
+    name: ecommerce-network

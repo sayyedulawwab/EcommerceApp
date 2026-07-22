@@ -1,39 +1,54 @@
 services:
+
   database-postgres:
-    image: postgres:latest
+    image: postgres:18
     container_name: database-postgres
+
     environment:
-      POSTGRES_DB: ecommercedb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
     volumes:
-      - ./.containers/database/:/var/lib/postgresql/18/docker
+      - postgres-data:/var/lib/postgresql/18/docker
+
     ports:
       - "5432:5432"
-    networks:
-      - app-network
+
     restart: unless-stopped
+
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 10
 
+    networks:
+      - ecommerce-network
+
   cache-redis:
-    image: redis:latest
+    image: redis:8
+
     container_name: cache-redis
+
     ports:
       - "6379:6379"
-    networks:
-      - app-network
+
     restart: unless-stopped
+
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 10
 
+    networks:
+      - ecommerce-network
+
+volumes:
+  postgres-data:
+
 networks:
-  app-network:
+  ecommerce-network:
     name: ecommerce-network
     driver: bridge
