@@ -4,7 +4,7 @@ using Npgsql;
 
 namespace Ecommerce.Infrastructure.Data;
 
-internal sealed class SqlConnectionFactory(string connectionString) : ISqlConnectionFactory
+public sealed class SqlConnectionFactory(string connectionString) : ISqlConnectionFactory
 {
     public IDbConnection CreateConnection()
     {

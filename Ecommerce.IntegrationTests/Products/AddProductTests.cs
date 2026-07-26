@@ -1,0 +1,77 @@
+﻿using Ecommerce.API.Controllers.Products;
+using Ecommerce.Domain.Categories;
+using Ecommerce.Domain.Products;
+using Ecommerce.Infrastructure;
+using Ecommerce.Infrastructure.Data;
+using Ecommerce.IntegrationTests.Helpers;
+using Ecommerce.IntegrationTests.Infrastructure;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using System.Net;
+using System.Net.Http.Json;
+
+namespace Ecommerce.IntegrationTests.Products;
+
+public sealed class AddProductTests
+    : IClassFixture<IntegrationTestFactory>
+{
+    private readonly IntegrationTestFactory _factory;
+
+    public AddProductTests(IntegrationTestFactory factory)
+    {
+        _factory = factory;
+    }
+
+    [Fact]
+    public async Task AddProduct_ShouldCreateProduct_WhenRequestIsValid()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        Category category = CategoryData.Create();
+
+        await _factory.ExecuteScopeAsync(async sp =>
+        {
+            ApplicationDbContext db =
+                sp.GetRequiredService<ApplicationDbContext>();
+
+            db.Add(category);
+
+            await db.SaveChangesAsync();
+        });
+
+        AddProductRequest request =
+            ProductData.Create(category.Id.Value);
+
+        // Act
+        HttpResponseMessage response =
+            await _factory.Client.PostAsJsonAsync(
+                "/api/v1/products",
+                request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        Product? product =
+            await _factory.ExecuteScopeAsync(async sp =>
+            {
+                ApplicationDbContext db =
+                    sp.GetRequiredService<ApplicationDbContext>();
+
+                var productName = new ProductName(request.Name);
+
+                return await db.Set<Product>()
+                    .FirstOrDefaultAsync(p =>
+                        p.Name == productName);
+            });
+
+        Assert.NotNull(product);
+
+        Assert.Equal(request.Name, product!.Name.Value);
+        Assert.Equal(request.Description, product.Description.Value);
+        Assert.Equal(request.PriceAmount, product.Price.Amount);
+        Assert.Equal(request.PriceCurrency, product.Price.Currency.Code);
+        Assert.Equal(request.Quantity, product.Quantity);
+        Assert.Equal(category.Id, product.CategoryId);
+    }
+}

@@ -11,6 +11,7 @@
   </Folder>
   <Folder Name="/test/">
     <Project Path="Ecommerce.Application.UnitTests/Ecommerce.Application.UnitTests.csproj" />
+    <Project Path="Ecommerce.IntegrationTests/Ecommerce.IntegrationTests.csproj" Id="67c32f54-38e3-439f-af12-3c66b3a4ff99" />
   </Folder>
   <Project Path="docker-compose.dcproj">
     <Build />

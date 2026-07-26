@@ -1,2 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Update="SonarAnalyzer.CSharp" Version="10.30.0.144632" />
+  </ItemGroup>
 </Project>

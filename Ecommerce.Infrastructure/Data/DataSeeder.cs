@@ -21,10 +21,9 @@ public static class DataSeeder
             var lastName = new LastName(faker.Person.LastName);
             var email = new Domain.Users.Email(faker.Internet.Email());
 
-            string password = "test1234";
 
             string passwordSalt = authService.GenerateSalt();
-            string passwordHash = authService.HashPassword(password, passwordSalt);
+            string passwordHash = authService.HashPassword("test1234", passwordSalt);
 
             bool isAdmin = faker.Random.Bool();
 

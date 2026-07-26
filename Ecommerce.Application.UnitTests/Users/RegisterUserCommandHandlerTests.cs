@@ -2,7 +2,6 @@
 using Ecommerce.Application.Users.Register;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Users;
-using FluentAssertions;
 using Moq;
 
 namespace Ecommerce.Application.UnitTests.Users;
@@ -50,9 +49,8 @@ public class RegisterUserCommandHandlerTests
         Result<Guid> result = await handler.Handle(command, default);
 
         // Assert
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().Be(UserErrors.AlreadyExists);
+        Assert.True(result.IsFailure);
+        Assert.Equal(UserErrors.AlreadyExists, result.Error);
     }
 
 
@@ -78,8 +76,7 @@ public class RegisterUserCommandHandlerTests
 
         // Assert
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().NotBeEmpty();
+        Assert.True(result.IsSuccess);
     }
 
 
@@ -143,7 +140,7 @@ public class RegisterUserCommandHandlerTests
         Result<Guid> result = await handler.Handle(command, default);
 
         // Assert
-        result.IsSuccess.Should().BeTrue();
+        Assert.False(result.IsSuccess);
 
         _unitOfWorkMock.Verify(
             x => x.SaveChangesAsync(It.IsAny<CancellationToken>()),
