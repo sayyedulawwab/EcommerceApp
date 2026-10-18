@@ -1,182 +1,152 @@
 # Ecommerce API
 
-Welcome to the Ecommerce API repository! This API provides various functionalities for managing products, categories, user authentication, reviews, and orders for an ecommerce platform. It is a project in progress!
+A REST API for an ecommerce platform: products, categories, orders, product reviews, and user registration/login with JWT authentication. It is a work in progress.
 
 ## Features
 
-- **Product Management:**
-  - Add, edit, delete, and retrieve products
-- **Category Management:**
-  - Add, edit, delete, and retrieve product categories
-- **User Authentication:**
-  - Register and login with username and password
-  - JWT token authentication and authorization
-- **Review System:**
-  - Add reviews to products
-  - Get reviews of a product
-- **Order Placement:**
-  - Place orders
+- **Products:** add, edit, delete, get by id (with its reviews), and search with filtering, sorting, paging and Redis caching
+- **Categories:** add, edit, delete, list, and get by id
+- **Orders:** place an order for the signed-in user and list orders
+- **Reviews:** rate (1–5) and comment on a product
+- **Users:** register and log in (JWT bearer tokens, PBKDF2-hashed passwords)
 
+## Technologies
 
-## Technologies Used
+- **.NET 10**, ASP.NET Core controllers, API versioning (`/api/v1/...`)
+- **PostgreSQL** with **EF Core** (write side and migrations) and **Dapper** (read-side queries)
+- **Redis** for caching
+- **FluentValidation**, **Scrutor** (handler registration and decorators)
+- **Serilog** and **OpenTelemetry**, exported through an OTLP collector to Loki, Tempo and Prometheus, and viewed in Grafana
+- **xUnit**, **Moq**, **Testcontainers**, **Respawn**
+- **Docker** / Docker Compose, with nginx as a reverse proxy
 
-- ASP.NET Core 8 Web API, PostgreSQL, Entity Framework Core 8, Dapper, FluentValidation, MediatR, Redis, Docker
-- Architecture Patterns: Clean architecture, Domain-driven design (DDD), CQRS by implementing Mediator pattern using MediatR package
+**Architecture:** Clean Architecture, Domain-Driven Design, and CQRS through lightweight custom command/query handler interfaces (no MediatR).
+
+```
+Ecommerce.Domain            Entities, value objects, domain events, repository interfaces
+Ecommerce.Application       Commands, queries, handlers, validators, decorators
+Ecommerce.Infrastructure    EF Core, repositories, Redis cache, JWT, password hashing
+Ecommerce.API               Controllers, error mapping, middleware, startup
+Ecommerce.Application.UnitTests
+Ecommerce.IntegrationTests  HTTP tests against PostgreSQL in Docker
+```
 
 ## Getting Started
 
-To get started with the Ecommerce API, follow these steps:
+Prerequisites: the .NET 10 SDK and Docker Desktop.
 
-1. Clone this repository to your local machine.
-2. Install Docker Desktop for windows.
-3. Navigate to the project directory in your terminal.
-4. Run the command `docker-compose up`.
+1. Start the infrastructure (PostgreSQL, Redis, and the observability stack). This also creates the shared Docker network:
+
+   ```bash
+   docker compose -f infra.compose.yml --env-file .env.dev up -d
+   ```
+
+2. Build and start the API:
+
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.override.yml --env-file .env.dev up --build
+   ```
+
+3. The API is available at `http://localhost:5000` (direct) and `http://localhost:8080` (through nginx). In Development the OpenAPI document is served at `/openapi/v1.json`, and Grafana runs at `http://localhost:3000`.
+
+> In Development, the API recreates the database on every start: it drops it, applies migrations, and seeds sample data. Seeded users have the password `test1234`.
+
+## Running the Tests
+
+```bash
+# Unit tests
+dotnet test Ecommerce.Application.UnitTests/Ecommerce.Application.UnitTests.csproj
+
+# Integration tests (Docker must be running)
+dotnet test Ecommerce.IntegrationTests/Ecommerce.IntegrationTests.csproj
+```
 
 ## API Endpoints
 
+All routes are versioned. The version can also be sent in the `X-Api-Version` header. Endpoints marked 🔒 require a `Bearer` token from `/api/v1/auth/login`.
 
-### Users
+### Auth
 
-- **POST /api/users/register**: Registers a new user.
-  - Request Body:
-    ```json
-    {
-      "firstName": "John",
-      "lastName": "Doe",
-      "email": "john.doe@example.com",
-      "password": "Password123!"
-    }
-    ```
-  - Response: Success (200)
+| Method | Route                    | Description                                   |
+| ------ | ------------------------ | --------------------------------------------- |
+| POST   | `/api/v1/auth/register`  | Register a user; returns the new user id      |
+| POST   | `/api/v1/auth/login`     | Log in; returns `{ "accessToken": "..." }`     |
 
-- **POST /api/users/login**: Logs in a user.
-  - Request Body:
-    ```json
-    {
-      "email": "john.doe@example.com",
-      "password": "Password123!"
-    }
-    ```
-  - Response: Success (200)
+```json
+POST /api/v1/auth/register
+{ "firstName": "John", "lastName": "Doe", "email": "john.doe@example.com", "password": "Password123!" }
+```
 
 ### Products
 
-- **GET /api/products**: Retrieves a list of products. Optionally filter by product name.
-  - Query Parameters:
-    - `name` (string) - Filter products by name.
-  - Response: Success (200)
+| Method | Route                    | Description                                                    |
+| ------ | ------------------------ | -------------------------------------------------------------- |
+| GET    | `/api/v1/products`       | Search products (paged)                                         |
+| GET    | `/api/v1/products/{id}`  | Get a product with its reviews                                  |
+| POST   | `/api/v1/products` 🔒    | Add a product                                                   |
+| PUT    | `/api/v1/products/{id}` 🔒 | Edit a product                                                |
+| DELETE | `/api/v1/products/{id}` 🔒 | Delete a product                                              |
 
-- **POST /api/products**: Creates a new product.
-  - Request Body:
-    ```json
-    {
-      "name": "Laptop",
-      "description": "High-performance laptop with the latest specifications.",
-      "priceCurrency": "USD",
-      "priceAmount": 1099.99,
-      "quantity": 50,
-      "productCategoryId": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-    }
-    ```
-  - Response: Success (200)
+Search query parameters: `page`, `pageSize`, `categoryId`, `minPrice`, `maxPrice`, `keyword` (case-insensitive name match), `sortColumn` (`Name`, `PriceAmount`, `CreatedOnUtc`) and `sortOrder` (`asc`, `desc`).
 
-- **GET /api/products/{id}**: Retrieves details of a specific product.
-  - Request Parameters:
-    - `id` (string, format: uuid) - ID of the product to retrieve.
-  - Response: Success (200)
+```json
+POST /api/v1/products
+{
+  "name": "Laptop",
+  "description": "High-performance laptop.",
+  "priceCurrency": "USD",
+  "priceAmount": 1099.99,
+  "quantity": 50,
+  "categoryId": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+}
+```
 
-- **PUT /api/products/{id}**: Updates details of a specific product.
-  - Request Parameters:
-    - `id` (string, format: uuid) - ID of the product to update.
-  - Request Body:
-    ```json
-    {
-      "name": "Updated Laptop",
-      "description": "Updated description of the laptop.",
-      "priceCurrency": "USD",
-      "priceAmount": 1199.99,
-      "quantity": 60,
-      "productCategoryId": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-    }
-    ```
-  - Response: Success (200)
+Supported currencies: `USD`, `BDT`.
 
-- **DELETE /api/products/{id}**: Deletes a specific product.
-  - Request Parameters:
-    - `id` (string, format: uuid) - ID of the product to delete.
-  - Response: Success (200)
+### Categories
 
-### Product Categories
+| Method | Route                      | Description         |
+| ------ | -------------------------- | ------------------- |
+| GET    | `/api/v1/categories`       | List categories     |
+| GET    | `/api/v1/categories/{id}`  | Get a category      |
+| POST   | `/api/v1/categories` 🔒    | Add a category      |
+| PUT    | `/api/v1/categories/{id}` 🔒 | Edit a category   |
+| DELETE | `/api/v1/categories/{id}` 🔒 | Delete a category |
 
-- **GET /api/productcategories**: Retrieves a list of product categories.
-  - *No request body.*
-  - Response: Success (200)
-
-- **POST /api/productcategories**: Creates a new product category.
-  - Request Body:
-    ```json
-    {
-      "name": "Electronics",
-      "code": "electronics"
-    }
-    ```
-  - Response: Success (200)
-
-- **GET /api/productcategories/{id}**: Retrieves details of a specific product category.
-  - Request Parameters:
-    - `id` (string, format: uuid) - ID of the product category to retrieve.
-  - Response: Success (200)
-
-- **PUT /api/productcategories/{id}**: Updates details of a specific product category.
-  - Request Parameters:
-    - `id` (string, format: uuid) - ID of the product category to update.
-  - Request Body:
-    ```json
-    {
-      "name": "Updated Electronics",
-      "code": "electronics"
-    }
-    ```
-  - Response: Success (200)
-
-- **DELETE /api/productcategories/{id}**: Deletes a specific product category.
-  - Request Parameters:
-    - `id` (string, format: uuid) - ID of the product category to delete.
-  - Response: Success (200)
-
-### Reviews
-
-- **POST /api/reviews**: Posts a review for a product.
-  - Request Body:
-    ```json
-    {
-      "productId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "rating": 5,
-      "comment": "This laptop exceeded my expectations. Highly recommended!"
-    }
-    ```
-  - Response: Success (200)
+```json
+POST /api/v1/categories
+{ "name": "Electronics", "code": "ELEC" }
+```
 
 ### Orders
 
-- **GET /api/orders**: Retrieves a list of orders.
-  - *No request body.*
-  - Response: Success (200)
+| Method | Route               | Description                              |
+| ------ | ------------------- | ---------------------------------------- |
+| GET    | `/api/v1/orders` 🔒 | List orders                              |
+| POST   | `/api/v1/orders` 🔒 | Place an order for the signed-in user    |
 
-- **POST /api/orders**: Places a new order.
-  - Request Body:
-    ```json
-    {
-      "orderItems": [
-        {
-          "productId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-          "quantity": 1
-        },
-        {
-          "productId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-          "quantity": 2
-        }
-      ]
-    }
-    ```
-  - Response: Success (200)
+```json
+POST /api/v1/orders
+{
+  "orderItems": [
+    { "productId": "3fa85f64-5717-4562-b3fc-2c963f66afa6", "quantity": 2 }
+  ]
+}
+```
+
+All products in one order must use the same currency.
+
+### Reviews
+
+| Method | Route                | Description          |
+| ------ | -------------------- | -------------------- |
+| POST   | `/api/v1/reviews` 🔒 | Review a product     |
+
+```json
+POST /api/v1/reviews
+{ "productId": "3fa85f64-5717-4562-b3fc-2c963f66afa6", "rating": 5, "comment": "Highly recommended!" }
+```
+
+### Errors
+
+Failures return an error object `{ "name": "...", "description": "...", "code": ... }` with the matching HTTP status: 400 (validation, including a list of per-field `errors`), 401 (invalid credentials), 404 (not found), 409 (conflict, e.g. email already registered), or 500.

@@ -3,7 +3,7 @@ using Ecommerce.Domain.Abstractions;
 using Microsoft.Extensions.Logging;
 using Serilog.Context;
 
-namespace Application.Abstractions.Behaviors;
+namespace Ecommerce.Application.Abstractions.Behaviors;
 
 internal static class LoggingDecorator
 {

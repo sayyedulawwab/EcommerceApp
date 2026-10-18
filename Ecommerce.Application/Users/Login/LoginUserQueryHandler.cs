@@ -17,18 +17,10 @@ internal sealed class LoginUserQueryHandler(
 
         User? user = await userRepository.GetByEmail(request.Email);
 
-        if (user is null)
-        {
-            return Result.Failure<AccessTokenResponse>(UserErrors.NotFound);
-        }
-
-        string hashedPassword = authService.HashPassword(request.Password, user.PasswordSalt);
-
-        if (hashedPassword != user.PasswordHash)
+        if (user is null || !authService.VerifyPassword(request.Password, user.PasswordSalt, user.PasswordHash))
         {
             return Result.Failure<AccessTokenResponse>(UserErrors.InvalidCredentials);
         }
-
 
         Result<string> result = jwtService.GetAccessToken(
             request.Email,

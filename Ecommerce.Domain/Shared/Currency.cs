@@ -12,21 +12,16 @@ public record Currency
 
     public string Code { get; init; }
 
-    public static Currency FromCode(string code)
-    {
-        return All.FirstOrDefault(c => c.Code == code) ?? throw new ApplicationException("The currency code is invalid");
-    }
-
     public static readonly IReadOnlyCollection<Currency> All =
     [
         Usd,
         Bdt
     ];
 
-    public static Currency Create(string code)
-    {
-        var currency = new Currency(code);
+    public static bool IsSupported(string? code) => All.Any(c => c.Code == code);
 
-        return currency;
+    public static Currency FromCode(string code)
+    {
+        return All.FirstOrDefault(c => c.Code == code) ?? throw new ApplicationException("The currency code is invalid");
     }
 }

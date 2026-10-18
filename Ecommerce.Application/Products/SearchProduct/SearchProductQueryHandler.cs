@@ -18,7 +18,8 @@ internal sealed class SearchProductQueryHandler(
 {
     public async Task<Result<PagedList<ProductResponse>>> Handle(SearchProductQuery request, CancellationToken cancellationToken)
     {
-        //await _cacheService.RemoveByPrefixAsync("products", cancellationToken);
+        int page = request.Page > 0 ? request.Page : 1;
+        int pageSize = request.PageSize > 0 ? request.PageSize : 10;
 
         string cacheKey = $"products-{GenerateCacheKey(request)}";
 
@@ -27,7 +28,7 @@ internal sealed class SearchProductQueryHandler(
         if (cachedProductResponses is not null && cachedProductResponses.Any())
         {
             long totalRecordsFromCache = cachedProductResponses.FirstOrDefault()?.TotalRecords ?? 0;
-            var pagedProductsFromCache = PagedList<ProductResponse>.Create(cachedProductResponses, request.Page, request.PageSize, totalRecordsFromCache);
+            var pagedProductsFromCache = PagedList<ProductResponse>.Create(cachedProductResponses, page, pageSize, totalRecordsFromCache);
             return pagedProductsFromCache;
         }
 
@@ -66,7 +67,7 @@ internal sealed class SearchProductQueryHandler(
         }
         if (!string.IsNullOrEmpty(request.Keyword))
         {
-            conditions.Add("p.name LIKE '%' || @Keyword || '%'");
+            conditions.Add("p.name ILIKE '%' || @Keyword || '%'");
         }
 
         // Add conditions if there are any
@@ -86,9 +87,6 @@ internal sealed class SearchProductQueryHandler(
         sqlBuilder.Append(" OFFSET (@PageSize * (@Page - 1)) ROWS FETCH NEXT @PageSize ROWS ONLY;");
 
         string sql = sqlBuilder.ToString();
-
-        int page = request.Page > 0 ? request.Page : 1;
-        int pageSize = request.PageSize > 0 ? request.PageSize : 10;
 
         // Execute query with parameters
         IEnumerable<ProductResponse> products = await connection.QueryAsync<ProductResponse>(sql, new

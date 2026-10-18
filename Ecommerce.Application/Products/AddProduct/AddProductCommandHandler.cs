@@ -20,7 +20,7 @@ internal sealed class AddProductCommandHandler(
             new ProductName(request.Name),
             new ProductDescription(request.Description),
             new Money(request.PriceAmount,
-            Currency.Create(request.PriceCurrency)),
+            Currency.FromCode(request.PriceCurrency)),
             request.Quantity,
             new CategoryId(request.CategoryId),
             dateTimeProvider.UtcNow);

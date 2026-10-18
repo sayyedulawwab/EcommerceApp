@@ -1,4 +1,6 @@
-﻿namespace Ecommerce.Domain.Abstractions;
+﻿using System.Net;
+
+namespace Ecommerce.Domain.Abstractions;
 
 public sealed record ValidationError : Error
 {
@@ -6,7 +8,7 @@ public sealed record ValidationError : Error
         : base(
             "Validation.General",
             "One or more validation errors occurred",
-            HttpResponseStatusCodes.BadRequest)
+            HttpStatusCode.BadRequest)
     {
         Errors = errors;
     }

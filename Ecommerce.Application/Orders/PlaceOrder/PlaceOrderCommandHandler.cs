@@ -3,7 +3,6 @@ using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Orders;
 using Ecommerce.Domain.Products;
-using Ecommerce.Domain.Shared;
 using Ecommerce.Domain.Users;
 
 namespace Ecommerce.Application.Orders.PlaceOrder;
@@ -27,7 +26,12 @@ internal sealed class PlaceOrderCommandHandler(
                 return Result.Failure<Guid>(ProductErrors.NotFound);
             }
 
-            order.AddOrderItem(order.Id, product, item.Quantity, dateTimeProvider.UtcNow);
+            Result addItemResult = order.AddOrderItem(product, item.Quantity, dateTimeProvider.UtcNow);
+
+            if (addItemResult.IsFailure)
+            {
+                return Result.Failure<Guid>(addItemResult.Error);
+            }
         }
 
         orderRepository.Add(order);

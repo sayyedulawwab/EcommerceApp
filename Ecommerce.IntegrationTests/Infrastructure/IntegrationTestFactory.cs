@@ -38,8 +38,7 @@ public sealed class IntegrationTestFactory
 
     public IntegrationTestFactory()
     {
-        _postgres = new PostgreSqlBuilder()
-            .WithImage("postgres:18")
+        _postgres = new PostgreSqlBuilder("postgres:18")
             .WithDatabase("ecommerce")
             .WithUsername("postgres")
             .WithPassword("postgres")
@@ -73,6 +72,21 @@ public sealed class IntegrationTestFactory
     public Task ResetDatabaseAsync()
     {
         return _databaseReset.ResetAsync(_connection);
+    }
+
+    public HttpClient CreateClientForUser(Guid userId)
+    {
+        HttpClient client = CreateClient();
+
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(
+                TestAuthenticationHandler.AuthenticationScheme);
+
+        client.DefaultRequestHeaders.Add(
+            TestAuthenticationHandler.UserIdHeaderName,
+            userId.ToString());
+
+        return client;
     }
 
     public new async Task DisposeAsync()

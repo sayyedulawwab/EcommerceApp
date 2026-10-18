@@ -1,4 +1,5 @@
-﻿using Ecommerce.Domain.Abstractions;
+﻿using System.Net;
+using Ecommerce.Domain.Abstractions;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Ecommerce.API.Extensions;
@@ -9,10 +10,11 @@ public static class ErrorMappingExtensions
     {
         return error.Code switch
         {
-            HttpResponseStatusCodes.BadRequest => new BadRequestObjectResult(error),
-            HttpResponseStatusCodes.NotFound => new NotFoundObjectResult(error),
-            HttpResponseStatusCodes.Conflict => new ConflictObjectResult(error),
-            HttpResponseStatusCodes.InternalServerError => new ObjectResult(error)
+            HttpStatusCode.BadRequest => new BadRequestObjectResult(error),
+            HttpStatusCode.Unauthorized => new UnauthorizedObjectResult(error),
+            HttpStatusCode.NotFound => new NotFoundObjectResult(error),
+            HttpStatusCode.Conflict => new ConflictObjectResult(error),
+            HttpStatusCode.InternalServerError => new ObjectResult(error)
             {
                 StatusCode = 500
             },

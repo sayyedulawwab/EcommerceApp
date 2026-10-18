@@ -13,6 +13,7 @@ internal sealed class TestAuthenticationHandler
     : AuthenticationHandler<AuthenticationSchemeOptions>
 {
     public const string AuthenticationScheme = "Test";
+    public const string UserIdHeaderName = "X-Test-User-Id";
     public static readonly Guid UserId =
         Guid.Parse("11111111-1111-1111-1111-111111111111");
 
@@ -26,9 +27,13 @@ internal sealed class TestAuthenticationHandler
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
+        Guid userId = Guid.TryParse(Request.Headers[UserIdHeaderName], out Guid headerUserId)
+            ? headerUserId
+            : UserId;
+
         Claim[] claims =
         [
-            new(ClaimTypes.NameIdentifier, UserId.ToString()),
+            new(ClaimTypes.NameIdentifier, userId.ToString()),
             new(ClaimTypes.Name, "Integration Test User")
         ];
 

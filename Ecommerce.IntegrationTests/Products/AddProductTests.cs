@@ -67,7 +67,7 @@ public sealed class AddProductTests
 
         Assert.NotNull(product);
 
-        Assert.Equal(request.Name, product!.Name.Value);
+        Assert.Equal(request.Name, product.Name.Value);
         Assert.Equal(request.Description, product.Description.Value);
         Assert.Equal(request.PriceAmount, product.Price.Amount);
         Assert.Equal(request.PriceCurrency, product.Price.Currency.Code);

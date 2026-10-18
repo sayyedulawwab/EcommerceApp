@@ -4,7 +4,7 @@ using Ecommerce.Domain.Abstractions;
 using FluentValidation;
 using FluentValidation.Results;
 
-namespace Application.Abstractions.Behaviors;
+namespace Ecommerce.Application.Abstractions.Behaviors;
 
 internal static class ValidationDecorator
 {

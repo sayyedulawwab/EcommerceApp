@@ -6,13 +6,12 @@ using Ecommerce.Domain.Users;
 namespace Ecommerce.Domain.Orders;
 public sealed class Order : Entity<OrderId>
 {
-    public Order(OrderId id, UserId userID, Money totalPrice, OrderStatus status, DateTime createdOnUtc) : base(id)
+    private Order(OrderId id, UserId userId, Money totalPrice, OrderStatus status, DateTime createdOnUtc) : base(id)
     {
-        UserId = userID;
+        UserId = userId;
         TotalPrice = totalPrice;
         Status = status;
         CreatedOnUtc = createdOnUtc;
-
     }
 
     private Order()
@@ -23,7 +22,7 @@ public sealed class Order : Entity<OrderId>
     public Money TotalPrice { get; private set; }
     public OrderStatus Status { get; private set; }
     public DateTime CreatedOnUtc { get; private set; }
-    public DateTime UpdatedOnUtc { get; private set; }
+    public DateTime? UpdatedOnUtc { get; private set; }
     public List<OrderItem> OrderItems { get; private set; } = [];
 
     public static Order Create(UserId userId, OrderStatus status, DateTime createdOnUtc)
@@ -33,37 +32,34 @@ public sealed class Order : Entity<OrderId>
         return order;
     }
 
-    public void AddOrderItem(OrderId orderId, Product product, int quantity, DateTime createdOnUtc)
+    public Result AddOrderItem(Product product, int quantity, DateTime createdOnUtc)
     {
-
-        var orderItem = OrderItem.Create(orderId, product, quantity, createdOnUtc);
-
-        OrderItems.Add(orderItem);
-
-        if (TotalPrice.IsZero())
+        if (quantity <= 0)
         {
-            TotalPrice = new Money(orderItem.Product.Price.Amount, orderItem.Product.Price.Currency);
+            return Result.Failure(OrderErrors.InvalidQuantity);
         }
-        else
-        {
-            if (TotalPrice.Currency != orderItem.Product.Price.Currency)
-            {
-                throw new InvalidOperationException("Currencies have to be equal");
-            }
 
-            TotalPrice += new Money(orderItem.Product.Price.Amount * orderItem.Quantity, orderItem.Product.Price.Currency);
+        var lineTotal = new Money(product.Price.Amount * quantity, product.Price.Currency);
+
+        if (OrderItems.Count > 0 && TotalPrice.Currency != lineTotal.Currency)
+        {
+            return Result.Failure(OrderErrors.CurrencyMismatch);
         }
+
+        TotalPrice = OrderItems.Count == 0 ? lineTotal : TotalPrice + lineTotal;
+
+        OrderItems.Add(OrderItem.Create(Id, product, quantity, createdOnUtc));
+
+        return Result.Success();
     }
 
-    public static Order Update(Order order, UserId userID, Money totalPrice, OrderStatus status, DateTime updatedOnUtc)
+    public static Order Update(Order order, UserId userId, Money totalPrice, OrderStatus status, DateTime updatedOnUtc)
     {
-
-        order.UserId = userID;
+        order.UserId = userId;
         order.TotalPrice = totalPrice;
         order.Status = status;
         order.UpdatedOnUtc = updatedOnUtc;
 
         return order;
     }
-
 }

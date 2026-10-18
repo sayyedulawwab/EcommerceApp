@@ -25,6 +25,12 @@ internal sealed class AddReviewCommandHandler(
         }
 
         Result<Rating> rating = Rating.Create(request.Rating);
+
+        if (rating.IsFailure)
+        {
+            return Result.Failure<Guid>(rating.Error);
+        }
+
         var review = Review.Create(product,
                                    new UserId(request.UserId),
                                    rating.Value,

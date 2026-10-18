@@ -6,8 +6,8 @@ public class EditCategoryCommandValidator : AbstractValidator<EditCategoryComman
     public EditCategoryCommandValidator()
     {
         RuleFor(c => c.Id).NotEmpty();
-        RuleFor(c => c.Name).NotEmpty();
-        RuleFor(c => c.Code).NotEmpty();
+        RuleFor(c => c.Name).NotEmpty().MaximumLength(200);
+        RuleFor(c => c.Code).NotEmpty().MaximumLength(200);
 
     }
 }

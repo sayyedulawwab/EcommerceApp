@@ -53,7 +53,7 @@ public static class DataSeeder
             var name = new ProductName(faker.Commerce.ProductName());
             var description = new ProductDescription(faker.Commerce.ProductAdjective());
             int quantity = faker.Random.Number(1, 100);
-            var price = new Money(faker.Finance.Amount(), Currency.Create("BDT"));
+            var price = new Money(faker.Finance.Amount(), Currency.Bdt);
             CategoryId categoryId = productCategoryGuids[i % productCategoryGuids.Count];
 
             var product = Product.Create(name, description, price, quantity, categoryId, DateTime.UtcNow);
