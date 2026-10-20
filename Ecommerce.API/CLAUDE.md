@@ -122,5 +122,6 @@ If a domain error uses a status that isn't listed here, add a case to this switc
 
 ## Configuration
 
-- `appsettings.json` / `appsettings.Development.json` sections: `Serilog`, `Otlp`, `Jwt` (`Issuer`, `Audience`, `SecretKey`), `ConnectionStrings` (`Database`, `Redis`). Hostnames are the Docker service names (`database-postgres`, `cache-redis`, `otel-collector`).
+- `appsettings.json` has only the environment-agnostic `Serilog` section. `appsettings.Development.json` has `Otlp`, `Jwt` (`Issuer`, `Audience`, `SecretKey`) and `ConnectionStrings` (`Database`, `Redis`), using Docker service names (`database-postgres`, `cache-redis`, `otel-collector`).
+- Outside Development these must come from environment variables (`ConnectionStrings__Database`, `Jwt__SecretKey`, `Otlp__LogsEndpoint`, ...); without a connection string the host fails at startup. Without `Otlp:*` endpoints the OTLP exporters are simply off.
 - The committed JWT secret and DB password are dev values. Real secrets go in user secrets (`UserSecretsId` is set) or environment variables. Never commit new secrets.

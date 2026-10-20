@@ -27,7 +27,8 @@ RUN dotnet publish \
     "Ecommerce.API.csproj" \
     -c $BUILD_CONFIGURATION \
     -o /app/publish \
-    /p:UseAppHost=false
+    /p:UseAppHost=false \
+    /p:OpenApiGenerateDocuments=false
 
 FROM base AS final
 

@@ -10,10 +10,14 @@ services:
 
     environment:
       ASPNETCORE_HTTP_PORTS: 8080
-      POSTGRES_DB: ecommercedb
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      IMAGE_TAG: latest
+      ConnectionStrings__Database: "Host=database-postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};"
+      ConnectionStrings__Redis: cache-redis:6379
+      Jwt__Issuer: ${JWT_ISSUER:-Ecommerce}
+      Jwt__Audience: ${JWT_AUDIENCE:-Ecommerce}
+      Jwt__SecretKey: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY}
+      Otlp__LogsEndpoint: http://otel-collector:4318/v1/logs
+      Otlp__TracesEndpoint: http://otel-collector:4318/v1/traces
+      Otlp__MetricsEndpoint: http://otel-collector:4318/v1/metrics
 
     expose:
       - "8080"
