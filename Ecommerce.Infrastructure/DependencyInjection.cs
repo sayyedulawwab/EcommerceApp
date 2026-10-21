@@ -49,9 +49,12 @@ public static class DependencyInjection
 
     private static void AddPersistence(IServiceCollection services, IConfiguration configuration)
     {
-        string connectionString = configuration.GetConnectionString("Database") ?? throw new ArgumentNullException(nameof(configuration));
+        // Read when first resolved, not at registration: build-time OpenAPI generation boots the app
+        // without any environment config and never touches the database.
+        string GetConnectionString() => configuration.GetConnectionString("Database")
+            ?? throw new InvalidOperationException("Connection string 'ConnectionStrings:Database' is not configured.");
 
-        services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention());
+        services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(GetConnectionString()).UseSnakeCaseNamingConvention());
 
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IProductRepository, ProductRepository>();
@@ -61,7 +64,7 @@ public static class DependencyInjection
 
         services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<ApplicationDbContext>());
 
-        services.AddSingleton<ISqlConnectionFactory>(_ => new SqlConnectionFactory(connectionString));
+        services.AddSingleton<ISqlConnectionFactory>(_ => new SqlConnectionFactory(GetConnectionString()));
 
         SqlMapper.AddTypeHandler(new DateOnlyTypeHandler());
     }
