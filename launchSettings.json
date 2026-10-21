@@ -4,7 +4,8 @@
       "commandName": "DockerCompose",
       "commandVersion": "1.0",
       "serviceActions": {
-        "ecommerce.api": "StartDebugging"
+        "ecommerce-api": "StartDebugging",
+        "nginx": "StartWithoutDebugging"
       }
     }
   }

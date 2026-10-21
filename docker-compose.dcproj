@@ -6,8 +6,9 @@
     <DockerPublishLocally>False</DockerPublishLocally>
     <ProjectGuid>4a3e2a11-be5f-408a-923c-313e28b65e48</ProjectGuid>
     <DockerLaunchAction>LaunchBrowser</DockerLaunchAction>
-    <DockerServiceUrl>{Scheme}://localhost:{ServicePort}/swagger</DockerServiceUrl>
-    <DockerServiceName>ecommerce.api</DockerServiceName>
+    <DockerServiceUrl>{Scheme}://localhost:{ServicePort}/openapi/v1.json</DockerServiceUrl>
+    <DockerServiceName>ecommerce-api</DockerServiceName>
+    <DockerComposeEnvFilePath>.env.dev</DockerComposeEnvFilePath>
   </PropertyGroup>
   <ItemGroup>
     <None Include="docker-compose.override.yml">
@@ -15,5 +16,6 @@
     </None>
     <None Include="docker-compose.yml" />
     <None Include=".dockerignore" />
+    <None Include=".env.dev" />
   </ItemGroup>
 </Project>

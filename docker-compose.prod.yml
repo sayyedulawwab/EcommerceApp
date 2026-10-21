@@ -6,7 +6,7 @@ services:
     restart: unless-stopped
 
     volumes:
-      - /opt/ecommerce/logs:/logs
+      - /opt/ecommerce/logs:/app/logs
 
   nginx:
     image: nginx:alpine

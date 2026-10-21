@@ -47,6 +47,10 @@ Prerequisites: the .NET 10 SDK and Docker Desktop.
    docker compose -f docker-compose.yml -f docker-compose.override.yml --env-file .env.dev up --build
    ```
 
+   Or open the solution in Visual Studio and run the **Docker Compose** profile, which reads `.env.dev` (set in `docker-compose.dcproj`) and attaches the debugger to `ecommerce-api`.
+
+   Infrastructure is its own compose project (`ecommerce-infra`), so stopping or rebuilding the API leaves PostgreSQL, Redis and the observability stack running. Stop it with `docker compose -f infra.compose.yml down`.
+
 3. The API is available at `http://localhost:5000` (direct) and `http://localhost:8080` (through nginx). In Development the OpenAPI document is served at `/openapi/v1.json`, and Grafana runs at `http://localhost:3000`.
 
 > In Development, the API recreates the database on every start: it drops it, applies migrations, and seeds sample data. Seeded users have the password `test1234`.

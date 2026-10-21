@@ -61,7 +61,8 @@ dotnet test Ecommerce.IntegrationTests/Ecommerce.IntegrationTests.csproj
 # Add an EF migration (EF tools package lives in the API project)
 dotnet ef migrations add <Name> --project Ecommerce.Infrastructure --startup-project Ecommerce.API
 
-# Run the full stack in Docker (the infra compose file creates the shared external network)
+# Run the full stack in Docker. Infra is a separate compose project (`ecommerce-infra`) that creates the shared
+# external network and keeps running while the API stack is stopped/rebuilt (VS Docker Compose reads .env.dev via the dcproj)
 docker compose -f infra.compose.yml --env-file .env.dev up -d
 docker compose -f docker-compose.yml -f docker-compose.override.yml --env-file .env.dev up --build
 # API: http://localhost:5000 (direct) or http://localhost:8080 (via nginx); Grafana: http://localhost:3000

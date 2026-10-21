@@ -1,3 +1,5 @@
+name: ecommerce-infra
+
 services:
 
   database-postgres:
@@ -46,7 +48,7 @@ services:
       - ecommerce-network
   
   otel-collector:
-    image: otel/opentelemetry-collector-contrib
+    image: otel/opentelemetry-collector-contrib:0.143.1
     container_name: otel-collector
     restart: unless-stopped
     ports:
@@ -56,16 +58,11 @@ services:
     volumes:
       - ./otel/otel-collector.yml:/etc/otel-collector.yml:ro
     command: ["--config=/etc/otel-collector.yml"]
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:13133"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     networks:
       - ecommerce-network
 
   loki:
-    image: grafana/loki
+    image: grafana/loki:3.6.3
     container_name: loki
     restart: unless-stopped
     ports:
@@ -75,16 +72,11 @@ services:
       - ./loki/loki-config.yml:/etc/loki/config.yml:ro
     command: -config.file=/etc/loki/config.yml
     user: "0:0"
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3100/ready"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     networks:
       - ecommerce-network
 
   prometheus:
-    image: prom/prometheus
+    image: prom/prometheus:v3.9.1
     container_name: prometheus
     restart: unless-stopped
     ports:
@@ -105,7 +97,7 @@ services:
       - ecommerce-network
 
   tempo:
-    image: grafana/tempo
+    image: grafana/tempo:2.9.0
     container_name: tempo
     restart: unless-stopped
     ports:
@@ -114,16 +106,11 @@ services:
       - ./tempo/tempo.yml:/etc/tempo.yml:ro
       - ./tempo/data:/var/tempo
     command: ["-config.file=/etc/tempo.yml"]
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3200/ready"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
     networks:
       - ecommerce-network
 
   grafana:
-    image: grafana/grafana
+    image: grafana/grafana:12.3.1
     container_name: grafana
     restart: unless-stopped
     ports:
