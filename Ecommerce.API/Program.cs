@@ -84,8 +84,6 @@ builder.Services
     .AddPresentation()
     .AddInfrastructure(builder.Configuration);
 
-builder.Services.AddOpenApi();
-
 builder.Services.AddApiVersioning(options =>
 {
     options.DefaultApiVersion = new ApiVersion(1);
@@ -106,7 +104,7 @@ WebApplication app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwaggerWithUi();
     app.ApplyMigrations();
 }
 
