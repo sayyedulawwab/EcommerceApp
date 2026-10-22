@@ -71,7 +71,7 @@ internal sealed class SearchProductQueryHandler(
         }
 
         // Add conditions if there are any
-        if (conditions.Any())
+        if (conditions.Count > 0)
         {
             sqlBuilder.Append(" WHERE " + string.Join(" AND ", conditions));
         }
@@ -109,7 +109,7 @@ internal sealed class SearchProductQueryHandler(
     }
 
 
-    private string GenerateCacheKey(SearchProductQuery request)
+    private static string GenerateCacheKey(SearchProductQuery request)
     {
         // Create an anonymous object with all the necessary parameters
         var parameters = new

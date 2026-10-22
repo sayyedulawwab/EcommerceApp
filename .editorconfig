@@ -229,180 +229,75 @@ dotnet_naming_style.begins_with_i.capitalization = pascal_case
 
 # .NET Code Analyzers rules
 
-# CA1000: Do not declare static members on generic types
+# CA1000: Do not declare static members on generic types. Result<T> and PagedList<T> expose static factory methods by design.
 dotnet_diagnostic.CA1000.severity = none
 
-# CA1002: Do not expose generic lists
+# CA1002: Do not expose generic lists. DTOs and commands use List<T> for JSON binding, and Order uses it for an EF Core navigation.
 dotnet_diagnostic.CA1002.severity = none
 
-# CA1008: Enums should have zero value
+# CA1008: Enums should have zero value. OrderStatus values are stored in the database; adding a zero value would change them.
 dotnet_diagnostic.CA1008.severity = none
 
-# CA1019: Define accessors for attribute arguments
-dotnet_diagnostic.CA1019.severity = none
-
-# CA1024: Use properties where appropriate
-dotnet_diagnostic.CA1024.severity = none
-
-# CA1030: Use events where appropriate
+# CA1030: Use events where appropriate. RaiseDomainEvent records a domain event; it is not a .NET event.
 dotnet_diagnostic.CA1030.severity = none
 
-# CA1031: Do not catch general exception types
-dotnet_diagnostic.CA1031.severity = none
-
-# CA1032: Implement standard exception constructors
-dotnet_diagnostic.CA1032.severity = none
-
-# CA1034: Nested types should not be visible
-dotnet_diagnostic.CA1034.severity = none
-
-# CA1040: Avoid empty interfaces
+# CA1040: Avoid empty interfaces. ICommand and IQuery are marker interfaces used for handler registration.
 dotnet_diagnostic.CA1040.severity = none
 
-# CA1051: Do not declare visible instance fields
-dotnet_diagnostic.CA1051.severity = none
-
-# CA1056: URI-like properties should not be strings
-dotnet_diagnostic.CA1056.severity = none
-
-# CA1062: Validate arguments of public methods
+# CA1062: Validate arguments of public methods. Nullable reference types already flag possible null arguments.
 dotnet_diagnostic.CA1062.severity = none
 
-# CA1063: Implement IDisposable Correctly
-dotnet_diagnostic.CA1063.severity = none
-
-# CA1307: Specify StringComparison for clarity
-dotnet_diagnostic.CA1307.severity = none
-
-# CA1515: Consider making public types internal
-dotnet_diagnostic.CA1515.severity = none
-
-# CA1700: Do not name enum values 'Reserved'
-dotnet_diagnostic.CA1700.severity = none
-
-# CA1707: Identifiers should not contain underscores
-dotnet_diagnostic.CA1707.severity = none
-
-# CA1711: Identifiers should not have incorrect suffix
+# CA1711: Identifiers should not have incorrect suffix. IDomainEventHandler is a domain term, not a .NET event handler.
 dotnet_diagnostic.CA1711.severity = none
 
-# CA1716: Identifiers should not match keywords
+# CA1716: Identifiers should not match keywords. Error and Shared are Visual Basic keywords; this solution is C# only.
 dotnet_diagnostic.CA1716.severity = none
 
-# CA1724: Type names should not match namespaces
+# CA1724: Type names should not match namespaces. Each layer's DependencyInjection class is named by convention.
 dotnet_diagnostic.CA1724.severity = none
 
-# CA1725: Parameter names should match base declaration
-dotnet_diagnostic.CA1725.severity = none
-
-# CA1812: Avoid uninstantiated internal classes
-dotnet_diagnostic.CA1812.severity = none
-
-# CA1816: Dispose methods should call SuppressFinalize
-dotnet_diagnostic.CA1816.severity = none
-
-# CA1819: Properties should not return arrays
+# CA1819: Properties should not return arrays. ValidationError.Errors is an array built once from the failed results.
 dotnet_diagnostic.CA1819.severity = none
 
-# CA1822: Mark members as static
-dotnet_diagnostic.CA1822.severity = none
-
-# CA1848: Use the LoggerMessage delegates
+# CA1848: Use the LoggerMessage delegates. LoggerMessage delegates are for hot paths; plain ILogger calls are fine here.
 dotnet_diagnostic.CA1848.severity = none
 
-# CA1860: Avoid using 'Enumerable.Any()' extension method
-dotnet_diagnostic.CA1860.severity = none
-
-# CA1873: Avoid potentially expensive logging
+# CA1873: Avoid potentially expensive logging. The logged arguments are cheap: type names and errors.
 dotnet_diagnostic.CA1873.severity = none
 
-# CA2007: Consider calling ConfigureAwait on the awaited task
+# CA2007: Consider calling ConfigureAwait on the awaited task. ASP.NET Core has no synchronization context, so ConfigureAwait adds nothing.
 dotnet_diagnostic.CA2007.severity = none
 
-# CA2201: Do not raise reserved exception types
-dotnet_diagnostic.CA2201.severity = none
-
-# CA2211: Non-constant fields should not be visible
-dotnet_diagnostic.CA2211.severity = none
-
-# CA2213: Disposable fields should be disposed
-dotnet_diagnostic.CA2213.severity = none
-
-# CA2225: Operator overloads have named alternates
+# CA2225: Operator overloads have named alternates. Result and Money operators need no named alternates in a C#-only solution.
 dotnet_diagnostic.CA2225.severity = none
 
-# CA2227: Collection properties should be read only
-dotnet_diagnostic.CA2227.severity = none
-
-# CA2234: Pass system uri objects instead of strings
+# CA2234: Pass system uri objects instead of strings. Controllers call Created(string.Empty, ...) and send no Location URL yet. Remove when they do.
 dotnet_diagnostic.CA2234.severity = none
-
-# CA2326: Do not use TypeNameHandling values other than None
-dotnet_diagnostic.CA2326.severity = none
-
-# CA2326: Do not use insecure JsonSerializerSettings
-dotnet_diagnostic.CA2327.severity = none
 
 # IDE Code Analyzers rules
 
 # IDE0005
-dotnet_diagnostic.IDE0005.severity = none
-
-# IDE0046: Convert to conditional expression
-dotnet_diagnostic.IDE0046.severity = none
-
-# IDE0058: Expression value is never used
-dotnet_diagnostic.IDE0058.severity = none
-
-# IDE0060: Remove unused parameter
-dotnet_diagnostic.IDE0060.severity = none
-
-# IDE0072: Add missing cases
-dotnet_diagnostic.IDE0072.severity = none
-
-# IDE0290: Use primary constructor
-dotnet_diagnostic.IDE0290.severity = none
-
 # SonarAnalyzer.CSharp rules
-
-# S112: General or reserved exceptions should never be thrown
-dotnet_diagnostic.S112.severity = none
-
-# S125: Sections of code should not be commented out
-dotnet_diagnostic.S125.severity = none
-
-# S1135: Track uses of "TODO" tags
-dotnet_diagnostic.S1135.severity = none
 
 # S2094: Utility classes should not have public constructors
 dotnet_diagnostic.S1118.severity = none
 
-# S2094: Classes should not be empty
-dotnet_diagnostic.S2094.severity = none
-
-# S2325: Methods and properties that don't access instance data should be static
-dotnet_diagnostic.S2325.severity = none
-
-# S2326: Generic type parameter is not used in interface
+# S2326: Generic type parameter is not used in interface. TResponse on ICommand<TResponse> and IQuery<TResponse> types the handler result.
 dotnet_diagnostic.S2326.severity = none
 
-# S2365: Properties should not make collection or array copies
-dotnet_diagnostic.S2365.severity = none
-
-# S3267: Loops should be simplified with "LINQ" expressions
-dotnet_diagnostic.S3267.severity = none
-
-# S3881: "IDisposable" should be implemented correctly
-dotnet_diagnostic.S3881.severity = none
-
-# S4136: Method overloads should be grouped together
+# S4136: Method overloads should be grouped together. Result keeps its non-generic and generic overloads in separate groups.
 dotnet_diagnostic.S4136.severity = none
 
-# S4158: Empty collections should not be accessed or iterated
-dotnet_diagnostic.S4158.severity = none
+# Rules turned off only where they don't fit
 
-# S6605: Collection-specific "Exists" method should be used instead of the "Any" extension
-dotnet_diagnostic.S6605.severity = none
+[{Ecommerce.Application.UnitTests,Ecommerce.IntegrationTests}/**.cs]
+# CA1707: Identifiers should not contain underscores. Test names use Method_Should_Result.
+dotnet_diagnostic.CA1707.severity = none
 
-# S6781: JWT secret keys should not be disclosed
-dotnet_diagnostic.S6781.severity = none
+[{Ecommerce.API,Ecommerce.IntegrationTests}/**.cs]
+# CA1515: Consider making public types internal. MVC only finds public controllers, their request types must be public too, and xUnit needs public test classes.
+dotnet_diagnostic.CA1515.severity = none
+
+[{Ecommerce.API,Ecommerce.Infrastructure,Ecommerce.IntegrationTests}/**.cs]
+# CA1812: Avoid uninstantiated internal classes. DI, EF Core and xUnit create these classes, not new.
+dotnet_diagnostic.CA1812.severity = none
