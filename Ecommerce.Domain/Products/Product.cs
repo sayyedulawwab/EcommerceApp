@@ -17,9 +17,11 @@ public sealed class Product : Entity<ProductId>
         CreatedOnUtc = createdOnUtc;
     }
 
+    #pragma warning disable CS8618 // Used by EF Core to materialize the entity
     private Product()
     {
     }
+    #pragma warning restore CS8618
 
     public CategoryId CategoryId { get; private set; }
     public ProductName Name { get; private set; }

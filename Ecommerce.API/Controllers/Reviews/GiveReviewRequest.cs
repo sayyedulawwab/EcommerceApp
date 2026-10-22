@@ -6,5 +6,5 @@ public record GiveReviewRequest
 {
     [JsonRequired] public Guid ProductId { get; init; }
     [JsonRequired] public int Rating { get; init; }
-    [JsonRequired] public string Comment { get; init; }
+    [JsonRequired] public required string Comment { get; init; }
 }

@@ -4,10 +4,10 @@ public sealed class OrderItemResponse
 {
     public Guid OrderId { get; init; }
     public Guid ProductId { get; init; }
-    public string Name { get; init; }
-    public string Description { get; init; }
+    public required string Name { get; init; }
+    public required string Description { get; init; }
     public decimal PriceAmount { get; init; }
-    public string PriceCurrency { get; init; }
+    public required string PriceCurrency { get; init; }
     public Guid CategoryId { get; init; }
     public int Quantity { get; init; }
     public DateTime CreatedOnUtc { get; init; }

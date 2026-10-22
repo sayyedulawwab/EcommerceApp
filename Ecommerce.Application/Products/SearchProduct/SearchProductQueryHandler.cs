@@ -78,7 +78,7 @@ internal sealed class SearchProductQueryHandler(
 
         // Handle sorting
         string[] allowedSortColumns = ["Name", "PriceAmount", "CreatedOnUtc"]; // Add all allowed columns here
-        string sortColumn = allowedSortColumns.Contains(request.SortColumn) ? request.SortColumn : "CreatedOnUtc"; // Default to CreatedOnUtc if invalid
+        string sortColumn = request.SortColumn is { } column && allowedSortColumns.Contains(column) ? column : "CreatedOnUtc"; // Default to CreatedOnUtc if invalid
         string sortOrder = request.SortOrder?.ToLower(CultureInfo.CurrentCulture) == "desc" ? "DESC" : "ASC"; // Default to ASC if invalid
 
         sqlBuilder.AppendFormat(CultureInfo.InvariantCulture, " ORDER BY {0} {1}", sortColumn, sortOrder);

@@ -14,9 +14,11 @@ public sealed class Order : Entity<OrderId>
         CreatedOnUtc = createdOnUtc;
     }
 
+    #pragma warning disable CS8618 // Used by EF Core to materialize the entity
     private Order()
     {
     }
+    #pragma warning restore CS8618
 
     public UserId UserId { get; private set; }
     public Money TotalPrice { get; private set; }

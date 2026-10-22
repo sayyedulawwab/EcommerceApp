@@ -15,7 +15,7 @@ public sealed class OrderItem : Entity<OrderItemId>
 
     public OrderId OrderId { get; private set; }
     public ProductId ProductId { get; private set; }
-    public Product Product { get; private set; }
+    public Product Product { get; private set; } = null!; // Set in Create, or loaded by EF Core
     public int Quantity { get; private set; }
     public DateTime CreatedOnUtc { get; private set; }
 

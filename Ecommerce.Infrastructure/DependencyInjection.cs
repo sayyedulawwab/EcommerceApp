@@ -34,7 +34,7 @@ public static class DependencyInjection
         services.AddStackExchangeRedisCache(redisOptions =>
         {
 
-            string connection = configuration.GetConnectionString("Redis");
+            string? connection = configuration.GetConnectionString("Redis");
 
             redisOptions.Configuration = connection;
         });

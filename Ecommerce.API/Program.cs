@@ -35,7 +35,7 @@ builder.Services.AddOpenTelemetry()
     .WithLogging(logging =>
     {
         if (!string.IsNullOrWhiteSpace(otlpLogsEndpoint) &&
-            Uri.TryCreate(otlpLogsEndpoint, UriKind.Absolute, out Uri logsUri))
+            Uri.TryCreate(otlpLogsEndpoint, UriKind.Absolute, out Uri? logsUri))
         {
             logging.AddOtlpExporter(exporterOptions =>
             {
@@ -51,7 +51,7 @@ builder.Services.AddOpenTelemetry()
         tracing.AddHttpClientInstrumentation();
 
         if (!string.IsNullOrWhiteSpace(otlpTracesEndpoint) &&
-            Uri.TryCreate(otlpTracesEndpoint, UriKind.Absolute, out Uri tracesUri))
+            Uri.TryCreate(otlpTracesEndpoint, UriKind.Absolute, out Uri? tracesUri))
         {
             tracing.AddOtlpExporter(exporterOptions =>
             {
@@ -67,7 +67,7 @@ builder.Services.AddOpenTelemetry()
         metrics.AddRuntimeInstrumentation();
 
         if (!string.IsNullOrWhiteSpace(otlpMetricsEndpoint) &&
-            Uri.TryCreate(otlpMetricsEndpoint, UriKind.Absolute, out Uri metricsUri))
+            Uri.TryCreate(otlpMetricsEndpoint, UriKind.Absolute, out Uri? metricsUri))
         {
             metrics.AddOtlpExporter((exporterOptions, metricReaderOptions) =>
             {

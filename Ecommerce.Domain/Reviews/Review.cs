@@ -22,9 +22,11 @@ public sealed class Review : Entity<ReviewId>
         CreatedOnUtc = createdOnUtc;
     }
 
+    #pragma warning disable CS8618 // Used by EF Core to materialize the entity
     private Review()
     {
     }
+    #pragma warning restore CS8618
     public ProductId ProductId { get; private set; }
     public UserId UserId { get; private set; }
     public Rating Rating { get; private set; }

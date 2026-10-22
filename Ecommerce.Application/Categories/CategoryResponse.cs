@@ -2,6 +2,6 @@
 public sealed class CategoryResponse
 {
     public Guid Id { get; init; }
-    public string Name { get; init; }
-    public string Code { get; init; }
+    public required string Name { get; init; }
+    public required string Code { get; init; }
 }
