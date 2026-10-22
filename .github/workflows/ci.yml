@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    env:
+      # Turns NuGet audit warnings (vulnerable packages) into errors. See Directory.Build.props.
+      ContinuousIntegrationBuild: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      # The test projects build all four src projects. The solution also contains
+      # docker-compose.dcproj, which needs Visual Studio and doesn't build on Linux.
+      - name: Unit tests
+        run: dotnet test Ecommerce.Application.UnitTests/Ecommerce.Application.UnitTests.csproj
+
+      # Testcontainers starts PostgreSQL in the runner's Docker.
+      - name: Integration tests
+        run: dotnet test Ecommerce.IntegrationTests/Ecommerce.IntegrationTests.csproj
