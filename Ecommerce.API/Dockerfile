@@ -11,6 +11,7 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 COPY ["Directory.Build.props", "."]
+COPY ["Directory.Packages.props", "."]
 
 COPY ["Ecommerce.API/Ecommerce.API.csproj", "Ecommerce.API/"]
 COPY ["Ecommerce.Application/Ecommerce.Application.csproj", "Ecommerce.Application/"]

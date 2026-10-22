@@ -9,12 +9,4 @@
         <CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
         <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     </PropertyGroup>
-    <ItemGroup>
-        <PackageReference
-          Include="SonarAnalyzer.CSharp"
-          Version="10.4.0.108396"
-          PrivateAssets="all"
-          Condition="$(MSBuildProjectExtension) == '.csproj'"
-    />
-    </ItemGroup>
 </Project>
