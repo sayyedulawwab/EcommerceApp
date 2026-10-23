@@ -11,11 +11,6 @@ public sealed class Category : Entity<CategoryId>
         Code = code;
         CreatedOnUtc = createdOnUtc;
     }
-    #pragma warning disable CS8618 // Used by EF Core to materialize the entity
-    private Category()
-    {
-    }
-    #pragma warning restore CS8618
 
     public CategoryName Name { get; private set; }
     public CategoryCode Code { get; private set; }

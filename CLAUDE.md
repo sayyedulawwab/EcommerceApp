@@ -43,6 +43,7 @@ Ecommerce REST API (products, categories, orders, reviews, users/auth). This fil
 | Bogus                                   | Development data seeding (`DataSeeder`)                        |
 | SonarAnalyzer.CSharp                    | Static analysis (warnings are errors)                          |
 | Testcontainers, Respawn, WebApplicationFactory | Integration tests against real PostgreSQL               |
+| ArchUnitNET                             | Architecture tests: layer dependency rules                     |
 
 ---
 
@@ -54,6 +55,9 @@ dotnet build EcommerceApp.slnx
 
 # Unit tests (no external dependencies)
 dotnet test Ecommerce.Application.UnitTests/Ecommerce.Application.UnitTests.csproj
+
+# Architecture tests (layer dependencies, ArchUnitNET)
+dotnet test Ecommerce.ArchitectureTests/Ecommerce.ArchitectureTests.csproj
 
 # Integration tests (Docker must be running: Testcontainers starts postgres:18)
 dotnet test Ecommerce.IntegrationTests/Ecommerce.IntegrationTests.csproj
