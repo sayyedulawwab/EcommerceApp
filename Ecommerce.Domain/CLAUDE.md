@@ -5,11 +5,11 @@ Pure domain model with **no project or package dependencies** (BCL only, e.g. `S
 ## Folder layout
 
 ```
-Abstractions/   Entity<TId>, IEntity, IDomainEvent, IDomainEventHandler<T>, IUnitOfWork,
+Abstractions/   Entity<TId>, IEntity, IDomainEvent, IDomainEventHandler<T>,
                 Result, Result<T>, Error, ValidationError
 Shared/         Money, Currency (cross-aggregate value objects)
 {Module}/       {Entity}.cs, {Entity}Id.cs, one file per value object, {Entity}Errors.cs,
-                I{Entity}Repository.cs, Events/{Entity}CreatedDomainEvent.cs
+                Events/{Entity}CreatedDomainEvent.cs
 ```
 
 Modules: `Categories`, `Products`, `Orders`, `Reviews`, `Users`.
@@ -186,23 +186,3 @@ public sealed record ProductCreatedDomainEvent(ProductId ProductId) : IDomainEve
 - They are collected on the entity and dispatched by `ApplicationDbContext` **after** `SaveChangesAsync` succeeds (see the Infrastructure guide).
 - Handlers implement `IDomainEventHandler<TEvent>` (`Task Handle(T domainEvent, CancellationToken cancellationToken)`).
 
----
-
-## Repository interfaces
-
-One per aggregate root, in the module folder:
-
-```csharp
-public interface IProductRepository
-{
-    Task<IReadOnlyList<Product>> GetAllAsync(CancellationToken cancellationToken = default);
-    Task<Product?> GetByIdAsync(ProductId id, CancellationToken cancellationToken = default);
-    void Add(Product product);
-    void Update(Product product);
-    void Remove(Product product);
-}
-```
-
-- Reads are `async`, return domain entities (`T?` for single, `IReadOnlyList<T>` for many), take **strongly typed IDs**, and accept `CancellationToken cancellationToken = default`.
-- `Add` / `Update` / `Remove` are **synchronous** because they only stage changes. Persisting is `IUnitOfWork.SaveChangesAsync`.
-- Declare only the members the aggregate needs (`IOrderRepository` has just `GetAllAsync` + `Add`). Add specific queries as named methods (`GetByProductAsync(ProductId ...)`, `GetByEmail(string email)`).

@@ -22,7 +22,7 @@ jobs:
       # The test projects build all four src projects. The solution also contains
       # docker-compose.dcproj, which needs Visual Studio and doesn't build on Linux.
       - name: Unit tests
-        run: dotnet test Ecommerce.Application.UnitTests/Ecommerce.Application.UnitTests.csproj
+        run: dotnet test Ecommerce.Domain.UnitTests/Ecommerce.Domain.UnitTests.csproj
 
       - name: Architecture tests
         run: dotnet test Ecommerce.ArchitectureTests/Ecommerce.ArchitectureTests.csproj

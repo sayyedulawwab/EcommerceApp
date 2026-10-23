@@ -2,7 +2,7 @@
 
 End-to-end tests over **real HTTP** against the full API host (`WebApplicationFactory<Program>`) and a **real PostgreSQL** container (Testcontainers). The database is reset between tests with Respawn.
 
-- xUnit (`Xunit` is a global using), default **`Assert.*` only**. There is no Moq here; real implementations are used except for the overrides below.
+- xUnit (`Xunit` is a global using), default **`Assert.*` only**. There is no mocking library; real implementations are used except for the overrides below.
 - **Docker must be running.** Run: `dotnet test Ecommerce.IntegrationTests/Ecommerce.IntegrationTests.csproj`.
 - Each test class gets its own `IntegrationTestFactory`, which means its own container.
 

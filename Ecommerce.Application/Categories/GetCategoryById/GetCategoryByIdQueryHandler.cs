@@ -1,15 +1,17 @@
-﻿using Ecommerce.Application.Abstractions.Messaging;
+﻿using Ecommerce.Application.Abstractions.Data;
+using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Application.Categories;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Categories;
+using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Application.Categories.GetCategoryById;
-internal sealed class GetCategoryByIdQueryHandler(ICategoryRepository categoryRepository)
+internal sealed class GetCategoryByIdQueryHandler(IApplicationDbContext dbContext)
     : IQueryHandler<GetCategoryByIdQuery, CategoryResponse>
 {
     public async Task<Result<CategoryResponse>> Handle(GetCategoryByIdQuery request, CancellationToken cancellationToken)
     {
-        Category? category = await categoryRepository.GetByIdAsync(new CategoryId(request.Id), cancellationToken);
+        Category? category = await dbContext.Categories.AsNoTracking().FirstOrDefaultAsync(category => category.Id == new CategoryId(request.Id), cancellationToken);
 
         if (category is null)
         {

@@ -4,12 +4,8 @@ using Ecommerce.Application.Abstractions.Caching;
 using Ecommerce.Application.Abstractions.Clock;
 using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Emails;
+using Ecommerce.Application.Products;
 using Ecommerce.Domain.Abstractions;
-using Ecommerce.Domain.Categories;
-using Ecommerce.Domain.Orders;
-using Ecommerce.Domain.Products;
-using Ecommerce.Domain.Reviews;
-using Ecommerce.Domain.Users;
 using Ecommerce.Infrastructure.Auth;
 using Ecommerce.Infrastructure.Caching;
 using Ecommerce.Infrastructure.Clock;
@@ -56,13 +52,9 @@ public static class DependencyInjection
 
         services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(GetConnectionString()).UseSnakeCaseNamingConvention());
 
-        services.AddScoped<ICategoryRepository, CategoryRepository>();
-        services.AddScoped<IProductRepository, ProductRepository>();
-        services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IOrderRepository, OrderRepository>();
-        services.AddScoped<IReviewRepository, ReviewRepository>();
+        services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());
 
-        services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<ApplicationDbContext>());
+        services.AddScoped<IProductQueryRepository, ProductQueryRepository>();
 
         services.AddSingleton<ISqlConnectionFactory>(_ => new SqlConnectionFactory(GetConnectionString()));
 

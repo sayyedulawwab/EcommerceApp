@@ -1,20 +1,21 @@
 ﻿using Ecommerce.Application.Abstractions.Auth;
+using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Users;
+using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Application.Users.Register;
 internal sealed class RegisterUserCommandHandler(
     IAuthService authService,
-    IUserRepository userRepository,
-    IUnitOfWork unitOfWork)
+    IApplicationDbContext dbContext)
     : ICommandHandler<RegisterUserCommand, Guid>
 {
     public async Task<Result<Guid>> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
     {
-        User? existingUserByEmail = await userRepository.GetByEmail(request.Email);
+        bool emailExists = await dbContext.Users.AnyAsync(user => user.Email == new Email(request.Email), cancellationToken);
 
-        if (existingUserByEmail is not null)
+        if (emailExists)
         {
             return Result.Failure<Guid>(UserErrors.AlreadyExists);
         }
@@ -26,9 +27,9 @@ internal sealed class RegisterUserCommandHandler(
                                 new LastName(request.LastName),
                                 new Email(request.Email), hashedPassword, passwordSalt, false);
 
-        userRepository.Add(user);
+        dbContext.Users.Add(user);
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
 
         return user.Id.Value;
     }

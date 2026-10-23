@@ -1,5 +1,4 @@
 ﻿using System.Data;
-using Ecommerce.Application.Abstractions.Data;
 using Npgsql;
 
 namespace Ecommerce.Infrastructure.Data;

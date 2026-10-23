@@ -290,7 +290,7 @@ dotnet_diagnostic.S4136.severity = none
 
 # Rules turned off only where they don't fit
 
-[{Ecommerce.Application.UnitTests,Ecommerce.ArchitectureTests,Ecommerce.IntegrationTests}/**.cs]
+[{Ecommerce.ArchitectureTests,Ecommerce.Domain.UnitTests,Ecommerce.IntegrationTests}/**.cs]
 # CA1707: Identifiers should not contain underscores. Test names use Method_Should_Result.
 dotnet_diagnostic.CA1707.severity = none
 
@@ -298,6 +298,6 @@ dotnet_diagnostic.CA1707.severity = none
 # CA1515: Consider making public types internal. MVC only finds public controllers, their request types must be public too, and xUnit needs public test classes.
 dotnet_diagnostic.CA1515.severity = none
 
-[{Ecommerce.API,Ecommerce.Infrastructure,Ecommerce.IntegrationTests}/**.cs]
+[{Ecommerce.API,Ecommerce.Application,Ecommerce.Infrastructure,Ecommerce.IntegrationTests}/**.cs]
 # CA1812: Avoid uninstantiated internal classes. DI, EF Core and xUnit create these classes, not new.
 dotnet_diagnostic.CA1812.severity = none

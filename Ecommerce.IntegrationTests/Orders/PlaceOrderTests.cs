@@ -130,6 +130,29 @@ public sealed class PlaceOrderTests
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    [Fact]
+    public async Task PlaceOrder_ShouldReturnBadRequest_WhenQuantityIsNotPositive()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        User user = UserData.Create();
+        Category category = CategoryData.Create();
+        Product keyboard = ProductData.CreateProduct(category.Id, 100m);
+
+        await SeedAsync(user, category, keyboard);
+
+        var request = new PlaceOrderRequest([new PlaceOrderProductRequest(keyboard.Id.Value, 0)]);
+
+        using HttpClient client = _factory.CreateClientForUser(user.Id.Value);
+
+        // Act
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     private Task SeedAsync(params object[] entities)
     {
         return _factory.ExecuteScopeAsync(async sp =>

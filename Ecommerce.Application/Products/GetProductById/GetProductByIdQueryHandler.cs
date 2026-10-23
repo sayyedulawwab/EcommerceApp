@@ -1,25 +1,26 @@
-﻿using Ecommerce.Application.Abstractions.Messaging;
+﻿using Ecommerce.Application.Abstractions.Data;
+using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Application.Reviews;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Reviews;
+using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Application.Products.GetProductById;
 internal sealed class GetProductByIdQueryHandler(
-    IProductRepository productRepository,
-    IReviewRepository reviewRepository)
+    IApplicationDbContext dbContext)
     : IQueryHandler<GetProductByIdQuery, ProductResponse>
 {
     public async Task<Result<ProductResponse>> Handle(GetProductByIdQuery request, CancellationToken cancellationToken)
     {
-        Product? product = await productRepository.GetByIdAsync(new ProductId(request.Id), cancellationToken);
+        Product? product = await dbContext.Products.AsNoTracking().FirstOrDefaultAsync(product => product.Id == new ProductId(request.Id), cancellationToken);
 
         if (product is null)
         {
             return Result.Failure<ProductResponse>(ProductErrors.NotFound);
         }
 
-        IReadOnlyList<Review> reviews = await reviewRepository.GetByProductAsync(product.Id, cancellationToken);
+        IReadOnlyList<Review> reviews = await dbContext.Reviews.AsNoTracking().Where(review => review.ProductId == product.Id).ToListAsync(cancellationToken);
 
         var productResponse = new ProductResponse()
         {

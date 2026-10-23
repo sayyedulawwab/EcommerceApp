@@ -1,23 +1,23 @@
 ﻿using Ecommerce.Application.Abstractions.Clock;
+using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Reviews;
 using Ecommerce.Domain.Users;
+using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Application.Reviews.AddReview;
 
 internal sealed class AddReviewCommandHandler(
-    IProductRepository productRepository,
-    IReviewRepository reviewRepository,
-    IUnitOfWork unitOfWork,
+    IApplicationDbContext dbContext,
     IDateTimeProvider dateTimeProvider)
     : ICommandHandler<AddReviewCommand, Guid>
 {
     public async Task<Result<Guid>> Handle(AddReviewCommand request, CancellationToken cancellationToken)
     {
 
-        Product? product = await productRepository.GetByIdAsync(new ProductId(request.ProductId), cancellationToken);
+        Product? product = await dbContext.Products.FirstOrDefaultAsync(product => product.Id == new ProductId(request.ProductId), cancellationToken);
 
         if (product is null)
         {
@@ -37,9 +37,9 @@ internal sealed class AddReviewCommandHandler(
                                    new Comment(request.Comment),
                                    dateTimeProvider.UtcNow);
 
-        reviewRepository.Add(review);
+        dbContext.Reviews.Add(review);
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
 
         return review.Id.Value;
     }

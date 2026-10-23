@@ -1,6 +1,6 @@
 # Ecommerce.Application — Conventions
 
-Use-case layer: commands, queries, handlers, validators, responses, and the ports (interfaces) that Infrastructure implements. It references **Domain only**, plus Dapper, FluentValidation, Scrutor, Serilog and logging abstractions.
+Use-case layer: commands, queries, handlers, validators, responses, and the ports (interfaces) that Infrastructure implements. It references **Domain only**, plus EF Core (for `DbSet<T>` and LINQ), FluentValidation, Scrutor, Serilog and logging abstractions. It does not reference Dapper or Npgsql.
 
 ## Folder layout
 
@@ -10,7 +10,7 @@ Abstractions/
   Behaviors/   LoggingDecorator, ValidationDecorator
   Caching/     ICacheService
   Clock/       IDateTimeProvider
-  Data/        ISqlConnectionFactory (Dapper read side)
+  Data/        IApplicationDbContext (DbSets + SaveChangesAsync)
   Emails/      IEmailService
   Messaging/   ICommand, ICommand<T>, IQuery<T>, ICommandHandler<...>, IQueryHandler<...>
 Exceptions/    ConcurrencyException
@@ -86,14 +86,13 @@ public record PlaceOrderCommand(Guid UserId, List<OrderStockItem> OrderStockItem
 
 ```csharp
 internal sealed class EditCategoryCommandHandler(
-    ICategoryRepository categoryRepository,
-    IUnitOfWork unitOfWork,
+    IApplicationDbContext dbContext,
     IDateTimeProvider dateTimeProvider)
     : ICommandHandler<EditCategoryCommand, Guid>
 {
     public async Task<Result<Guid>> Handle(EditCategoryCommand request, CancellationToken cancellationToken)
     {
-        Category? category = await categoryRepository.GetByIdAsync(new CategoryId(request.Id), cancellationToken);
+        Category? category = await dbContext.Categories.FirstOrDefaultAsync(category => category.Id == new CategoryId(request.Id), cancellationToken);
 
         if (category is null)
         {
@@ -106,9 +105,7 @@ internal sealed class EditCategoryCommandHandler(
             new CategoryCode(request.Code),
             dateTimeProvider.UtcNow);
 
-        categoryRepository.Update(category);
-
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
 
         return category.Id.Value;
     }
@@ -117,11 +114,11 @@ internal sealed class EditCategoryCommandHandler(
 
 Rules:
 
-- **`internal sealed class`** with a **primary constructor**. Dependencies are Domain repository interfaces, `IUnitOfWork`, and Application ports (`IDateTimeProvider`, `ICacheService`, `IAuthService`, ...). Never inject `ApplicationDbContext` or other Infrastructure types.
+- **`internal sealed class`** with a **primary constructor**. Dependencies are `IApplicationDbContext`, query repositories, and Application ports (`IDateTimeProvider`, `ICacheService`, `IAuthService`, ...). Never inject `ApplicationDbContext` or other Infrastructure types.
 - The `Handle` parameter is named `request`.
 - **Ordering:**
   1. Load each referenced entity. If one is missing, `return Result.Failure<T>({Entity}Errors.NotFound);`.
-  2. Run business checks such as duplicates. Failures return `{Entity}Errors.X` (e.g. `UserErrors.AlreadyExists` when `GetByEmail` finds a user).
+  2. Run business checks such as duplicates. Failures return `{Entity}Errors.X` (e.g. `UserErrors.AlreadyExists` when `dbContext.Users.AnyAsync(...)` finds the email).
   3. Build value objects from primitives (`new ProductName(request.Name)`, `new Money(request.PriceAmount, Currency.FromCode(request.PriceCurrency))`, `Rating.Create(...)`). **If a VO factory returns `Result`, check `IsFailure` and return its error.**
   4. Change state **only through the domain**: `X.Create(...)`, `X.Update(x, ...)`, `order.AddOrderItem(...)`. Never set entity properties from a handler. Domain methods that return `Result` are propagated the same way:
      ```csharp
@@ -132,8 +129,8 @@ Rules:
          return Result.Failure<Guid>(addItemResult.Error);
      }
      ```
-  5. Stage the change with the repository's `Add` / `Update` / `Remove`.
-  6. `await unitOfWork.SaveChangesAsync(cancellationToken);`. Exactly once, at the end, and **never on a failure path**.
+  5. Stage new or removed entities with `dbContext.{Set}.Add` / `Remove`. An entity loaded through the DbContext is tracked, so an edit needs no `Update` call.
+  6. `await dbContext.SaveChangesAsync(cancellationToken);`. Exactly once, at the end, and **never on a failure path**.
   7. Invalidate the cache if the write affects cached reads (see Caching).
   8. `return entity.Id.Value;` (implicit `Result<Guid>`).
 - Timestamps always come from `dateTimeProvider.UtcNow`.
@@ -168,15 +165,17 @@ public class AddProductCommandValidator : AbstractValidator<AddProductCommand>
 
 ## Query handlers & responses
 
-### Repository-backed queries (default for get-by-id / get-all)
+### DbContext queries (default for get-by-id / get-all)
 
 ```csharp
-internal sealed class GetCategoryByIdQueryHandler(ICategoryRepository categoryRepository)
+internal sealed class GetCategoryByIdQueryHandler(IApplicationDbContext dbContext)
     : IQueryHandler<GetCategoryByIdQuery, CategoryResponse>
 {
     public async Task<Result<CategoryResponse>> Handle(GetCategoryByIdQuery request, CancellationToken cancellationToken)
     {
-        Category? category = await categoryRepository.GetByIdAsync(new CategoryId(request.Id), cancellationToken);
+        Category? category = await dbContext.Categories
+            .AsNoTracking()
+            .FirstOrDefaultAsync(category => category.Id == new CategoryId(request.Id), cancellationToken);
 
         if (category is null)
         {
@@ -194,6 +193,9 @@ internal sealed class GetCategoryByIdQueryHandler(ICategoryRepository categoryRe
     }
 }
 ```
+
+- Use `AsNoTracking()` on reads that don't change anything, and `Include` for the children the response needs (`GetAllOrdersQueryHandler`).
+- Load many entities by ID in one query (`Where(p => ids.Contains(p.Id))`), never one query per item in a loop (`PlaceOrderCommandHandler`).
 
 ### Responses
 
@@ -215,43 +217,27 @@ public sealed class ProductResponse
 - Child collections are nested response lists initialized to `[]`.
 - **Map inline in the handler** with object initializers and LINQ `Select`. Never return domain entities, and don't add mapper classes or AutoMapper.
 
-### Dapper read side (search, filtering, paging)
+### Query repositories (hand-written SQL with Dapper)
 
-For projections that would be awkward or slow through EF, query handlers use Dapper via `ISqlConnectionFactory` (reference: `SearchProductQueryHandler`):
+Commands and simple reads use `IApplicationDbContext`. A read goes behind a **query repository** when the SQL is better written by hand: joins over several tables that return selected columns, search with dynamic filters and paging, stored procedures, or operations that are easier or faster in raw SQL. The interface lives in Application (`Products/IProductQueryRepository.cs`), the Dapper implementation in Infrastructure (`Repositories/ProductQueryRepository.cs`). The handler keeps the defaults, caching and paging:
 
 ```csharp
-using IDbConnection connection = sqlConnectionFactory.CreateConnection();   // returns an already-open connection
+IReadOnlyList<ProductResponse> products = await productQueryRepository.SearchAsync(request, page, pageSize, cancellationToken);
 
-var sqlBuilder = new StringBuilder(@"
-    SELECT
-        p.id AS Id,
-        p.price_amount AS PriceAmount,
-        p.created_on_utc AS CreatedOnUtc,
-        COUNT(*) OVER () AS TotalRecords
-    FROM products AS p");
+long totalRecords = products.Count > 0 ? products[0].TotalRecords : 0;
 
-var conditions = new List<string>();
-if (request.CategoryId.HasValue)
-{
-    conditions.Add("p.category_id = @CategoryId");
-}
-// ... WHERE string.Join(" AND ", conditions)
+await cacheService.SetAsync(cacheKey, products, cancellationToken);
 
-string[] allowedSortColumns = ["Name", "PriceAmount", "CreatedOnUtc"];
-// ORDER BY {whitelisted column} {ASC|DESC}
-// OFFSET (@PageSize * (@Page - 1)) ROWS FETCH NEXT @PageSize ROWS ONLY;
-
-IEnumerable<ProductResponse> products = await connection.QueryAsync<ProductResponse>(sql, new { request.CategoryId, Page = page, PageSize = pageSize });
 return PagedList<ProductResponse>.Create(products, page, pageSize, totalRecords);
 ```
 
 Rules:
 
-- Write SQL against **snake_case** tables/columns and alias each column **`AS PascalCase`** to match the response property.
-- **Always parameterize values** (`@Param` plus an anonymous object). Never interpolate user input. Dynamic `ORDER BY` columns come **only from a whitelist array**; direction is normalized to `ASC`/`DESC`.
-- Get the paged total from **`COUNT(*) OVER () AS TotalRecords`** on each row (no second COUNT query), then read it from `FirstOrDefault()?.TotalRecords ?? 0`.
+- Name it `I{Entity}QueryRepository` with methods named for the operation (`SearchAsync`). Reads return response types, never entities. A stored procedure or a write that is easier in raw SQL goes behind the same kind of interface, as a named method.
+- Don't add a query repository for reads LINQ handles well. Don't add generic CRUD repositories.
 - Default `page = 1` and `pageSize = 10` when the input is ≤ 0.
 - Return `PagedList<T>.Create(items, page, pageSize, totalCount)`. It lives in `Application/Products/PagedList.cs` and exposes `Items`, `Page`, `PageSize`, `TotalCount`, `HasPreviousPage`, `HasNextPage`. Reuse it; don't create another paging type.
+- The SQL rules (snake_case, parameters, whitelisted `ORDER BY`, `COUNT(*) OVER ()`) are in the Infrastructure guide.
 
 ---
 
@@ -265,6 +251,6 @@ Rules:
 
 ## Auth use cases
 
-- Register: `IUserRepository.GetByEmail` duplicate check → `UserErrors.AlreadyExists`, then `IAuthService.GenerateSalt()` + `HashPassword(password, salt)`, then `User.Create(..., isAdmin: false)`.
+- Register: `dbContext.Users.AnyAsync(user => user.Email == new Email(...))` duplicate check → `UserErrors.AlreadyExists`, then `IAuthService.GenerateSalt()` + `HashPassword(password, salt)`, then `User.Create(..., isAdmin: false)`.
 - Login: load by email, then `IAuthService.VerifyPassword(password, salt, hash)`. A missing user **and** a wrong password both return `UserErrors.InvalidCredentials` (401), so the API never reveals whether an email is registered. Then call `IJwtService.GetAccessToken(email, userId)` and return `AccessTokenResponse`.
 - Never compare password hashes in a handler; always go through `VerifyPassword` (constant-time, handles legacy hashes).
