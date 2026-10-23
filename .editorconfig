@@ -290,7 +290,7 @@ dotnet_diagnostic.S4136.severity = none
 
 # Rules turned off only where they don't fit
 
-[{Ecommerce.Application.UnitTests,Ecommerce.IntegrationTests}/**.cs]
+[{Ecommerce.Application.UnitTests,Ecommerce.ArchitectureTests,Ecommerce.IntegrationTests}/**.cs]
 # CA1707: Identifiers should not contain underscores. Test names use Method_Should_Result.
 dotnet_diagnostic.CA1707.severity = none
 

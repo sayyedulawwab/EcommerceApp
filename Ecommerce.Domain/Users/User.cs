@@ -14,11 +14,6 @@ public sealed class User : Entity<UserId>
         IsAdmin = isAdmin;
     }
 
-    #pragma warning disable CS8618 // Used by EF Core to materialize the entity
-    private User()
-    {
-    }
-    #pragma warning restore CS8618
     public FirstName FirstName { get; private set; }
     public LastName LastName { get; private set; }
     public Email Email { get; private set; }

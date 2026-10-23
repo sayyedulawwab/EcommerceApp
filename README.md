@@ -28,6 +28,7 @@ Ecommerce.Application       Commands, queries, handlers, validators, decorators
 Ecommerce.Infrastructure    EF Core, repositories, Redis cache, JWT, password hashing
 Ecommerce.API               Controllers, error mapping, middleware, startup
 Ecommerce.Application.UnitTests
+Ecommerce.ArchitectureTests Layer dependency rules (ArchUnitNET)
 Ecommerce.IntegrationTests  HTTP tests against PostgreSQL in Docker
 ```
 
@@ -60,6 +61,9 @@ Prerequisites: the .NET 10 SDK and Docker Desktop.
 ```bash
 # Unit tests
 dotnet test Ecommerce.Application.UnitTests/Ecommerce.Application.UnitTests.csproj
+
+# Architecture tests
+dotnet test Ecommerce.ArchitectureTests/Ecommerce.ArchitectureTests.csproj
 
 # Integration tests (Docker must be running)
 dotnet test Ecommerce.IntegrationTests/Ecommerce.IntegrationTests.csproj
