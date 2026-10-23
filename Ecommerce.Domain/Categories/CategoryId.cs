@@ -2,5 +2,5 @@
 
 public record CategoryId(Guid Value)
 {
-    public static CategoryId New() => new(Guid.NewGuid());
+    public static CategoryId New() => new(Guid.CreateVersion7());
 }
