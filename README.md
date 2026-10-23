@@ -17,17 +17,17 @@ A REST API for an ecommerce platform: products, categories, orders, product revi
 - **Redis** for caching
 - **FluentValidation**, **Scrutor** (handler registration and decorators)
 - **Serilog** and **OpenTelemetry**, exported through an OTLP collector to Loki, Tempo and Prometheus, and viewed in Grafana
-- **xUnit**, **Moq**, **Testcontainers**, **Respawn**
+- **xUnit**, **Testcontainers**, **Respawn**, **ArchUnitNET**
 - **Docker** / Docker Compose, with nginx as a reverse proxy
 
 **Architecture:** Clean Architecture, Domain-Driven Design, and CQRS through lightweight custom command/query handler interfaces (no MediatR).
 
 ```
-Ecommerce.Domain            Entities, value objects, domain events, repository interfaces
-Ecommerce.Application       Commands, queries, handlers, validators, decorators
-Ecommerce.Infrastructure    EF Core, repositories, Redis cache, JWT, password hashing
+Ecommerce.Domain            Entities, value objects, domain events
+Ecommerce.Application       Commands, queries, handlers, validators, decorators, IApplicationDbContext
+Ecommerce.Infrastructure    EF Core, Dapper query repositories, Redis cache, JWT, password hashing
 Ecommerce.API               Controllers, error mapping, middleware, startup
-Ecommerce.Application.UnitTests
+Ecommerce.Domain.UnitTests  Domain rules (no database, no mocks)
 Ecommerce.ArchitectureTests Layer dependency rules (ArchUnitNET)
 Ecommerce.IntegrationTests  HTTP tests against PostgreSQL in Docker
 ```
@@ -59,8 +59,8 @@ Prerequisites: the .NET 10 SDK and Docker Desktop.
 ## Running the Tests
 
 ```bash
-# Unit tests
-dotnet test Ecommerce.Application.UnitTests/Ecommerce.Application.UnitTests.csproj
+# Domain unit tests
+dotnet test Ecommerce.Domain.UnitTests/Ecommerce.Domain.UnitTests.csproj
 
 # Architecture tests
 dotnet test Ecommerce.ArchitectureTests/Ecommerce.ArchitectureTests.csproj

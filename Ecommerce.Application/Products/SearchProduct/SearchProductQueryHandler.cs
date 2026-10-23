@@ -1,18 +1,13 @@
-﻿using System.ComponentModel;
-using System.Data;
-using System.Globalization;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Dapper;
 using Ecommerce.Application.Abstractions.Caching;
-using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
 
 namespace Ecommerce.Application.Products.SearchProduct;
 internal sealed class SearchProductQueryHandler(
-    ISqlConnectionFactory sqlConnectionFactory,
+    IProductQueryRepository productQueryRepository,
     ICacheService cacheService)
     : IQueryHandler<SearchProductQuery, PagedList<ProductResponse>>
 {
@@ -32,74 +27,9 @@ internal sealed class SearchProductQueryHandler(
             return pagedProductsFromCache;
         }
 
-        using IDbConnection connection = sqlConnectionFactory.CreateConnection();
+        IReadOnlyList<ProductResponse> products = await productQueryRepository.SearchAsync(request, page, pageSize, cancellationToken);
 
-        // Start building the base query
-        var sqlBuilder = new StringBuilder(@"
-        SELECT
-            p.id AS Id,
-            p.name AS Name,
-            p.description AS Description,
-            p.price_amount AS PriceAmount,
-            p.price_currency AS PriceCurrency,
-            p.quantity AS Quantity,
-            p.created_on_utc AS CreatedOnUtc,
-            p.updated_on_utc AS UpdatedOnUtc,
-            p.category_id AS CategoryId,
-            COUNT(*) OVER () AS TotalRecords
-        FROM products AS p");
-
-        // List to hold SQL conditions
-        var conditions = new List<string>();
-
-        // Dynamic filtering conditions
-        if (request.CategoryId.HasValue)
-        {
-            conditions.Add("p.category_id = @CategoryId");
-        }
-        if (request.MinPrice.HasValue)
-        {
-            conditions.Add("p.price_amount >= @MinPrice");
-        }
-        if (request.MaxPrice.HasValue)
-        {
-            conditions.Add("p.price_amount <= @MaxPrice");
-        }
-        if (!string.IsNullOrEmpty(request.Keyword))
-        {
-            conditions.Add("p.name ILIKE '%' || @Keyword || '%'");
-        }
-
-        // Add conditions if there are any
-        if (conditions.Count > 0)
-        {
-            sqlBuilder.Append(" WHERE " + string.Join(" AND ", conditions));
-        }
-
-        // Handle sorting
-        string[] allowedSortColumns = ["Name", "PriceAmount", "CreatedOnUtc"]; // Add all allowed columns here
-        string sortColumn = request.SortColumn is { } column && allowedSortColumns.Contains(column) ? column : "CreatedOnUtc"; // Default to CreatedOnUtc if invalid
-        string sortOrder = request.SortOrder?.ToLower(CultureInfo.CurrentCulture) == "desc" ? "DESC" : "ASC"; // Default to ASC if invalid
-
-        sqlBuilder.AppendFormat(CultureInfo.InvariantCulture, " ORDER BY {0} {1}", sortColumn, sortOrder);
-
-        // Add pagination
-        sqlBuilder.Append(" OFFSET (@PageSize * (@Page - 1)) ROWS FETCH NEXT @PageSize ROWS ONLY;");
-
-        string sql = sqlBuilder.ToString();
-
-        // Execute query with parameters
-        IEnumerable<ProductResponse> products = await connection.QueryAsync<ProductResponse>(sql, new
-        {
-            request.CategoryId,
-            request.MinPrice,
-            request.MaxPrice,
-            request.Keyword,
-            Page = page,
-            PageSize = pageSize
-        });
-
-        long totalRecords = products.FirstOrDefault()?.TotalRecords ?? 0;
+        long totalRecords = products.Count > 0 ? products[0].TotalRecords : 0;
 
         await cacheService.SetAsync(cacheKey, products, cancellationToken);
 

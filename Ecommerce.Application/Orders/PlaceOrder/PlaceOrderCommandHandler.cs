@@ -1,15 +1,15 @@
 ﻿using Ecommerce.Application.Abstractions.Clock;
+using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Orders;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Users;
+using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Application.Orders.PlaceOrder;
 internal sealed class PlaceOrderCommandHandler(
-    IProductRepository productRepository,
-    IOrderRepository orderRepository,
-    IUnitOfWork unitOfWork,
+    IApplicationDbContext dbContext,
     IDateTimeProvider dateTimeProvider)
     : ICommandHandler<PlaceOrderCommand, Guid>
 {
@@ -17,11 +17,16 @@ internal sealed class PlaceOrderCommandHandler(
     {
         var order = Order.Create(new UserId(request.UserId), OrderStatus.Placed, dateTimeProvider.UtcNow);
 
+        // Load every product in the order with one query, instead of one query per item.
+        var productIds = request.OrderStockItems.Select(item => new ProductId(item.ProductId)).ToList();
+
+        Dictionary<ProductId, Product> products = await dbContext.Products
+            .Where(product => productIds.Contains(product.Id))
+            .ToDictionaryAsync(product => product.Id, cancellationToken);
+
         foreach (OrderStockItem item in request.OrderStockItems)
         {
-            Product? product = await productRepository.GetByIdAsync(new ProductId(item.ProductId), cancellationToken);
-
-            if (product is null)
+            if (!products.TryGetValue(new ProductId(item.ProductId), out Product? product))
             {
                 return Result.Failure<Guid>(ProductErrors.NotFound);
             }
@@ -34,9 +39,9 @@ internal sealed class PlaceOrderCommandHandler(
             }
         }
 
-        orderRepository.Add(order);
+        dbContext.Orders.Add(order);
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
 
         return order.Id.Value;
     }

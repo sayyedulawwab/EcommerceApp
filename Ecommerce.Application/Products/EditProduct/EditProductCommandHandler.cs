@@ -1,22 +1,23 @@
 ﻿using Ecommerce.Application.Abstractions.Caching;
 using Ecommerce.Application.Abstractions.Clock;
+using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Categories;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Shared;
+using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Application.Products.EditProduct;
 internal sealed class EditProductCommandHandler(
-    IProductRepository productRepository,
-    IUnitOfWork unitOfWork,
+    IApplicationDbContext dbContext,
     IDateTimeProvider dateTimeProvider,
     ICacheService cacheService)
     : ICommandHandler<EditProductCommand, Guid>
 {
     public async Task<Result<Guid>> Handle(EditProductCommand request, CancellationToken cancellationToken)
     {
-        Product? product = await productRepository.GetByIdAsync(new ProductId(request.Id), cancellationToken);
+        Product? product = await dbContext.Products.FirstOrDefaultAsync(product => product.Id == new ProductId(request.Id), cancellationToken);
 
         if (product is null)
         {
@@ -33,9 +34,7 @@ internal sealed class EditProductCommandHandler(
             new CategoryId(request.CategoryId),
             dateTimeProvider.UtcNow);
 
-        productRepository.Update(product);
-
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
 
         await cacheService.RemoveByPrefixAsync("products", cancellationToken);
 

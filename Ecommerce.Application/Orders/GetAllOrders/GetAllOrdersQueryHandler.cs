@@ -1,14 +1,20 @@
-﻿using Ecommerce.Application.Abstractions.Messaging;
+﻿using Ecommerce.Application.Abstractions.Data;
+using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Orders;
+using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Application.Orders.GetAllOrders;
-internal sealed class GetAllOrdersQueryHandler(IOrderRepository orderRepository)
+internal sealed class GetAllOrdersQueryHandler(IApplicationDbContext dbContext)
     : IQueryHandler<GetAllOrdersQuery, IReadOnlyList<OrderResponse>>
 {
     public async Task<Result<IReadOnlyList<OrderResponse>>> Handle(GetAllOrdersQuery request, CancellationToken cancellationToken)
     {
-        IReadOnlyList<Order> orders = await orderRepository.GetAllAsync(cancellationToken);
+        IReadOnlyList<Order> orders = await dbContext.Orders
+            .AsNoTracking()
+            .Include(order => order.OrderItems)
+            .ThenInclude(orderItem => orderItem.Product)
+            .ToListAsync(cancellationToken);
 
         IEnumerable<OrderResponse> ordersResponse = orders.Select(order => new OrderResponse
         {

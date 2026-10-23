@@ -1,20 +1,20 @@
 # Ecommerce.Infrastructure — Conventions
 
-Implements the Domain repository interfaces and the Application ports. Persistence is **EF Core + Npgsql (PostgreSQL)** with snake_case naming, plus a Dapper connection factory for the read side.
+Implements the Application ports, including `IApplicationDbContext`. Persistence is **EF Core + Npgsql (PostgreSQL)** with snake_case naming, plus Dapper query repositories for hand-written SQL.
 
 ## Folder layout
 
 ```
-ApplicationDbContext.cs     DbContext + IUnitOfWork + domain-event dispatch
+ApplicationDbContext.cs     DbContext + IApplicationDbContext + domain-event dispatch
 Auth/                       AuthService, JwtService, JwtOptions, JwtOptionsSetup, JwtBearerOptionsSetup
 Caching/                    CacheService (IDistributedCache/Redis), PrivateResolver
 Clock/                      DateTimeProvider
 Configurations/             {Entity}Configuration : IEntityTypeConfiguration<{Entity}>
-Data/                       SqlConnectionFactory (Npgsql), DateOnlyTypeHandler (Dapper), DataSeeder (Bogus)
+Data/                       ISqlConnectionFactory + SqlConnectionFactory (Npgsql), DateOnlyTypeHandler (Dapper), DataSeeder (Bogus)
 DomainEvents/               IDomainEventsDispatcher, DomainEventsDispatcher
 Emails/                     EmailService (stub, no-op)
 Migrations/                 EF generated code: never hand-edit
-Repositories/               Repository<TEntity, TEntityId> base + one {Entity}Repository per aggregate
+Repositories/               Dapper query repositories ({Entity}QueryRepository)
 DependencyInjection.cs      AddInfrastructure(services, configuration)
 ```
 
@@ -24,10 +24,10 @@ DependencyInjection.cs      AddInfrastructure(services, configuration)
 
 ```csharp
 public sealed class ApplicationDbContext(DbContextOptions options, IDomainEventsDispatcher domainEventsDispatcher)
-    : DbContext(options), IUnitOfWork
+    : DbContext(options), IApplicationDbContext
 ```
 
-- **There are no `DbSet<T>` properties.** Use `DbContext.Set<T>()`.
+- One `DbSet<T>` property per aggregate root, declared on `IApplicationDbContext` and implemented as `public DbSet<Product> Products => Set<Product>();`. Child entities (`OrderItem`) have no set; they load through their root.
 - `OnModelCreating` → `ApplyConfigurationsFromAssembly(...)`, so a new `IEntityTypeConfiguration<T>` is picked up automatically.
 - `SaveChangesAsync`:
   1. `base.SaveChangesAsync` (commits).
@@ -88,33 +88,32 @@ Rules:
 
 ---
 
-## Repositories
+## Query repositories (Dapper)
 
 ```csharp
-internal abstract class Repository<TEntity, TEntityId>(ApplicationDbContext dbContext)
-    where TEntity : Entity<TEntityId>
-    where TEntityId : class
+internal sealed class ProductQueryRepository(ISqlConnectionFactory sqlConnectionFactory) : IProductQueryRepository
 {
-    protected readonly ApplicationDbContext DbContext = dbContext;
+    public async Task<IReadOnlyList<ProductResponse>> SearchAsync(SearchProductQuery query, int page, int pageSize, CancellationToken cancellationToken = default)
+    {
+        using IDbConnection connection = sqlConnectionFactory.CreateConnection();   // returns an already-open connection
 
-    public virtual Task<IReadOnlyList<TEntity>> GetAllAsync(CancellationToken cancellationToken = default);
-    public virtual Task<TEntity?> GetByIdAsync(TEntityId id, CancellationToken cancellationToken = default);
-    public void Add(TEntity entity);     // DbContext.Add
-    public void Remove(TEntity entity);  // DbContext.Remove
-    public void Update(TEntity entity);  // DbContext.Update
-}
+        // ... build the SQL, then
+        CommandDefinition command = new(sql, new { query.CategoryId, Page = page, PageSize = pageSize }, cancellationToken: cancellationToken);
 
-internal sealed class ProductRepository(ApplicationDbContext dbContext)
-    : Repository<Product, ProductId>(dbContext), IProductRepository
-{
+        IEnumerable<ProductResponse> products = await connection.QueryAsync<ProductResponse>(command);
+
+        return products.ToList();
+    }
 }
 ```
 
-- `internal sealed class {Entity}Repository(ApplicationDbContext dbContext) : Repository<{Entity}, {Entity}Id>(dbContext), I{Entity}Repository`.
-- Repositories **never call `SaveChangesAsync`**. Handlers commit through `IUnitOfWork`.
-- **Override** `GetAllAsync`/`GetByIdAsync` to eager-load aggregate children (`OrderRepository` does `.Include(o => o.OrderItems).ThenInclude(oi => oi.Product)`).
-- Add extra queries with LINQ over `DbContext.Set<T>()` and strongly typed ID comparisons (`review.ProductId == productId`). Raw SQL only via **`FromSqlInterpolated`** (parameterized), never `FromSqlRaw` with concatenation.
-- Register each repository in `AddPersistence`: `services.AddScoped<IXRepository, XRepository>();`.
+- Only for SQL that is better written by hand (see the Application guide). There are no generic or CRUD repositories: handlers use `IApplicationDbContext`.
+- `ISqlConnectionFactory` is internal to Infrastructure; Application never sees a connection.
+- Write SQL against **snake_case** tables/columns and alias each column **`AS PascalCase`** to match the response property.
+- **Always parameterize values** (`@Param` plus an anonymous object). Never interpolate user input. Dynamic `ORDER BY` columns come **only from a whitelist array**; direction is normalized to `ASC`/`DESC`.
+- Get the paged total from **`COUNT(*) OVER () AS TotalRecords`** on each row (no second COUNT query).
+- Pass the `cancellationToken` through `CommandDefinition`.
+- Register each one in `AddPersistence`: `services.AddScoped<IXQueryRepository, XQueryRepository>();`.
 
 ---
 
@@ -139,8 +138,8 @@ internal sealed class ProductRepository(ApplicationDbContext dbContext)
 | `IDistributedCache` (Redis)                       | –          | `ConnectionStrings:Redis`                                |
 | `ICacheService` → `CacheService`                  | Singleton  |                                                          |
 | `ApplicationDbContext`                            | Scoped     | `UseNpgsql(...).UseSnakeCaseNamingConvention()`, `ConnectionStrings:Database` |
-| `IUnitOfWork` → same `ApplicationDbContext`       | Scoped     | `sp.GetRequiredService<ApplicationDbContext>()`           |
-| `I{Entity}Repository` → `{Entity}Repository`      | Scoped     | Registered explicitly, one line each                     |
+| `IApplicationDbContext` → same `ApplicationDbContext` | Scoped | `sp.GetRequiredService<ApplicationDbContext>()`           |
+| `I{Entity}QueryRepository` → `{Entity}QueryRepository` | Scoped | Registered explicitly, one line each                     |
 | `ISqlConnectionFactory` → `SqlConnectionFactory`  | Singleton  | Returns an **opened** `NpgsqlConnection`                  |
 | `IJwtService`, `IAuthService`                     | Singleton  |                                                          |
 

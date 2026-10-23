@@ -1,5 +1,4 @@
 ﻿using Ecommerce.Application.Abstractions.Caching;
-using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Emails;
 using Ecommerce.Infrastructure;
 using Ecommerce.Infrastructure.Caching;

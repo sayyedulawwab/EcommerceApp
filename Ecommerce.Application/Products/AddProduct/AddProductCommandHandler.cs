@@ -1,5 +1,6 @@
 ﻿using Ecommerce.Application.Abstractions.Caching;
 using Ecommerce.Application.Abstractions.Clock;
+using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Categories;
@@ -8,8 +9,7 @@ using Ecommerce.Domain.Shared;
 
 namespace Ecommerce.Application.Products.AddProduct;
 internal sealed class AddProductCommandHandler(
-    IProductRepository productRepository,
-    IUnitOfWork unitOfWork,
+    IApplicationDbContext dbContext,
     IDateTimeProvider dateTimeProvider,
     ICacheService cacheService)
     : ICommandHandler<AddProductCommand, Guid>
@@ -25,9 +25,9 @@ internal sealed class AddProductCommandHandler(
             new CategoryId(request.CategoryId),
             dateTimeProvider.UtcNow);
 
-        productRepository.Add(product);
+        dbContext.Products.Add(product);
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
 
         await cacheService.RemoveByPrefixAsync("products", cancellationToken);
 

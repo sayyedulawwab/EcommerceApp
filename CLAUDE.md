@@ -11,9 +11,8 @@ Ecommerce REST API (products, categories, orders, reviews, users/auth). This fil
 | ------------------------------------------------------------------------------ | ------------------------------------------------------------- |
 | [Ecommerce.Domain/CLAUDE.md](Ecommerce.Domain/CLAUDE.md)                       | Entities, value objects, strongly typed IDs, errors, events    |
 | [Ecommerce.Application/CLAUDE.md](Ecommerce.Application/CLAUDE.md)             | Commands/queries, handlers, validators, responses, Dapper reads |
-| [Ecommerce.Infrastructure/CLAUDE.md](Ecommerce.Infrastructure/CLAUDE.md)       | EF Core config, repositories, migrations, DI, auth, caching    |
+| [Ecommerce.Infrastructure/CLAUDE.md](Ecommerce.Infrastructure/CLAUDE.md)       | EF Core config, Dapper query repositories, migrations, DI, auth, caching |
 | [Ecommerce.API/CLAUDE.md](Ecommerce.API/CLAUDE.md)                             | Controllers, request DTOs, error mapping, versioning, logging  |
-| [Ecommerce.Application.UnitTests/CLAUDE.md](Ecommerce.Application.UnitTests/CLAUDE.md) | Handler unit tests (xUnit + Moq)                       |
 | [Ecommerce.IntegrationTests/CLAUDE.md](Ecommerce.IntegrationTests/CLAUDE.md)   | HTTP-level tests (Testcontainers + Respawn)                    |
 
 ---
@@ -25,13 +24,13 @@ Ecommerce REST API (products, categories, orders, reviews, users/auth). This fil
 - **CQRS**: custom `ICommand` / `IQuery` handlers (no MediatR)
 - **Domain-Driven Design**: aggregates, value objects, strongly typed IDs, domain events
 - **PostgreSQL 18**: **EF Core 10** for the write side and migrations, **Dapper** for read-side projections
-- **xUnit + Moq** for tests, using the **default `Assert.*` only** (no FluentAssertions)
+- **xUnit** for tests, using the **default `Assert.*` only** (no FluentAssertions, no mocking library)
 
 | Technology                              | Purpose                                                        |
 | --------------------------------------- | -------------------------------------------------------------- |
-| EF Core + Npgsql                        | Write model, change tracking, `IUnitOfWork`, migrations        |
+| EF Core + Npgsql                        | Handlers use `IApplicationDbContext` directly; change tracking, migrations |
 | EFCore.NamingConventions                | `UseSnakeCaseNamingConvention()`: all tables/columns snake_case |
-| Dapper                                  | Read-side SQL (search/paging) via `ISqlConnectionFactory`      |
+| Dapper                                  | Hand-written SQL reads behind query repositories in Infrastructure |
 | FluentValidation                        | One validator per command, run by `ValidationDecorator`        |
 | Scrutor                                 | Assembly scanning for handlers + decorator registration        |
 | Redis (`IDistributedCache`)             | Query result caching via `ICacheService`                       |
@@ -53,8 +52,8 @@ Ecommerce REST API (products, categories, orders, reviews, users/auth). This fil
 # Build (must finish with 0 warnings: warnings are errors)
 dotnet build EcommerceApp.slnx
 
-# Unit tests (no external dependencies)
-dotnet test Ecommerce.Application.UnitTests/Ecommerce.Application.UnitTests.csproj
+# Domain unit tests (no external dependencies)
+dotnet test Ecommerce.Domain.UnitTests/Ecommerce.Domain.UnitTests.csproj
 
 # Architecture tests (layer dependencies, ArchUnitNET)
 dotnet test Ecommerce.ArchitectureTests/Ecommerce.ArchitectureTests.csproj
@@ -90,11 +89,12 @@ Build and environment notes:
 
 ```
 EcommerceApp.slnx
-├── Ecommerce.Domain/                 # Entities, value objects, IDs, errors, domain events, repo interfaces (no dependencies)
-├── Ecommerce.Application/            # Commands/queries + handlers, validators, responses, decorators, abstractions
-├── Ecommerce.Infrastructure/         # EF Core DbContext/configs/migrations, repositories, auth, caching, clock, DI
+├── Ecommerce.Domain/                 # Entities, value objects, IDs, errors, domain events (no dependencies)
+├── Ecommerce.Application/            # Commands/queries + handlers, validators, responses, decorators, IApplicationDbContext and other ports
+├── Ecommerce.Infrastructure/         # EF Core DbContext/configs/migrations, Dapper query repositories, auth, caching, clock, DI
 ├── Ecommerce.API/                    # Controllers, request DTOs, error mapping, middleware, Program.cs
-├── Ecommerce.Application.UnitTests/  # Handler unit tests
+├── Ecommerce.Domain.UnitTests/       # Domain rule tests (no database, no mocks)
+├── Ecommerce.ArchitectureTests/      # Layer dependency rules (ArchUnitNET)
 └── Ecommerce.IntegrationTests/       # End-to-end HTTP tests against PostgreSQL in Docker
 ```
 
@@ -105,20 +105,20 @@ Supporting folders: `nginx/`, `otel/`, `loki/`, `tempo/`, `prometheus/`, `grafan
 ```
 API → Application → Domain
 API → Infrastructure                     (DI wiring + DbContext for migrations)
-Infrastructure → Application → Domain    (implements Domain repo interfaces and Application abstractions)
+Infrastructure → Application → Domain    (implements the Application abstractions)
 ```
 
 - **Domain** references nothing: no EF, no Dapper, no attributes.
-- **Application** defines the ports (`IDateTimeProvider`, `ICacheService`, `ISqlConnectionFactory`, `IAuthService`, `IJwtService`, `IEmailService`). It references Dapper so read-side query handlers can run SQL directly. This is the accepted CQRS read-path shortcut.
-- **Infrastructure** implements those ports and the Domain repository interfaces.
+- **Application** defines the ports (`IApplicationDbContext`, `IProductQueryRepository`, `IDateTimeProvider`, `ICacheService`, `IAuthService`, `IJwtService`, `IEmailService`). It references EF Core (for `DbSet<T>` and LINQ in handlers) but not Dapper or Npgsql.
+- **Infrastructure** implements those ports. `ApplicationDbContext` implements `IApplicationDbContext`; the Dapper query repositories implement the query repository interfaces.
 
 ### Layer responsibilities
 
 | Layer          | Role                                                    | Key patterns                                                   |
 | -------------- | ------------------------------------------------------- | -------------------------------------------------------------- |
 | Domain         | Business state, invariants, factories                   | `Entity<TId>`, record value objects, `{Entity}Errors`, domain events |
-| Application    | Use-case orchestration, validation, read projections    | `ICommandHandler`/`IQueryHandler`, decorators, FluentValidation, Dapper |
-| Infrastructure | Persistence and external services                       | `ApplicationDbContext : IUnitOfWork`, `Repository<T,TId>`, `IEntityTypeConfiguration<T>` |
+| Application    | Use-case orchestration, validation, read projections    | `ICommandHandler`/`IQueryHandler`, decorators, FluentValidation, `IApplicationDbContext` |
+| Infrastructure | Persistence and external services                       | `ApplicationDbContext : IApplicationDbContext`, Dapper query repositories, `IEntityTypeConfiguration<T>` |
 | API            | HTTP, routing, auth, request → command mapping          | Resource controllers, action-injected handlers, `Error.ToActionResult()` |
 
 ### Request lifecycle
@@ -128,11 +128,11 @@ Infrastructure → Application → Domain    (implements Domain repo interfaces 
 1. The controller action receives a `{Verb}{Entity}Request` plus an `ICommandHandler<TCommand, TResponse>` injected **as an action parameter**.
 2. The controller maps the request to a command. The route `id` and the user id from JWT claims are passed in explicitly.
 3. The decorator chain runs **`LoggingDecorator` (outer) → `ValidationDecorator` → handler**. On validation failure it returns `ValidationError` (400) without calling the handler.
-4. The handler runs its lookups (failures return `Result.Failure`), builds value objects, calls the domain `Create`/`Update`, calls repository `Add`/`Update`/`Remove`, then `IUnitOfWork.SaveChangesAsync`.
+4. The handler runs its lookups (failures return `Result.Failure`), builds value objects, calls the domain `Create`/`Update`, stages new or removed entities with `dbContext.{Set}.Add`/`Remove` (tracked entities need no `Update` call), then `dbContext.SaveChangesAsync`.
 5. `ApplicationDbContext.SaveChangesAsync` saves, then **dispatches the collected domain events synchronously** (each in a new DI scope).
 6. The handler invalidates cache prefixes if needed and returns `Result<T>`. The controller returns 2xx, or `result.Error.ToActionResult()`.
 
-**Query** (GET): `LoggingDecorator` → handler, with **no validation decorator**. The handler reads through a repository (simple reads) or Dapper (search/paged projections), optionally via the cache.
+**Query** (GET): `LoggingDecorator` → handler, with **no validation decorator**. The handler reads through `IApplicationDbContext` with `AsNoTracking()` (simple reads), or through a Dapper query repository (multi-table joins, selected columns, stored procedures, SQL that is easier or faster by hand), optionally via the cache.
 
 ---
 
@@ -166,7 +166,7 @@ Each module uses the same name in every layer (plural folders in Domain, Applica
 | Strongly typed IDs    | `{Entity}Id`                                                                              | `ProductId`                               |
 | Domain errors         | `{Entity}Errors` static class; codes `"{Entity}.{Reason}"`                                 | `UserErrors.AlreadyExists`                |
 | Domain events         | `{Entity}{PastTenseVerb}DomainEvent` in `Domain/{Module}/Events/`                          | `ProductCreatedDomainEvent`               |
-| Repositories          | `I{Entity}Repository` (Domain) / `{Entity}Repository` (Infrastructure)                     | `IReviewRepository`                       |
+| Query repositories    | `I{Entity}QueryRepository` (Application) / `{Entity}QueryRepository` (Infrastructure)      | `IProductQueryRepository`                 |
 | EF configurations     | `{Entity}Configuration`                                                                   | `OrderItemConfiguration`                  |
 | DB tables / columns   | snake_case plural tables, snake_case columns (automatic)                                  | `order_items.created_on_utc`              |
 | Timestamps            | `CreatedOnUtc` (`DateTime`), `UpdatedOnUtc` (`DateTime?`)                                  |                                           |
@@ -184,15 +184,15 @@ Each Command/Query record, Handler and Validator gets **its own file** in the fe
 - **Explicit types.** Use `var` only when the type is apparent from the right-hand side (`new X(...)`, `X.Create(...)`). Otherwise spell it out:
   ```csharp
   var category = Category.Create(new CategoryName(request.Name), new CategoryCode(request.Code), dateTimeProvider.UtcNow);
-  Category? category = await categoryRepository.GetByIdAsync(new CategoryId(request.Id), cancellationToken);
+  Category? category = await dbContext.Categories.FirstOrDefaultAsync(category => category.Id == new CategoryId(request.Id), cancellationToken);
   Result<Guid> result = await handler.Handle(command, cancellationToken);
-  IReadOnlyList<Order> orders = await orderRepository.GetAllAsync(cancellationToken);
+  IReadOnlyList<ProductResponse> products = await productQueryRepository.SearchAsync(request, page, pageSize, cancellationToken);
   ```
-- **Primary constructors** for DI in handlers, repositories, services, controllers and middleware. Use the parameters directly; there are no `_field` assignments.
+- **Primary constructors** for DI in handlers, query repositories, services, controllers and middleware. Use the parameters directly; there are no `_field` assignments.
 - No `this.` qualification. Use predefined types (`string`, not `String`). Use collection expressions (`[]`, `[.. items]`).
 - Expression-bodied members for properties, operators and lambdas. Methods and constructors use block bodies.
 - Pattern matching: `is null` / `is not null`, `value is < 1 or > 5`, `switch` expressions.
-- **Visibility:** handlers, repositories, EF configurations and most infrastructure services are **`internal sealed`**. Domain entities are `public sealed`. Validators are `public class`. Responses are `public sealed class`.
+- **Visibility:** handlers, query repositories, EF configurations and most infrastructure services are **`internal sealed`**. Domain entities are `public sealed`. Validators are `public class`. Responses are `public sealed class`.
 - Nullable reference types are enabled, but `CS8618`/`CS8600`/`CS8603` are suppressed (the EF private constructors leave non-nullable properties unset).
 - Structured logging templates only (`logger.LogInformation("Processing command {Command}", commandName)`), never string interpolation in log calls.
 
@@ -228,24 +228,24 @@ Rules:
 
 ## 9. Adding a New Feature
 
-1. **Domain:** entity (`Entity<TId>`, private constructors, static `Create`/`Update`), `{Entity}Id`, value objects, `{Entity}Errors`, `{Entity}CreatedDomainEvent`, `I{Entity}Repository`.
-2. **Infrastructure:** `{Entity}Configuration` (table, ID/VO conversions, owned `Money`, FKs), `{Entity}Repository : Repository<TEntity, TId>`, register it in `DependencyInjection.AddPersistence`, then add an EF migration.
+1. **Domain:** entity (`Entity<TId>`, private constructors, static `Create`/`Update`), `{Entity}Id`, value objects, `{Entity}Errors`, `{Entity}CreatedDomainEvent`.
+2. **Infrastructure:** `{Entity}Configuration` (table, ID/VO conversions, owned `Money`, FKs), a `DbSet<{Entity}>` on `IApplicationDbContext` and `ApplicationDbContext`, then an EF migration. Add a query repository only for a read that needs hand-written SQL.
 3. **Application:** feature folder containing the Command/Query record, `internal sealed` Handler, Validator (commands), and Response. Handlers are auto-registered by Scrutor; there is nothing to wire.
 4. **API:** `{Verb}{Entity}Request` record and a controller action (versioned route, handler injected as an action parameter, `ToActionResult()` on failure).
 5. **Side effects** (emails, etc.) go in an `IDomainEventHandler<TEvent>` for an event raised by the entity, never inline in the handler. Cache invalidation is the exception: it is done inline after `SaveChangesAsync` (see the Application guide).
-6. **Tests:** handler unit tests in `Ecommerce.Application.UnitTests/{Module}/` and HTTP tests in `Ecommerce.IntegrationTests/{Module}/`. Cover the success path **and every distinct failure path**.
+6. **Tests:** HTTP tests in `Ecommerce.IntegrationTests/{Module}/` against the real PostgreSQL container, and unit tests in `Ecommerce.Domain.UnitTests/{Module}/` for new domain rules. Cover the success path **and every distinct failure path**. Never mock `DbSet` or use SQLite or the EF InMemory provider.
 
 ---
 
 ## 10. Testing (summary; details in each test project's `CLAUDE.md`)
 
-- xUnit `[Fact]` / `[Theory]` + `[InlineData]`, **Moq**, default **`Assert.*`** only.
-- **AAA:** `// Arrange`, `// Act`, `// Assert` comments in every test.
-- Mocks are `private readonly Mock<T> _xxxMock`, created in the test-class constructor.
-- Build domain objects through their real factories (`User.Create(...)`). Never mock entities or value objects.
-- Assert failures against the **domain error instance**: `Assert.Equal(UserErrors.AlreadyExists, result.Error)`.
-- Verify critical interactions with `Times.Once` / `Times.Never` (e.g. `SaveChangesAsync` is **never** called on a failure path).
-- Naming: unit tests `Handle_Should_{Outcome}_When{Condition}`; integration tests `{Action}_Should{Outcome}_When{Condition}`.
+- xUnit `[Fact]` / `[Theory]` + `[InlineData]`, default **`Assert.*`** only. No mocking library.
+- **AAA:** `// Arrange`, `// Act`, `// Assert` comments in every integration test.
+- Handlers are tested over HTTP against PostgreSQL in Testcontainers, not with mocks. Never mock `DbSet`, and never swap in SQLite or the EF InMemory provider: they don't behave like PostgreSQL.
+- Domain rules (`Order.AddOrderItem`, `Rating.Create`, ...) are plain unit tests of the entities: no database, no mocks.
+- Build domain objects through their real factories (`User.Create(...)`).
+- Assert failures against the **domain error instance**: `Assert.Equal(OrderErrors.InvalidQuantity, result.Error)`. Over HTTP, assert the status code and the database state.
+- Naming: domain tests `{Method}_Should_{Outcome}_When{Condition}`; integration tests `{Action}_Should{Outcome}_When{Condition}`.
 - Use `Options.Create(new XOptions { ... })` for options in tests; never mock `IOptions<T>`.
 
 ---

@@ -1,6 +1,6 @@
 ﻿using System.Data;
 
-namespace Ecommerce.Application.Abstractions.Data;
+namespace Ecommerce.Infrastructure.Data;
 
 public interface ISqlConnectionFactory
 {
