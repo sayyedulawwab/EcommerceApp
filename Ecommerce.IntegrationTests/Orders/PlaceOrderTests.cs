@@ -1,7 +1,8 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using Ecommerce.API.Controllers.Orders;
 using Ecommerce.Domain.Categories;
+using Ecommerce.Domain.Coupons;
 using Ecommerce.Domain.Orders;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Users;
@@ -199,7 +200,7 @@ public sealed class PlaceOrderTests
     }
 
     [Fact]
-    public async Task PlaceOrder_ShouldReturnBadRequestAndKeepStock_WhenStockIsInsufficient()
+    public async Task PlaceOrder_ShouldReturnConflictAndKeepStock_WhenStockIsInsufficient()
     {
         // Arrange
         await _factory.ResetDatabaseAsync();
@@ -218,7 +219,7 @@ public sealed class PlaceOrderTests
         HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
 
         (int orders, int quantity) = await _factory.ExecuteScopeAsync(async sp =>
         {
@@ -233,6 +234,127 @@ public sealed class PlaceOrderTests
         Assert.Equal(0, orders);
         Assert.Equal(10, quantity);
         Assert.DoesNotContain(_factory.Emails.Sent, email => email.Subject == "Your order is placed");
+    }
+
+    [Fact]
+    public async Task PlaceOrder_ShouldApplyTheDiscountAndCountTheRedemption_WhenTheCouponIsValid()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        User user = UserData.Create();
+        Category category = CategoryData.Create();
+        Product keyboard = ProductData.CreateProduct(category.Id, 100m);
+        Coupon coupon = CouponData.Create(percentOff: 10);
+
+        await SeedAsync(user, category, keyboard, coupon);
+
+        // Lower case on purpose: codes are matched in upper case.
+        var request = new PlaceOrderRequest([new PlaceOrderProductRequest(keyboard.Id.Value, 2)], "save10");
+
+        using HttpClient client = _factory.CreateClientForUser(user.Id.Value);
+
+        // Act
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        (Order order, Coupon storedCoupon) = await _factory.ExecuteScopeAsync(async sp =>
+        {
+            ApplicationDbContext db = sp.GetRequiredService<ApplicationDbContext>();
+
+            return (
+                await db.Set<Order>().AsNoTracking().FirstAsync(o => o.UserId == user.Id),
+                await db.Set<Coupon>().AsNoTracking().FirstAsync(c => c.Id == coupon.Id));
+        });
+
+        Assert.Equal(20m, order.Discount.Amount);
+        Assert.Equal(180m, order.TotalPrice.Amount);
+        Assert.Equal(coupon.Id, order.CouponId);
+        Assert.Equal(1, storedCoupon.RedemptionCount);
+    }
+
+    [Fact]
+    public async Task PlaceOrder_ShouldReturnBadRequestAndKeepStock_WhenTheCouponHasExpired()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        User user = UserData.Create();
+        Category category = CategoryData.Create();
+        Product keyboard = ProductData.CreateProduct(category.Id, 100m);
+        Coupon coupon = CouponData.Create(expiresOnUtc: DateTime.UtcNow.AddDays(-1));
+
+        await SeedAsync(user, category, keyboard, coupon);
+
+        var request = new PlaceOrderRequest([new PlaceOrderProductRequest(keyboard.Id.Value, 2)], "SAVE10");
+
+        using HttpClient client = _factory.CreateClientForUser(user.Id.Value);
+
+        // Act
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        int quantity = await _factory.ExecuteScopeAsync(async sp =>
+        {
+            ApplicationDbContext db = sp.GetRequiredService<ApplicationDbContext>();
+
+            return (await db.Set<Product>().AsNoTracking().FirstAsync(p => p.Id == keyboard.Id)).Quantity;
+        });
+
+        Assert.Equal(10, quantity);
+    }
+
+    [Fact]
+    public async Task PlaceOrder_ShouldReturnConflict_WhenTheCouponIsUsedUp()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        User user = UserData.Create();
+        Category category = CategoryData.Create();
+        Product keyboard = ProductData.CreateProduct(category.Id, 100m);
+        Coupon coupon = CouponData.Create(maxRedemptions: 1);
+
+        await SeedAsync(user, category, keyboard, coupon);
+
+        var request = new PlaceOrderRequest([new PlaceOrderProductRequest(keyboard.Id.Value, 1)], "SAVE10");
+
+        using HttpClient client = _factory.CreateClientForUser(user.Id.Value);
+
+        await client.PostAsJsonAsync("/api/v1/orders", request);
+
+        // Act
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PlaceOrder_ShouldReturnNotFound_WhenTheCouponDoesNotExist()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        User user = UserData.Create();
+        Category category = CategoryData.Create();
+        Product keyboard = ProductData.CreateProduct(category.Id, 100m);
+
+        await SeedAsync(user, category, keyboard);
+
+        var request = new PlaceOrderRequest([new PlaceOrderProductRequest(keyboard.Id.Value, 1)], "NOPE10");
+
+        using HttpClient client = _factory.CreateClientForUser(user.Id.Value);
+
+        // Act
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     private Task SeedAsync(params object[] entities)

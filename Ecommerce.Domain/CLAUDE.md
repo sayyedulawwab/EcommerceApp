@@ -12,7 +12,7 @@ Shared/         Money, Currency (cross-aggregate value objects)
                 Events/{Entity}CreatedDomainEvent.cs
 ```
 
-Modules: `Categories`, `Products`, `Orders`, `Reviews`, `Users`.
+Modules: `Categories`, `Coupons`, `Products`, `Orders`, `Reviews`, `Users`.
 
 ---
 
@@ -73,7 +73,7 @@ Rules:
 - **Timestamps:** `CreatedOnUtc` (`DateTime`) is set by `Create`. `UpdatedOnUtc` (`DateTime?`) is set by `Update`. Both are **passed in by the caller** (from `IDateTimeProvider`); the domain never reads the clock.
 - **`static Create(...)`** takes value objects plus `createdOnUtc`, generates the id with `{Entity}Id.New()`, raises `{Entity}CreatedDomainEvent`, and returns the entity. When the entity has rules beyond its value objects, `Create` returns `Result<{Entity}>` instead (`Product.Create` rejects a price <= 0 and a negative quantity with `ProductErrors.InvalidPrice` / `InvalidQuantity`).
 - **`static Update({Entity} entity, ...)`** is the established pattern here. It takes the entity plus the mutable fields and `updatedOnUtc`, mutates the entity, and returns it (handlers reassign: `category = Category.Update(category, ...)`). `Product.Update` checks the same rules as `Product.Create` and returns `Result`, changing nothing on failure. It never touches `Id` or `CreatedOnUtc`. Match this shape for new entities.
-- **Reference other aggregates by ID** (`Product.CategoryId`, `Review.ProductId`, `Review.UserId`, `Order.UserId`). The one exception is `OrderItem.Product`, a navigation used for pricing and order responses.
+- **Reference other aggregates by ID** (`Product.CategoryId`, `Review.ProductId`, `Review.UserId`, `Order.UserId`). The one exception is `OrderItem.Product`, a navigation used for order responses. The price is copied into `OrderItem.UnitPrice` when the line is created, so a later price change doesn't change past orders.
 - Factories may take a related aggregate when they need data from it (`Review.Create(Product product, ...)` stores `product.Id`).
 
 ### Aggregates with children
@@ -83,15 +83,20 @@ Rules:
 - Add children **only through the aggregate**: `Result result = order.AddOrderItem(product, quantity, createdOnUtc)`. It enforces the invariants (quantity > 0, every line in the same currency), calls `OrderItem.Create(...)`, and keeps `TotalPrice` as the sum of `price × quantity` across lines.
 - **Invariant violations return `Result.Failure({Entity}Errors.X)`** (`OrderErrors.InvalidQuantity`, `OrderErrors.CurrencyMismatch`); callers propagate the error. Don't throw for expected business failures.
 - Children are exposed read-only: `public IReadOnlyList<OrderItem> OrderItems => _orderItems;` over a `private readonly List<OrderItem> _orderItems`, which EF Core maps by convention. Only `AddOrderItem` adds to it.
+- Methods that must only run inside a domain service are `internal` (`Order.ApplyDiscount`, `Order.Cancel`), so a handler can't cancel an order without giving back its stock and coupon.
 - Child entities are also `sealed`, extend `Entity<{Child}Id>`, and have their own static `Create`.
 
 ### Domain services
 
-When a rule changes more than one aggregate, it goes in a domain service in the module folder, not in one of the aggregates and not in the handler. `Orders/OrderPlacementService.Place(userId, lines, utcNow)` creates the order, adds each line through `order.AddOrderItem`, and removes stock with `product.RemoveStock`, returning `Result<Order>`.
+A rule goes in a domain service in the module folder, not in an aggregate and not in the handler, when it works on more than one aggregate, depends on stored data outside them (such as a coupon's pricing rule), or is a business operation that no single aggregate owns.
+
+- `Orders/OrderPlacementService.Place(userId, lines, coupon, utcNow)` creates the order, adds each line through `order.AddOrderItem`, removes stock with `product.RemoveStock`, redeems the coupon and applies its discount, returning `Result<Order>`.
+- `Orders/OrderCancellationService.Cancel(order, products, coupon, utcNow)` cancels a placed order, gives each product its stock back and releases the coupon's redemption.
 
 - A service with no dependencies is a `static class` with static methods (the analyzers require it, CA1822/S2325). Make it an instance class only when it depends on something, such as an interface declared in the Domain.
 - It works on loaded aggregates and returns `Result`. It doesn't load data, save or read the clock: the handler loads the aggregates, passes `dateTimeProvider.UtcNow`, and saves.
-- Each aggregate still enforces its own rules (`AddOrderItem`: quantity and currency, `RemoveStock`: enough stock). The service only decides the order of the calls.
+- Each aggregate still enforces its own rules (`AddOrderItem`: quantity and currency, `RemoveStock`: enough stock, `Coupon.Redeem`: period and usage limit). The service only decides the order of the calls.
+- If a later step fails, earlier aggregates have already changed in memory. That's safe only because the handler doesn't save on a failure. A caller that saves anyway (an outbox, a shared unit of work) needs the service to check every step before changing anything.
 
 ---
 
@@ -182,7 +187,7 @@ public static class ReviewErrors
 ```
 
 - Codes follow `"{Entity}.{Reason}"` (`Product.NotFound`, `User.AlreadyExists`, `Order.CurrencyMismatch`, `Rating.Invalid`).
-- The status is a `System.Net.HttpStatusCode`. Choose it by meaning: missing → `NotFound`, duplicate/state clash → `Conflict`, invalid input/rule → `BadRequest`, bad credentials → `Unauthorized`. If you use a status not yet mapped in `Ecommerce.API/Extensions/ErrorMappingExtensions.cs`, add it there (otherwise it becomes a 500).
+- The status is a `System.Net.HttpStatusCode`. Choose it by meaning: missing → `NotFound`, duplicate/state clash → `Conflict` (including `Product.InsufficientStock`: the request is valid but conflicts with the current stock), invalid input/rule → `BadRequest`, bad credentials → `Unauthorized`. If you use a status not yet mapped in `Ecommerce.API/Extensions/ErrorMappingExtensions.cs`, add it there (otherwise it becomes a 500).
 - Application handlers return these instances, and domain unit tests assert equality against them.
 
 ---

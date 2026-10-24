@@ -20,6 +20,13 @@ internal sealed class DeleteProductCommandHandler(
             return Result.Failure<Guid>(ProductErrors.NotFound);
         }
 
+        bool hasOrders = await dbContext.Orders.AnyAsync(order => order.OrderItems.Any(item => item.ProductId == product.Id), cancellationToken);
+
+        if (hasOrders)
+        {
+            return Result.Failure<Guid>(ProductErrors.HasOrders);
+        }
+
         dbContext.Products.Remove(product);
 
         await dbContext.SaveChangesAsync(cancellationToken);

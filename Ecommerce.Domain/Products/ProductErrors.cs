@@ -27,5 +27,11 @@ public static class ProductErrors
     public static readonly Error InsufficientStock = new(
        "Product.InsufficientStock",
        "The product doesn't have enough stock for the requested quantity",
-       HttpStatusCode.BadRequest);
+       HttpStatusCode.Conflict);
+
+    // Order lines keep a reference to the product, so deleting it would change customers' order history.
+    public static readonly Error HasOrders = new(
+       "Product.HasOrders",
+       "The product can't be deleted because it has been ordered",
+       HttpStatusCode.Conflict);
 }

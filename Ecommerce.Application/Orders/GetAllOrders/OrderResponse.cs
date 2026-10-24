@@ -7,6 +7,7 @@ public sealed class OrderResponse
     public List<OrderItemResponse> OrderItems { get; init; } = [];
     public decimal TotalPriceAmount { get; init; }
     public required string TotalPriceCurrency { get; init; }
+    public decimal DiscountAmount { get; init; }
     public required string Status { get; init; }
     public DateTime CreatedOnUtc { get; init; }
     public DateTime? ShippedOnUtc { get; init; }

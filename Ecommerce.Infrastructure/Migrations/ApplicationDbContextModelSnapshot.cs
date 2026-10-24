@@ -54,11 +54,75 @@ namespace Ecommerce.Infrastructure.Migrations
                     b.ToTable("categories", (string)null);
                 });
 
+            modelBuilder.Entity("Ecommerce.Domain.Coupons.Coupon", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedOnUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_on_utc");
+
+                    b.Property<DateTime>("ExpiresOnUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_on_utc");
+
+                    b.Property<int>("MaxRedemptions")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_redemptions");
+
+                    b.Property<int>("PercentOff")
+                        .HasColumnType("integer")
+                        .HasColumnName("percent_off");
+
+                    b.Property<int>("RedemptionCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("redemption_count");
+
+                    b.Property<DateTime>("StartsOnUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("starts_on_utc");
+
+                    b.Property<DateTime?>("UpdatedOnUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_on_utc");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_coupons");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_coupons_code");
+
+                    b.ToTable("coupons", (string)null);
+                });
+
             modelBuilder.Entity("Ecommerce.Domain.Orders.Order", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.Property<DateTime?>("CancelledOnUtc")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelled_on_utc");
+
+                    b.Property<Guid?>("CouponId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("coupon_id");
 
                     b.Property<DateTime>("CreatedOnUtc")
                         .HasColumnType("timestamp with time zone")
@@ -76,8 +140,17 @@ namespace Ecommerce.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_orders");
+
+                    b.HasIndex("CouponId")
+                        .HasDatabaseName("ix_orders_coupon_id");
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_orders_user_id");
@@ -253,12 +326,42 @@ namespace Ecommerce.Infrastructure.Migrations
 
             modelBuilder.Entity("Ecommerce.Domain.Orders.Order", b =>
                 {
+                    b.HasOne("Ecommerce.Domain.Coupons.Coupon", null)
+                        .WithMany()
+                        .HasForeignKey("CouponId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_orders_coupons_coupon_id");
+
                     b.HasOne("Ecommerce.Domain.Users.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_orders_users_user_id");
+
+                    b.OwnsOne("Ecommerce.Domain.Shared.Money", "Discount", b1 =>
+                        {
+                            b1.Property<Guid>("OrderId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("id");
+
+                            b1.Property<decimal>("Amount")
+                                .HasColumnType("decimal(18, 2)")
+                                .HasColumnName("discount_amount");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasColumnType("text")
+                                .HasColumnName("discount_currency");
+
+                            b1.HasKey("OrderId");
+
+                            b1.ToTable("orders");
+
+                            b1.WithOwner()
+                                .HasForeignKey("OrderId")
+                                .HasConstraintName("fk_orders_orders_id");
+                        });
 
                     b.OwnsOne("Ecommerce.Domain.Shared.Money", "TotalPrice", b1 =>
                         {
@@ -286,6 +389,9 @@ namespace Ecommerce.Infrastructure.Migrations
                                 .HasConstraintName("fk_orders_orders_id");
                         });
 
+                    b.Navigation("Discount")
+                        .IsRequired();
+
                     b.Navigation("TotalPrice")
                         .IsRequired();
                 });
@@ -302,11 +408,38 @@ namespace Ecommerce.Infrastructure.Migrations
                     b.HasOne("Ecommerce.Domain.Products.Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_order_items_products_product_id");
 
+                    b.OwnsOne("Ecommerce.Domain.Shared.Money", "UnitPrice", b1 =>
+                        {
+                            b1.Property<Guid>("OrderItemId")
+                                .HasColumnType("uuid")
+                                .HasColumnName("id");
+
+                            b1.Property<decimal>("Amount")
+                                .HasColumnType("decimal(18, 2)")
+                                .HasColumnName("unit_price_amount");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasColumnType("text")
+                                .HasColumnName("unit_price_currency");
+
+                            b1.HasKey("OrderItemId");
+
+                            b1.ToTable("order_items");
+
+                            b1.WithOwner()
+                                .HasForeignKey("OrderItemId")
+                                .HasConstraintName("fk_order_items_order_items_id");
+                        });
+
                     b.Navigation("Product");
+
+                    b.Navigation("UnitPrice")
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Ecommerce.Domain.Products.Product", b =>

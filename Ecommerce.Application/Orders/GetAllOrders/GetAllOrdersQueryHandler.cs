@@ -2,6 +2,7 @@
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Orders;
+using Ecommerce.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Application.Orders.GetAllOrders;
@@ -12,6 +13,7 @@ internal sealed class GetAllOrdersQueryHandler(IApplicationDbContext dbContext)
     {
         IReadOnlyList<Order> orders = await dbContext.Orders
             .AsNoTracking()
+            .Where(order => order.UserId == new UserId(request.UserId))
             .Include(order => order.OrderItems)
             .ThenInclude(orderItem => orderItem.Product)
             .ToListAsync(cancellationToken);
@@ -26,15 +28,18 @@ internal sealed class GetAllOrdersQueryHandler(IApplicationDbContext dbContext)
                 ProductId = oi.ProductId.Value,
                 Name = oi.Product.Name.Value,
                 Description = oi.Product.Description.Value,
-                PriceAmount = oi.Product.Price.Amount,
-                PriceCurrency = oi.Product.Price.Currency.Code,
+                PriceAmount = oi.UnitPrice.Amount,
+                PriceCurrency = oi.UnitPrice.Currency.Code,
                 CategoryId = oi.Product.CategoryId.Value,
-                Quantity = oi.Quantity
+                Quantity = oi.Quantity,
+                CreatedOnUtc = oi.CreatedOnUtc
             }).ToList(),
             TotalPriceAmount = order.TotalPrice.Amount,
             TotalPriceCurrency = order.TotalPrice.Currency.Code,
+            DiscountAmount = order.Discount.Amount,
             Status = order.Status.ToString(),
-            CreatedOnUtc = order.CreatedOnUtc
+            CreatedOnUtc = order.CreatedOnUtc,
+            CancelledOnUtc = order.CancelledOnUtc
         });
 
         return ordersResponse.ToList();

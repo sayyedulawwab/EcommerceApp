@@ -6,7 +6,7 @@ A REST API for an ecommerce platform: products, categories, orders, product revi
 
 - **Products:** add, edit, delete, get by id (with its reviews), and search with filtering, sorting, paging and Redis caching
 - **Categories:** add, edit, delete, list, and get by id
-- **Orders:** place an order for the signed-in user and list orders
+- **Orders:** place an order for the signed-in user (with an optional coupon), cancel it before payment, and list the user's own orders
 - **Reviews:** rate (1–5) and comment on a product
 - **Users:** register and log in (JWT bearer tokens, PBKDF2-hashed passwords)
 
@@ -130,19 +130,21 @@ POST /api/v1/categories
 
 | Method | Route               | Description                              |
 | ------ | ------------------- | ---------------------------------------- |
-| GET    | `/api/v1/orders` 🔒 | List orders                              |
+| GET    | `/api/v1/orders` 🔒 | List the signed-in user's orders         |
 | POST   | `/api/v1/orders` 🔒 | Place an order for the signed-in user    |
+| POST   | `/api/v1/orders/{id}/cancel` 🔒 | Cancel a placed order: stock and the coupon use are given back |
 
 ```json
 POST /api/v1/orders
 {
   "orderItems": [
     { "productId": "3fa85f64-5717-4562-b3fc-2c963f66afa6", "quantity": 2 }
-  ]
+  ],
+  "couponCode": "WELCOME10"
 }
 ```
 
-All products in one order must use the same currency.
+All products in one order must use the same currency. `couponCode` is optional. A coupon takes a percentage off the order total, is valid for a period, and can be used a limited number of times. Development seeds `WELCOME10` and `FLASH25`. Out of stock or a used-up coupon returns 409.
 
 ### Reviews
 

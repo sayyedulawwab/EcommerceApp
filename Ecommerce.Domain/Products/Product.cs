@@ -99,4 +99,18 @@ public sealed class Product : Entity<ProductId>
 
         return Result.Success();
     }
+
+    // Gives stock back, for example when an order is cancelled.
+    public Result AddStock(int quantity, DateTime updatedOnUtc)
+    {
+        if (quantity <= 0)
+        {
+            return Result.Failure(ProductErrors.InvalidStockQuantity);
+        }
+
+        Quantity += quantity;
+        UpdatedOnUtc = updatedOnUtc;
+
+        return Result.Success();
+    }
 }

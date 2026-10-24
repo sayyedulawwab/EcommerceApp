@@ -2,6 +2,7 @@
 using Ecommerce.Application.Exceptions;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Categories;
+using Ecommerce.Domain.Coupons;
 using Ecommerce.Domain.Orders;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Reviews;
@@ -15,6 +16,7 @@ public sealed class ApplicationDbContext(DbContextOptions options, IDomainEvents
     : DbContext(options), IApplicationDbContext
 {
     public DbSet<Category> Categories => Set<Category>();
+    public DbSet<Coupon> Coupons => Set<Coupon>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<Review> Reviews => Set<Review>();

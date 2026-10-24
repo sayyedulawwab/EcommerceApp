@@ -1,6 +1,7 @@
 ﻿using Asp.Versioning;
 using Ecommerce.API.Extensions;
 using Ecommerce.Application.Abstractions.Messaging;
+using Ecommerce.Application.Orders.CancelOrder;
 using Ecommerce.Application.Orders.GetAllOrders;
 using Ecommerce.Application.Orders.PlaceOrder;
 using Ecommerce.Domain.Abstractions;
@@ -29,7 +30,7 @@ public class OrdersController() : ControllerBase
             new OrderStockItem(item.ProductId, item.Quantity))
             .ToList();
 
-        var command = new PlaceOrderCommand(userId, orderItems);
+        var command = new PlaceOrderCommand(userId, orderItems, request.CouponCode);
 
         Result<Guid> result = await handler.Handle(command, cancellationToken);
 
@@ -42,10 +43,41 @@ public class OrdersController() : ControllerBase
     }
 
     [MapToApiVersion(1)]
+    [HttpPost("{id:guid}/cancel")]
+    public async Task<IActionResult> CancelOrder(Guid id, ICommandHandler<CancelOrderCommand> handler, CancellationToken cancellationToken)
+    {
+        Claim? userIdClaim = User?.FindFirst(ClaimTypes.NameIdentifier);
+        if (userIdClaim == null || string.IsNullOrEmpty(userIdClaim.Value))
+        {
+            return Unauthorized("User ID claim is missing.");
+        }
+        var userId = Guid.Parse(userIdClaim.Value);
+
+        var command = new CancelOrderCommand(userId, id);
+
+        Result result = await handler.Handle(command, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return result.Error.ToActionResult();
+        }
+
+        return NoContent();
+    }
+
+    [MapToApiVersion(1)]
     [HttpGet]
     public async Task<IActionResult> GetOrders(IQueryHandler<GetAllOrdersQuery, IReadOnlyList<OrderResponse>> handler, CancellationToken cancellationToken)
     {
-        var query = new GetAllOrdersQuery();
+        Claim? userIdClaim = User?.FindFirst(ClaimTypes.NameIdentifier);
+        if (userIdClaim == null || string.IsNullOrEmpty(userIdClaim.Value))
+        {
+            return Unauthorized("User ID claim is missing.");
+        }
+        var userId = Guid.Parse(userIdClaim.Value);
+
+        // Customers see only their own orders.
+        var query = new GetAllOrdersQuery(userId);
 
         Result<IReadOnlyList<OrderResponse>> result = await handler.Handle(query, cancellationToken);
 
