@@ -20,19 +20,35 @@ internal sealed class DeleteProductCommandHandler(
             return Result.Failure<Guid>(ProductErrors.NotFound);
         }
 
-        bool hasOrders = await dbContext.Orders.AnyAsync(order => order.OrderItems.Any(item => item.ProductId == product.Id), cancellationToken);
-
-        if (hasOrders)
+        if (await HasOrdersAsync(product.Id, cancellationToken))
         {
             return Result.Failure<Guid>(ProductErrors.HasOrders);
         }
 
         dbContext.Products.Remove(product);
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            // An order placed between the check and the delete hits the foreign key. Report it as the same conflict.
+            if (await HasOrdersAsync(product.Id, cancellationToken))
+            {
+                return Result.Failure<Guid>(ProductErrors.HasOrders);
+            }
+
+            throw;
+        }
 
         await cacheService.RemoveByPrefixAsync("products", cancellationToken);
 
         return product.Id.Value;
+    }
+
+    private Task<bool> HasOrdersAsync(ProductId productId, CancellationToken cancellationToken)
+    {
+        return dbContext.Orders.AnyAsync(order => order.OrderItems.Any(item => item.ProductId == productId), cancellationToken);
     }
 }

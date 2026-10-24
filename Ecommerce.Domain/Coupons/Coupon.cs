@@ -33,22 +33,58 @@ public sealed class Coupon : Entity<CouponId>
 
     public static Result<Coupon> Create(CouponCode code, int percentOff, DateTime startsOnUtc, DateTime expiresOnUtc, int maxRedemptions, DateTime createdOnUtc)
     {
+        Result validation = Validate(percentOff, startsOnUtc, expiresOnUtc, maxRedemptions);
+
+        if (validation.IsFailure)
+        {
+            return Result.Failure<Coupon>(validation.Error);
+        }
+
+        return new Coupon(CouponId.New(), code, percentOff, startsOnUtc, expiresOnUtc, maxRedemptions, createdOnUtc);
+    }
+
+    // The code can't change: customers may already have it, and orders reference the coupon.
+    public Result Update(int percentOff, DateTime startsOnUtc, DateTime expiresOnUtc, int maxRedemptions, DateTime updatedOnUtc)
+    {
+        Result validation = Validate(percentOff, startsOnUtc, expiresOnUtc, maxRedemptions);
+
+        if (validation.IsFailure)
+        {
+            return validation;
+        }
+
+        if (maxRedemptions < RedemptionCount)
+        {
+            return Result.Failure(CouponErrors.MaxRedemptionsBelowUsage);
+        }
+
+        PercentOff = percentOff;
+        StartsOnUtc = startsOnUtc;
+        ExpiresOnUtc = expiresOnUtc;
+        MaxRedemptions = maxRedemptions;
+        UpdatedOnUtc = updatedOnUtc;
+
+        return Result.Success();
+    }
+
+    private static Result Validate(int percentOff, DateTime startsOnUtc, DateTime expiresOnUtc, int maxRedemptions)
+    {
         if (percentOff is < 1 or > 100)
         {
-            return Result.Failure<Coupon>(CouponErrors.InvalidPercentOff);
+            return Result.Failure(CouponErrors.InvalidPercentOff);
         }
 
         if (expiresOnUtc <= startsOnUtc)
         {
-            return Result.Failure<Coupon>(CouponErrors.InvalidPeriod);
+            return Result.Failure(CouponErrors.InvalidPeriod);
         }
 
         if (maxRedemptions < 1)
         {
-            return Result.Failure<Coupon>(CouponErrors.InvalidMaxRedemptions);
+            return Result.Failure(CouponErrors.InvalidMaxRedemptions);
         }
 
-        return new Coupon(CouponId.New(), code, percentOff, startsOnUtc, expiresOnUtc, maxRedemptions, createdOnUtc);
+        return Result.Success();
     }
 
     public Result Redeem(DateTime utcNow)

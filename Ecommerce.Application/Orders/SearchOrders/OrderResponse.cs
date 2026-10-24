@@ -1,4 +1,4 @@
-﻿namespace Ecommerce.Application.Orders.GetAllOrders;
+﻿namespace Ecommerce.Application.Orders.SearchOrders;
 
 public sealed class OrderResponse
 {

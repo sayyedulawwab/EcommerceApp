@@ -26,7 +26,7 @@ Helpers/
 - Redis is replaced with `AddDistributedMemoryCache()` (and `CacheService` is re-registered). `IEmailService` is replaced by `FakeEmailService` (`_factory.Emails`), which records each email so tests can assert what a domain event handler sent. `ResetDatabaseAsync()` clears it. Seeding a user raises its welcome email, so call `_factory.Emails.Clear()` after seeding when a test checks a later email.
 - Authentication is replaced by `TestAuthenticationHandler`. Every request is authenticated. `ClaimTypes.NameIdentifier` is the `X-Test-User-Id` header value if present, otherwise `TestAuthenticationHandler.UserId` (`11111111-1111-1111-1111-111111111111`, which doesn't exist in `users`).
 - The environment is `Development`, so **host startup runs `ApplyMigrations()` (drop + migrate + Bogus seed)** against the container. The test calls `MigrateAsync()` again and then creates the Respawn checkpoint.
-- Helpers: `Client` (pre-authorized `HttpClient` using the fixed user id), `CreateClientForUser(Guid userId)` (authorized as a specific user; dispose it with `using`), `ResetDatabaseAsync()`, `ExecuteScopeAsync(...)` / `ExecuteScopeAsync<TResult>(...)` for direct DbContext access, `CreateScope()`.
+- Helpers: `Client` (pre-authorized `HttpClient` using the fixed user id), `CreateClientForUser(Guid userId)` (authorized as a specific user; dispose it with `using`), `CreateAdminClient()` (an admin, for product, category and coupon writes), `ResetDatabaseAsync()`, `ExecuteScopeAsync(...)` / `ExecuteScopeAsync<TResult>(...)` for direct DbContext access, `CreateScope()`.
 
 ## Test structure
 

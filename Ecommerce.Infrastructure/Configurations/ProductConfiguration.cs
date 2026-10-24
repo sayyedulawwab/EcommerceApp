@@ -46,9 +46,11 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(product => product.CreatedOnUtc);
         builder.Property(product => product.UpdatedOnUtc);
 
+        // Restrict, not cascade: deleting a category must not delete its products.
         builder.HasOne<Category>()
                .WithMany()
-               .HasForeignKey(product => product.CategoryId);
+               .HasForeignKey(product => product.CategoryId)
+               .OnDelete(DeleteBehavior.Restrict);
 
     }
 }

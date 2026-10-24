@@ -34,7 +34,7 @@ Ecommerce REST API (products, categories, orders, reviews, users/auth). This fil
 | FluentValidation                        | One validator per command, run by `ValidationDecorator`        |
 | Scrutor                                 | Assembly scanning for handlers + decorator registration        |
 | Redis (`IDistributedCache`)             | Query result caching via `ICacheService`                       |
-| JWT Bearer                              | Auth; `[Authorize]` on controllers                             |
+| JWT Bearer                              | Auth; `[Authorize]` on controllers, `[Authorize(Roles = Roles.Admin)]` on admin writes |
 | Asp.Versioning                          | URL segment (`/api/v1/...`) + `X-Api-Version` header           |
 | Microsoft.AspNetCore.OpenApi            | `MapOpenApi()` (Development only)                              |
 | Serilog                                 | Structured logging, `ActivityEnricher` (trace_id/span_id)      |
@@ -144,8 +144,8 @@ Each module uses the same name in every layer (plural folders in Domain, Applica
 | ------------ | --------------------- | -------------------------------------------------------- |
 | `Categories` | `Category`            | Add, Edit, Delete, GetCategories, GetCategoryById        |
 | `Products`   | `Product`             | Add, Edit, Delete, GetProductById (with reviews), SearchProduct (Dapper, paged, cached) |
-| `Orders`     | `Order` → `OrderItem` | PlaceOrder (optional coupon), CancelOrder, GetAllOrders (the user's own) |
-| `Coupons`    | `Coupon`              | No endpoints yet (needs an admin role); seeded in Development |
+| `Orders`     | `Order` → `OrderItem` | PlaceOrder (optional coupon), CancelOrder, SearchOrders (the user's own; paged, sorted, filtered) |
+| `Coupons`    | `Coupon`              | Add, Edit, Delete, GetCoupons (admins only)               |
 | `Reviews`    | `Review`              | AddReview                                                |
 | `Users`      | `User`                | Register (command), Login (query → JWT); exposed via `AuthController` |
 | `Shared`     | `Money`, `Currency`   | Value objects reused across aggregates                   |
@@ -260,4 +260,4 @@ These exist in the codebase today. Leave them alone unless asked:
 - `OrderResponse.ShippedOnUtc/DeliveredOnUtc` and `OrderItemResponse.UpdatedOnUtc` exist but are never populated. `ProductResponse.TotalRecords` exists only to carry the Dapper window count.
 - `CacheService.RemoveByPrefixAsync` only clears keys written by the same app instance (in-process key registry).
 - Domain event handlers are auto-registered by the Scrutor scan in `Ecommerce.Application/DependencyInjection.cs`.
-- Any signed-in user can add, edit and delete products and categories. `User.IsAdmin` exists but isn't in the token or checked yet.
+- A coupon's usage limit is shared by all customers ("the first 100 orders"). There's no per-customer limit.

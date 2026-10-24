@@ -50,7 +50,7 @@ Controllers inject the closed handler interface directly (`ICommandHandler<AddPr
 - Scrutor scans this assembly and registers **every** `IQueryHandler<,>`, `ICommandHandler<>`, `ICommandHandler<,>` and `IDomainEventHandler<>` implementation (including `internal` ones) as **scoped**. New handlers need no registration.
 - Decorators are applied with `TryDecorate`. The resulting order is **`LoggingDecorator` → `ValidationDecorator` → handler** for commands, and **`LoggingDecorator` → handler** for queries.
 - `AddValidatorsFromAssembly` auto-registers all validators.
-- **Query validators never run**, because no validation decorator wraps `IQueryHandler`. Validate query input in the handler (as `SearchProductQueryHandler` does with page defaults and a sort whitelist).
+- **Query validators never run**, because no validation decorator wraps `IQueryHandler`. Validate query input in the handler (as `SearchProductQueryHandler` does with page defaults and a sort whitelist). `SearchOrdersQueryHandler` injects `IValidator<SearchOrdersQuery>` and runs it itself, returning a `ValidationError`.
 - A new cross-cutting concern is a new decorator class in `Abstractions/Behaviors/`, registered with `TryDecorate`. Only add one when asked; there are no MediatR-style pipeline behaviors.
 - **Domain event handlers** (`internal sealed class XDomainEventHandler : IDomainEventHandler<XDomainEvent>`) live in Application and are picked up by the scan. Put each in the module folder next to the use case that triggers it (`Users/Register/SendWelcomeEmailDomainEventHandler.cs`, `Orders/PlaceOrder/SendOrderConfirmationDomainEventHandler.cs`). The event carries only IDs, so the handler loads what it needs with `AsNoTracking()` and returns quietly if the entity is gone.
 
@@ -200,7 +200,7 @@ internal sealed class GetCategoryByIdQueryHandler(IApplicationDbContext dbContex
 }
 ```
 
-- Use `AsNoTracking()` on reads that don't change anything, and `Include` for the children the response needs (`GetAllOrdersQueryHandler`).
+- Use `AsNoTracking()` on reads that don't change anything, and `Include` for the children the response needs (`SearchOrdersQueryHandler`).
 - Load many entities by ID in one query (`Where(p => ids.Contains(p.Id))`), never one query per item in a loop (`PlaceOrderCommandHandler`).
 
 ### Responses
@@ -242,7 +242,7 @@ Rules:
 - Name it `I{Entity}QueryRepository` with methods named for the operation (`SearchAsync`). Reads return response types, never entities. A stored procedure or a write that is easier in raw SQL goes behind the same kind of interface, as a named method.
 - Don't add a query repository for reads LINQ handles well. Don't add generic CRUD repositories.
 - Default `page = 1` and `pageSize = 10` when the input is ≤ 0.
-- Return `PagedList<T>.Create(items, page, pageSize, totalCount)`. It lives in `Application/Products/PagedList.cs` and exposes `Items`, `Page`, `PageSize`, `TotalCount`, `HasPreviousPage`, `HasNextPage`. Reuse it; don't create another paging type.
+- Return `PagedList<T>.Create(items, page, pageSize, totalCount)`. It lives in `Application/Abstractions/Paging/PagedList.cs` and exposes `Items`, `Page`, `PageSize`, `TotalCount`, `HasPreviousPage`, `HasNextPage`. Reuse it; don't create another paging type.
 - The SQL rules (snake_case, parameters, whitelisted `ORDER BY`, `COUNT(*) OVER ()`) are in the Infrastructure guide.
 
 ---

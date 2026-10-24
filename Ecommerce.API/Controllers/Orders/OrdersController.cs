@@ -1,9 +1,10 @@
 ﻿using Asp.Versioning;
 using Ecommerce.API.Extensions;
 using Ecommerce.Application.Abstractions.Messaging;
+using Ecommerce.Application.Abstractions.Paging;
 using Ecommerce.Application.Orders.CancelOrder;
-using Ecommerce.Application.Orders.GetAllOrders;
 using Ecommerce.Application.Orders.PlaceOrder;
+using Ecommerce.Application.Orders.SearchOrders;
 using Ecommerce.Domain.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -67,7 +68,7 @@ public class OrdersController() : ControllerBase
 
     [MapToApiVersion(1)]
     [HttpGet]
-    public async Task<IActionResult> GetOrders(IQueryHandler<GetAllOrdersQuery, IReadOnlyList<OrderResponse>> handler, CancellationToken cancellationToken)
+    public async Task<IActionResult> SearchOrders([FromQuery] SearchOrdersRequest request, IQueryHandler<SearchOrdersQuery, PagedList<OrderResponse>> handler, CancellationToken cancellationToken)
     {
         Claim? userIdClaim = User?.FindFirst(ClaimTypes.NameIdentifier);
         if (userIdClaim == null || string.IsNullOrEmpty(userIdClaim.Value))
@@ -76,10 +77,9 @@ public class OrdersController() : ControllerBase
         }
         var userId = Guid.Parse(userIdClaim.Value);
 
-        // Customers see only their own orders.
-        var query = new GetAllOrdersQuery(userId);
+        var query = new SearchOrdersQuery(userId, request.Status, request.From?.UtcDateTime, request.To?.UtcDateTime, request.Page, request.PageSize, request.SortColumn, request.SortOrder);
 
-        Result<IReadOnlyList<OrderResponse>> result = await handler.Handle(query, cancellationToken);
+        Result<PagedList<OrderResponse>> result = await handler.Handle(query, cancellationToken);
 
         if (result.IsFailure)
         {

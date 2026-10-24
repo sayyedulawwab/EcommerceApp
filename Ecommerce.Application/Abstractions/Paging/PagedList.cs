@@ -1,4 +1,4 @@
-﻿namespace Ecommerce.Application.Products;
+namespace Ecommerce.Application.Abstractions.Paging;
 public class PagedList<T>
 {
     private PagedList(IEnumerable<T> items, int page, int pageSize, long totalCount)
