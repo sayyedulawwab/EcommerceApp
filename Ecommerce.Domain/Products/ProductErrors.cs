@@ -9,6 +9,16 @@ public static class ProductErrors
        "The product with the specified identifier was not found",
        HttpStatusCode.NotFound);
 
+    public static readonly Error InvalidPrice = new(
+       "Product.InvalidPrice",
+       "The product price must be greater than zero",
+       HttpStatusCode.BadRequest);
+
+    public static readonly Error InvalidQuantity = new(
+       "Product.InvalidQuantity",
+       "The product stock quantity can't be negative",
+       HttpStatusCode.BadRequest);
+
     public static readonly Error InvalidStockQuantity = new(
        "Product.InvalidStockQuantity",
        "The quantity of stock to remove must be greater than zero",

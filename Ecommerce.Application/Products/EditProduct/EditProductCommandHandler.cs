@@ -33,7 +33,7 @@ internal sealed class EditProductCommandHandler(
             return Result.Failure<Guid>(ValidationError.FromResults([name, description, currency]));
         }
 
-        product = Product.Update(
+        Result updateResult = Product.Update(
             product,
             name.Value,
             description.Value,
@@ -41,6 +41,11 @@ internal sealed class EditProductCommandHandler(
             request.Quantity,
             new CategoryId(request.CategoryId),
             dateTimeProvider.UtcNow);
+
+        if (updateResult.IsFailure)
+        {
+            return Result.Failure<Guid>(updateResult.Error);
+        }
 
         await dbContext.SaveChangesAsync(cancellationToken);
 

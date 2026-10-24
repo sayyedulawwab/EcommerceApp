@@ -31,8 +31,15 @@ public sealed class Product : Entity<ProductId>
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? UpdatedOnUtc { get; private set; }
 
-    public static Product Create(ProductName name, ProductDescription description, Money price, int quantity, CategoryId categoryId, DateTime createdOnUtc)
+    public static Result<Product> Create(ProductName name, ProductDescription description, Money price, int quantity, CategoryId categoryId, DateTime createdOnUtc)
     {
+        Result valid = Validate(price, quantity);
+
+        if (valid.IsFailure)
+        {
+            return Result.Failure<Product>(valid.Error);
+        }
+
         var product = new Product(ProductId.New(), name, description, price, quantity, categoryId, createdOnUtc);
 
         product.RaiseDomainEvent(new ProductCreatedDomainEvent(product.Id));
@@ -40,8 +47,15 @@ public sealed class Product : Entity<ProductId>
         return product;
     }
 
-    public static Product Update(Product product, ProductName name, ProductDescription description, Money price, int quantity, CategoryId categoryId, DateTime updatedOnUtc)
+    public static Result Update(Product product, ProductName name, ProductDescription description, Money price, int quantity, CategoryId categoryId, DateTime updatedOnUtc)
     {
+        Result valid = Validate(price, quantity);
+
+        if (valid.IsFailure)
+        {
+            return valid;
+        }
+
         product.Name = name;
         product.Description = description;
         product.Price = price;
@@ -49,7 +63,22 @@ public sealed class Product : Entity<ProductId>
         product.CategoryId = categoryId;
         product.UpdatedOnUtc = updatedOnUtc;
 
-        return product;
+        return Result.Success();
+    }
+
+    private static Result Validate(Money price, int quantity)
+    {
+        if (price.Amount <= 0)
+        {
+            return Result.Failure(ProductErrors.InvalidPrice);
+        }
+
+        if (quantity < 0)
+        {
+            return Result.Failure(ProductErrors.InvalidQuantity);
+        }
+
+        return Result.Success();
     }
 
     public Result RemoveStock(int quantity, DateTime updatedOnUtc)
