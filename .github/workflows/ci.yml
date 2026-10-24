@@ -9,7 +9,7 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     env:
-      # Turns NuGet audit warnings (vulnerable packages) into errors. See Directory.Build.props.
+      # Standard property for CI builds: deterministic paths in the build output.
       ContinuousIntegrationBuild: true
     steps:
       - uses: actions/checkout@v4
