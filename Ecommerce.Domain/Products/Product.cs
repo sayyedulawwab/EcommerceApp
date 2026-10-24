@@ -52,4 +52,22 @@ public sealed class Product : Entity<ProductId>
         return product;
     }
 
+    public Result RemoveStock(int quantity, DateTime updatedOnUtc)
+    {
+        // A negative quantity would add stock instead of removing it.
+        if (quantity <= 0)
+        {
+            return Result.Failure(ProductErrors.InvalidStockQuantity);
+        }
+
+        if (quantity > Quantity)
+        {
+            return Result.Failure(ProductErrors.InsufficientStock);
+        }
+
+        Quantity -= quantity;
+        UpdatedOnUtc = updatedOnUtc;
+
+        return Result.Success();
+    }
 }

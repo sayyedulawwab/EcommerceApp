@@ -16,11 +16,19 @@ internal sealed class AddProductCommandHandler(
 {
     public async Task<Result<Guid>> Handle(AddProductCommand request, CancellationToken cancellationToken)
     {
+        Result<ProductName> name = ProductName.Create(request.Name);
+        Result<ProductDescription> description = ProductDescription.Create(request.Description);
+        Result<Currency> currency = Currency.FromCode(request.PriceCurrency);
+
+        if (name.IsFailure || description.IsFailure || currency.IsFailure)
+        {
+            return Result.Failure<Guid>(ValidationError.FromResults([name, description, currency]));
+        }
+
         var product = Product.Create(
-            new ProductName(request.Name),
-            new ProductDescription(request.Description),
-            new Money(request.PriceAmount,
-            Currency.FromCode(request.PriceCurrency)),
+            name.Value,
+            description.Value,
+            new Money(request.PriceAmount, currency.Value),
             request.Quantity,
             new CategoryId(request.CategoryId),
             dateTimeProvider.UtcNow);

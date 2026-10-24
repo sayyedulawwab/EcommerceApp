@@ -8,7 +8,7 @@ HTTP layer: resource-based, versioned controllers that map request DTOs to comma
 Controllers/{Resource}/     {Resource}Controller.cs + {Verb}{Entity}Request.cs records
 Extensions/                 ErrorMappingExtensions (Error → IActionResult), MiddlewareExtensions,
                             MigrationExtensions (dev migrate + seed), ApplicationBuilderExtensions
-Infrastructure/             ExceptionHandler (IExceptionHandler → 500 ProblemDetails)
+Infrastructure/             ExceptionHandler (IExceptionHandler → 409 for ConcurrencyException, else 500 ProblemDetails)
 Logging/                    ActivityEnricher (Serilog trace_id / span_id)
 Middleware/                 RequestContextLoggingMiddleware (CorrelationId)
 DependencyInjection.cs      AddPresentation()
@@ -79,7 +79,7 @@ Rules:
 | `Conflict`                                 | `ConflictObjectResult(error)` (409)         |
 | `InternalServerError` / any other          | `ObjectResult(error) { StatusCode = 500 }` |
 
-If a domain error uses a status that isn't listed here, add a case to this switch; otherwise it is returned as 500. Unhandled exceptions go to `ExceptionHandler`, which logs and writes a 500 `ProblemDetails` ("Server failure").
+If a domain error uses a status that isn't listed here, add a case to this switch; otherwise it is returned as 500. Unhandled exceptions go to `ExceptionHandler`. A `ConcurrencyException` becomes a 409 `ProblemDetails` ("Conflict"); anything else is logged and written as a 500 `ProblemDetails` ("Server failure").
 
 ---
 

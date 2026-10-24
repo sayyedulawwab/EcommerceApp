@@ -3,7 +3,6 @@ using Ecommerce.Application.Abstractions.Emails;
 using Ecommerce.Infrastructure;
 using Ecommerce.Infrastructure.Caching;
 using Ecommerce.Infrastructure.Data;
-using Ecommerce.Infrastructure.Emails;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -32,6 +31,8 @@ public sealed class IntegrationTestFactory
     private DbConnection _connection = default!;
 
     public HttpClient Client { get; private set; } = default!;
+
+    public FakeEmailService Emails { get; } = new();
 
     public string ConnectionString => _postgres.GetConnectionString();
 
@@ -70,6 +71,8 @@ public sealed class IntegrationTestFactory
 
     public Task ResetDatabaseAsync()
     {
+        Emails.Clear();
+
         return _databaseReset.ResetAsync(_connection);
     }
 
@@ -155,7 +158,7 @@ public sealed class IntegrationTestFactory
             services.AddSingleton<ICacheService, CacheService>();
 
             services.RemoveAll<IEmailService>();
-            services.AddSingleton<IEmailService, EmailService>();
+            services.AddSingleton<IEmailService>(Emails);
 
             services.RemoveAll<IConfigureOptions<AuthenticationOptions>>();
             services.RemoveAll<IPostConfigureOptions<AuthenticationOptions>>();

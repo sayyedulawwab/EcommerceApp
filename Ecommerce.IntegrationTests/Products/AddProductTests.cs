@@ -58,7 +58,7 @@ public sealed class AddProductTests
                 ApplicationDbContext db =
                     sp.GetRequiredService<ApplicationDbContext>();
 
-                var productName = new ProductName(request.Name);
+                ProductName productName = ProductName.Create(request.Name).Value;
 
                 return await db.Set<Product>()
                     .FirstOrDefaultAsync(p =>

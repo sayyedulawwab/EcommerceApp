@@ -1,4 +1,5 @@
 ﻿using Ecommerce.Domain.Abstractions;
+using Ecommerce.Domain.Orders.Events;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Shared;
 using Ecommerce.Domain.Users;
@@ -6,6 +7,8 @@ using Ecommerce.Domain.Users;
 namespace Ecommerce.Domain.Orders;
 public sealed class Order : Entity<OrderId>
 {
+    private readonly List<OrderItem> _orderItems = [];
+
     private Order(OrderId id, UserId userId, Money totalPrice, OrderStatus status, DateTime createdOnUtc) : base(id)
     {
         UserId = userId;
@@ -25,11 +28,14 @@ public sealed class Order : Entity<OrderId>
     public OrderStatus Status { get; private set; }
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? UpdatedOnUtc { get; private set; }
-    public List<OrderItem> OrderItems { get; private set; } = [];
+    // Read-only from outside, so lines can only be added through AddOrderItem. EF Core maps the _orderItems field.
+    public IReadOnlyList<OrderItem> OrderItems => _orderItems;
 
     public static Order Create(UserId userId, OrderStatus status, DateTime createdOnUtc)
     {
         var order = new Order(OrderId.New(), userId, Money.Zero(), status, createdOnUtc);
+
+        order.RaiseDomainEvent(new OrderPlacedDomainEvent(order.Id));
 
         return order;
     }
@@ -43,14 +49,23 @@ public sealed class Order : Entity<OrderId>
 
         var lineTotal = new Money(product.Price.Amount * quantity, product.Price.Currency);
 
-        if (OrderItems.Count > 0 && TotalPrice.Currency != lineTotal.Currency)
+        if (OrderItems.Count == 0)
         {
-            return Result.Failure(OrderErrors.CurrencyMismatch);
+            TotalPrice = lineTotal;
+        }
+        else
+        {
+            Result<Money> total = TotalPrice.Add(lineTotal);
+
+            if (total.IsFailure)
+            {
+                return Result.Failure(OrderErrors.CurrencyMismatch);
+            }
+
+            TotalPrice = total.Value;
         }
 
-        TotalPrice = OrderItems.Count == 0 ? lineTotal : TotalPrice + lineTotal;
-
-        OrderItems.Add(OrderItem.Create(Id, product, quantity, createdOnUtc));
+        _orderItems.Add(OrderItem.Create(Id, product, quantity, createdOnUtc));
 
         return Result.Success();
     }

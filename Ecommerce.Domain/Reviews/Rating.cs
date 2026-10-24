@@ -11,7 +11,7 @@ public record Rating
         Value = value;
     }
 
-    public int Value { get; init; }
+    public int Value { get; }
 
     public static Result<Rating> Create(int value)
     {

@@ -16,8 +16,14 @@ internal sealed class LoginUserQueryHandler(
         LoginUserQuery request,
         CancellationToken cancellationToken)
     {
+        Result<Email> email = Email.Create(request.Email);
 
-        User? user = await dbContext.Users.AsNoTracking().FirstOrDefaultAsync(user => user.Email == new Email(request.Email), cancellationToken);
+        if (email.IsFailure)
+        {
+            return Result.Failure<AccessTokenResponse>(UserErrors.InvalidCredentials);
+        }
+
+        User? user = await dbContext.Users.AsNoTracking().FirstOrDefaultAsync(user => user.Email == email.Value, cancellationToken);
 
         if (user is null || !authService.VerifyPassword(request.Password, user.PasswordSalt, user.PasswordHash))
         {

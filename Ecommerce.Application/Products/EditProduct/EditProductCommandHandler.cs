@@ -24,12 +24,20 @@ internal sealed class EditProductCommandHandler(
             return Result.Failure<Guid>(ProductErrors.NotFound);
         }
 
+        Result<ProductName> name = ProductName.Create(request.Name);
+        Result<ProductDescription> description = ProductDescription.Create(request.Description);
+        Result<Currency> currency = Currency.FromCode(request.PriceCurrency);
+
+        if (name.IsFailure || description.IsFailure || currency.IsFailure)
+        {
+            return Result.Failure<Guid>(ValidationError.FromResults([name, description, currency]));
+        }
+
         product = Product.Update(
             product,
-            new ProductName(request.Name),
-            new ProductDescription(request.Description),
-            new Money(request.PriceAmount,
-            Currency.FromCode(request.PriceCurrency)),
+            name.Value,
+            description.Value,
+            new Money(request.PriceAmount, currency.Value),
             request.Quantity,
             new CategoryId(request.CategoryId),
             dateTimeProvider.UtcNow);

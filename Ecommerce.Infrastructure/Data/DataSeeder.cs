@@ -17,9 +17,9 @@ public static class DataSeeder
         // Seed users
         for (int i = 0; i < 10; i++)
         {
-            var firstName = new FirstName(faker.Person.FirstName);
-            var lastName = new LastName(faker.Person.LastName);
-            var email = new Domain.Users.Email(faker.Internet.Email());
+            FirstName firstName = FirstName.Create(faker.Person.FirstName).Value;
+            LastName lastName = LastName.Create(faker.Person.LastName).Value;
+            Domain.Users.Email email = Domain.Users.Email.Create(faker.Internet.Email()).Value;
 
 
             string passwordSalt = authService.GenerateSalt();
@@ -35,8 +35,8 @@ public static class DataSeeder
         // Seed product categories
         for (int i = 0; i < 10; i++)
         {
-            var name = new CategoryName(faker.Commerce.Department());
-            var code = new CategoryCode(faker.Random.AlphaNumeric(5));
+            CategoryName name = CategoryName.Create(faker.Commerce.Department()).Value;
+            CategoryCode code = CategoryCode.Create(faker.Random.AlphaNumeric(5)).Value;
 
             var category = Category.Create(name, code, DateTime.UtcNow);
 
@@ -50,8 +50,8 @@ public static class DataSeeder
         // Seed products
         for (int i = 0; i < 100; i++)
         {
-            var name = new ProductName(faker.Commerce.ProductName());
-            var description = new ProductDescription(faker.Commerce.ProductAdjective());
+            ProductName name = ProductName.Create(faker.Commerce.ProductName()).Value;
+            ProductDescription description = ProductDescription.Create(faker.Commerce.ProductAdjective()).Value;
             int quantity = faker.Random.Number(1, 100);
             var price = new Money(faker.Finance.Amount(), Currency.Bdt);
             CategoryId categoryId = productCategoryGuids[i % productCategoryGuids.Count];

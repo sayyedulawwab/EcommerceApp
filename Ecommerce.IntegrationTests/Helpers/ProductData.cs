@@ -28,9 +28,9 @@ internal static class ProductData
         string name = "Mechanical Keyboard")
     {
         return Product.Create(
-            new ProductName(name),
-            new ProductDescription("RGB Mechanical Keyboard"),
-            new Money(priceAmount, Currency.FromCode(currencyCode)),
+            ProductName.Create(name).Value,
+            ProductDescription.Create("RGB Mechanical Keyboard").Value,
+            new Money(priceAmount, Currency.FromCode(currencyCode).Value),
             10,
             categoryId,
             DateTime.UtcNow);
