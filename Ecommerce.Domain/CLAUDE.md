@@ -1,4 +1,4 @@
-# Ecommerce.Domain — Conventions
+﻿# Ecommerce.Domain — Conventions
 
 Pure domain model with **no project or package dependencies** (BCL only, e.g. `System.Net.HttpStatusCode` for error codes): no EF Core, no Dapper, no serialization attributes. Persistence mapping lives in `Ecommerce.Infrastructure/Configurations/`.
 
@@ -82,8 +82,16 @@ Rules:
 
 - Add children **only through the aggregate**: `Result result = order.AddOrderItem(product, quantity, createdOnUtc)`. It enforces the invariants (quantity > 0, every line in the same currency), calls `OrderItem.Create(...)`, and keeps `TotalPrice` as the sum of `price × quantity` across lines.
 - **Invariant violations return `Result.Failure({Entity}Errors.X)`** (`OrderErrors.InvalidQuantity`, `OrderErrors.CurrencyMismatch`); callers propagate the error. Don't throw for expected business failures.
-- Never call `order.OrderItems.Add(...)` from outside the aggregate. The list is exposed (`List<OrderItem> { get; private set; } = []`) only so EF can map it.
+- Children are exposed read-only: `public IReadOnlyList<OrderItem> OrderItems => _orderItems;` over a `private readonly List<OrderItem> _orderItems`, which EF Core maps by convention. Only `AddOrderItem` adds to it.
 - Child entities are also `sealed`, extend `Entity<{Child}Id>`, and have their own static `Create`.
+
+### Domain services
+
+When a rule changes more than one aggregate, it goes in a domain service in the module folder, not in one of the aggregates and not in the handler. `Orders/OrderPlacementService.Place(userId, lines, utcNow)` creates the order, adds each line through `order.AddOrderItem`, and removes stock with `product.RemoveStock`, returning `Result<Order>`.
+
+- A service with no dependencies is a `static class` with static methods (the analyzers require it, CA1822/S2325). Make it an instance class only when it depends on something, such as an interface declared in the Domain.
+- It works on loaded aggregates and returns `Result`. It doesn't load data, save or read the clock: the handler loads the aggregates, passes `dateTimeProvider.UtcNow`, and saves.
+- Each aggregate still enforces its own rules (`AddOrderItem`: quantity and currency, `RemoveStock`: enough stock). The service only decides the order of the calls.
 
 ---
 
@@ -94,7 +102,7 @@ One file per ID:
 ```csharp
 public record ProductId(Guid Value)
 {
-    public static ProductId New() => new(Guid.NewGuid());
+    public static ProductId New() => new(Guid.CreateVersion7());
 }
 ```
 
@@ -104,44 +112,49 @@ Infrastructure maps them with `HasConversion(id => id.Value, value => new Produc
 
 ## Value objects
 
-All value objects are **records**. Each lives in its own file in the module folder, or in `Shared/` if it is reused.
+All value objects are **records**. Each lives in its own file in the module folder, or in `Shared/` if it is reused. **A value object can't exist in an invalid state:** it has a private constructor and a `Create` that returns `Result<T>`. FluentValidation still checks the command first for a friendly 400, but the value object is what guarantees validity for every caller (another handler, the seeder, a test).
 
 | Kind              | Shape                                                                                         | Examples                                    |
 | ----------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| Simple wrapper    | `public record ProductName(string Value);`                                                    | `CategoryName`, `CategoryCode`, `ProductDescription`, `Comment`, `Email`, `FirstName`, `LastName` |
-| Validated         | private constructor, `public static Result<T> Create(...)`, `public static readonly Error Invalid` on the type | `Rating` (1–5)                |
-| Smart enum        | private constructor, `static readonly` instances, `All`, `IsSupported(code)`, `FromCode(code)` | `Currency` (`Usd`, `Bdt`)                   |
-| Composite         | positional record with behavior/operators                                                     | `Money(decimal Amount, Currency Currency)`  |
+| Validated         | private constructor, `public static Result<T> Create(...)`, `public static readonly Error Invalid` on the type, `MaxLength` const for strings | `ProductName`, `ProductDescription`, `CategoryName`, `CategoryCode`, `FirstName`, `LastName`, `Email`, `Comment`, `Rating` (1–5) |
+| Smart enum        | private constructor, `static readonly` instances, `All`, `IsSupported(code)`, `Result<Currency> FromCode(code)` | `Currency` (`Usd`, `Bdt`)                   |
+| Composite         | positional record with behavior                                                               | `Money(decimal Amount, Currency Currency)`  |
 
-Validated VO template (from `Rating`):
+Validated VO template (from `ProductName`):
 
 ```csharp
-public record Rating
+public record ProductName
 {
-    public static readonly Error Invalid = new("Rating.Invalid", "The rating is invalid", HttpStatusCode.BadRequest);
+    public const int MaxLength = 200;
 
-    private Rating(int value)
+    public static readonly Error Invalid = new("ProductName.Invalid", "The product name is required and can't be longer than 200 characters", HttpStatusCode.BadRequest);
+
+    private ProductName(string value)
     {
         Value = value;
     }
 
-    public int Value { get; init; }
+    public string Value { get; }
 
-    public static Result<Rating> Create(int value)
+    public static Result<ProductName> Create(string? value)
     {
-        if (value is < 1 or > 5)
+        if (string.IsNullOrWhiteSpace(value) || value.Length > MaxLength)
         {
-            return Result.Failure<Rating>(Invalid);
+            return Result.Failure<ProductName>(Invalid);
         }
 
-        return new Rating(value);
+        return new ProductName(value);
     }
 }
 ```
 
-`Money`: `+` throws `InvalidOperationException` on a currency mismatch. Check currencies first and return a domain error, as `Order.AddOrderItem` does. Use `Money.Zero()` / `Money.Zero(currency)` and `IsZero()`. Amounts persist as `decimal(18, 2)`.
+`Value` is `{ get; }`, not `init`, so a `with` expression can't bypass `Create`.
 
-`Currency.FromCode` throws on an unknown code, so it is only safe after validation. Validators check `Currency.IsSupported(code)`, and handlers then call `Currency.FromCode(...)`. There is no unvalidated `Currency.Create`.
+`Money.Add(other)` returns `Result<Money>` with `Money.CurrencyMismatch` when the currencies differ. `Order.AddOrderItem` turns that into `OrderErrors.CurrencyMismatch`. Use `Money.Zero()` / `Money.Zero(currency)` and `IsZero()`. Amounts persist as `decimal(18, 2)`.
+
+`Currency.FromCode(code)` returns `Result<Currency>` with `Currency.Unsupported` for an unknown code. Validators still check `Currency.IsSupported(code)`.
+
+**Result or exception:** an expected business outcome (invalid value, a rule that rejects the request, insufficient stock) returns `Result.Failure`. Throw only for what shouldn't happen: a bug, an invalid internal state, or an infrastructure failure. For example, reading `.Value` of a failed `Result` throws, and so does an invalid value read back from the database.
 
 ---
 
@@ -170,7 +183,7 @@ public static class ReviewErrors
 
 - Codes follow `"{Entity}.{Reason}"` (`Product.NotFound`, `User.AlreadyExists`, `Order.CurrencyMismatch`, `Rating.Invalid`).
 - The status is a `System.Net.HttpStatusCode`. Choose it by meaning: missing → `NotFound`, duplicate/state clash → `Conflict`, invalid input/rule → `BadRequest`, bad credentials → `Unauthorized`. If you use a status not yet mapped in `Ecommerce.API/Extensions/ErrorMappingExtensions.cs`, add it there (otherwise it becomes a 500).
-- Application handlers return these instances, and unit tests assert equality against them.
+- Application handlers return these instances, and domain unit tests assert equality against them.
 
 ---
 
@@ -183,6 +196,6 @@ public sealed record ProductCreatedDomainEvent(ProductId ProductId) : IDomainEve
 
 - `sealed record`, past-tense name, lives in `{Module}/Events/`. It **carries IDs only**; handlers reload what they need.
 - Raised **inside the entity** with `RaiseDomainEvent(...)` (protected on `Entity<TId>`), typically in `Create`. Never raised from Application code.
-- They are collected on the entity and dispatched by `ApplicationDbContext` **after** `SaveChangesAsync` succeeds (see the Infrastructure guide).
-- Handlers implement `IDomainEventHandler<TEvent>` (`Task Handle(T domainEvent, CancellationToken cancellationToken)`).
+- They are collected on the entity and dispatched by `ApplicationDbContext` **after** `SaveChangesAsync` succeeds (see the Infrastructure guide). An aggregate that is never saved (e.g. an order rejected for stock) dispatches nothing.
+- Handlers implement `IDomainEventHandler<TEvent>` (`Task Handle(T domainEvent, CancellationToken cancellationToken)`) and live in Application. Handled today: `UserCreatedDomainEvent` (welcome email) and `OrderPlacedDomainEvent` (raised in `Order.Create`, order confirmation email). `ProductCreated`, `CategoryCreated` and `ReviewCreated` have no handlers yet.
 

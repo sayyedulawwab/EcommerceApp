@@ -13,7 +13,16 @@ internal sealed class RegisterUserCommandHandler(
 {
     public async Task<Result<Guid>> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
     {
-        bool emailExists = await dbContext.Users.AnyAsync(user => user.Email == new Email(request.Email), cancellationToken);
+        Result<FirstName> firstName = FirstName.Create(request.FirstName);
+        Result<LastName> lastName = LastName.Create(request.LastName);
+        Result<Email> email = Email.Create(request.Email);
+
+        if (firstName.IsFailure || lastName.IsFailure || email.IsFailure)
+        {
+            return Result.Failure<Guid>(ValidationError.FromResults([firstName, lastName, email]));
+        }
+
+        bool emailExists = await dbContext.Users.AnyAsync(user => user.Email == email.Value, cancellationToken);
 
         if (emailExists)
         {
@@ -23,9 +32,7 @@ internal sealed class RegisterUserCommandHandler(
         string passwordSalt = authService.GenerateSalt();
         string hashedPassword = authService.HashPassword(request.Password, passwordSalt);
 
-        var user = User.Create(new FirstName(request.FirstName),
-                                new LastName(request.LastName),
-                                new Email(request.Email), hashedPassword, passwordSalt, false);
+        var user = User.Create(firstName.Value, lastName.Value, email.Value, hashedPassword, passwordSalt, false);
 
         dbContext.Users.Add(user);
 

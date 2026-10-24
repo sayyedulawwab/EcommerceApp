@@ -36,6 +36,25 @@ public sealed class RegisterTests
     }
 
     [Fact]
+    public async Task Register_ShouldSendWelcomeEmail_WhenUserIsCreated()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        var request = new RegisterUserRequest("Jane", "Doe", "jane@example.com", "Password123!");
+
+        // Act
+        HttpResponseMessage response = await _factory.Client.PostAsJsonAsync("/api/v1/auth/register", request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        SentEmail email = Assert.Single(_factory.Emails.Sent);
+        Assert.Equal("jane@example.com", email.To);
+        Assert.Equal("Welcome to Ecommerce", email.Subject);
+    }
+
+    [Fact]
     public async Task Register_ShouldReturnConflict_WhenEmailIsNotUnique()
     {
         // Arrange

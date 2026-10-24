@@ -24,8 +24,8 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
                         .HasColumnType("decimal(18, 2)");
 
             priceBuilder.Property(money => money.Currency)
-                        .HasConversion(currency => currency.Code, code => Currency.FromCode(code))
-                        .HasDefaultValue(Currency.FromCode("BDT"));
+                        .HasConversion(currency => currency.Code, code => Currency.FromCode(code).Value)
+                        .HasDefaultValue(Currency.Bdt);
 
         });
 

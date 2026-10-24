@@ -16,11 +16,11 @@ internal sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
 
         builder.Property(category => category.Name)
                .HasMaxLength(200)
-               .HasConversion(name => name.Value, value => new CategoryName(value));
+               .HasConversion(name => name.Value, value => CategoryName.Create(value).Value);
 
         builder.Property(category => category.Code)
                .HasMaxLength(200)
-               .HasConversion(code => code.Value, value => new CategoryCode(value));
+               .HasConversion(code => code.Value, value => CategoryCode.Create(value).Value);
 
         builder.Property(category => category.CreatedOnUtc);
 

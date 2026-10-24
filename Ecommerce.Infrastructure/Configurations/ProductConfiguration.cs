@@ -18,15 +18,19 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
 
         builder.Property(product => product.Name)
                .HasMaxLength(200)
-               .HasConversion(name => name.Value, value => new ProductName(value));
+               .HasConversion(name => name.Value, value => ProductName.Create(value).Value);
 
         builder.Property(product => product.Description)
                .HasMaxLength(2000)
-               .HasConversion(description => description.Value, value => new ProductDescription(value));
+               .HasConversion(description => description.Value, value => ProductDescription.Create(value).Value);
 
         builder.Property(product => product.Quantity);
 
-
+        // PostgreSQL's xmin system column changes on every update, so two orders that both read the same stock can't both save.
+        builder.Property<uint>("Version")
+               .HasColumnName("xmin")
+               .HasColumnType("xid")
+               .IsRowVersion();
 
         builder.OwnsOne(product => product.Price, priceBuilder =>
         {
@@ -34,8 +38,8 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
                         .HasColumnType("decimal(18, 2)");
 
             priceBuilder.Property(money => money.Currency)
-                        .HasConversion(currency => currency.Code, code => Currency.FromCode(code))
-                        .HasDefaultValue(Currency.FromCode("BDT"));
+                        .HasConversion(currency => currency.Code, code => Currency.FromCode(code).Value)
+                        .HasDefaultValue(Currency.Bdt);
 
         });
 

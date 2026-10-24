@@ -32,7 +32,8 @@ public sealed class ApplicationDbContext(DbContextOptions options, IDomainEvents
 - `SaveChangesAsync`:
   1. `base.SaveChangesAsync` (commits).
   2. Collects domain events from every tracked `IEntity`, clears them, and calls `IDomainEventsDispatcher.DispatchAsync`.
-  3. Rethrows `DbUpdateConcurrencyException` as `Application.Exceptions.ConcurrencyException`.
+  3. Rethrows `DbUpdateConcurrencyException` as `Application.Exceptions.ConcurrencyException`, which the API returns as 409.
+- `Product` has a concurrency token: a shadow `uint Version` mapped to PostgreSQL's `xmin` system column with `IsRowVersion()`. Placing an order removes stock, so two orders that read the same stock can't both save. Npgsql doesn't create a column for `xmin`, so its migration only adds a history row.
 - **Dispatch is synchronous and in-request, after commit, with no outbox.** `DomainEventsDispatcher` creates a new DI scope per event and resolves every `IDomainEventHandler<TEvent>`. A handler exception surfaces to the HTTP request (→ 500) even though the data is already saved. Keep handlers idempotent and resilient.
 
 ---
@@ -53,7 +54,7 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
 
         builder.Property(product => product.Name)
                .HasMaxLength(200)
-               .HasConversion(name => name.Value, value => new ProductName(value));
+               .HasConversion(name => name.Value, value => ProductName.Create(value).Value);
 
         builder.OwnsOne(product => product.Price, priceBuilder =>
         {
@@ -61,8 +62,8 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
                         .HasColumnType("decimal(18, 2)");
 
             priceBuilder.Property(money => money.Currency)
-                        .HasConversion(currency => currency.Code, code => Currency.FromCode(code))
-                        .HasDefaultValue(Currency.FromCode("BDT"));
+                        .HasConversion(currency => currency.Code, code => Currency.FromCode(code).Value)
+                        .HasDefaultValue(Currency.Bdt);
         });
 
         builder.Property(product => product.CreatedOnUtc);
@@ -80,8 +81,8 @@ Rules:
 - `internal sealed class {Entity}Configuration : IEntityTypeConfiguration<{Entity}>`, one per entity, in `Configurations/`.
 - `ToTable("{snake_case_plural}")` explicitly. Columns get snake_case automatically from `UseSnakeCaseNamingConvention()`.
 - **Every strongly typed ID** (key and FK) uses `HasConversion(id => id.Value, value => new XId(value))`.
-- **Single-value VOs** use `HasConversion(vo => vo.Value, value => new VO(value))`. Validated VOs convert back through their factory (`Rating.Create(value).Value`).
-- **`Money`** uses `OwnsOne` with `decimal(18, 2)` amount and currency stored as its code via `Currency.FromCode`, default `"BDT"`. The resulting columns are `{prop}_amount` and `{prop}_currency`.
+- **Single-value VOs** convert back through their factory: `HasConversion(vo => vo.Value, value => ProductName.Create(value).Value)`. An invalid value in the database is a bug, so `.Value` throwing there is intended.
+- **`Money`** uses `OwnsOne` with `decimal(18, 2)` amount and currency stored as its code via `Currency.FromCode(code).Value`, default `Currency.Bdt`. The resulting columns are `{prop}_amount` and `{prop}_currency`.
 - Max lengths: names/codes/emails `200`, descriptions `2000`.
 - **Cross-aggregate FKs** use `HasOne<OtherAggregate>().WithMany().HasForeignKey(x => x.OtherId)`, with no navigation property. Use a real navigation only where the domain has one (`OrderItem.Product`, `Order.OrderItems`).
 - List each persisted property explicitly (`builder.Property(x => x.CreatedOnUtc);`), even when it needs no extra config, for readability.

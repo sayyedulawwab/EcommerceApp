@@ -211,7 +211,7 @@ Defined in `Ecommerce.Domain/Abstractions/`:
 
 Rules:
 
-- **Expected business failures return `Result.Failure`; do not throw.** Unhandled exceptions become a 500 `ProblemDetails` from `API/Infrastructure/ExceptionHandler`.
+- **Expected business failures return `Result.Failure`; do not throw.** Unhandled exceptions become a 500 `ProblemDetails` from `API/Infrastructure/ExceptionHandler`, except `ConcurrencyException`, which becomes a 409.
 - The API maps `Error.Code` to an HTTP status in one place: `ErrorMappingExtensions.ToActionResult()`.
 - Value objects that validate input return `Result<T>` from `Create` (see `Rating`), and aggregate methods that enforce invariants return `Result` (see `Order.AddOrderItem`). Callers must check `IsFailure` before continuing or using `.Value`.
 - Validators catch bad input before it reaches the database. String limits mirror the column lengths (200/2000), and currency codes are checked with `Currency.IsSupported`, so bad input is a 400, not a 500.

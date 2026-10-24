@@ -16,16 +16,16 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Property(user => user.FirstName)
                .HasMaxLength(200)
-               .HasConversion(name => name.Value, value => new FirstName(value));
+               .HasConversion(name => name.Value, value => FirstName.Create(value).Value);
 
         builder.Property(user => user.LastName)
                .HasMaxLength(200)
-               .HasConversion(name => name.Value, value => new LastName(value));
+               .HasConversion(name => name.Value, value => LastName.Create(value).Value);
 
 
         builder.Property(user => user.Email)
                .HasMaxLength(200)
-               .HasConversion(email => email.Value, value => new Domain.Users.Email(value));
+               .HasConversion(email => email.Value, value => Domain.Users.Email.Create(value).Value);
 
         builder.Property(user => user.PasswordHash);
         builder.Property(user => user.PasswordSalt);

@@ -90,9 +90,9 @@ public sealed class LoginTests
         string legacyHash = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes("Password123!" + salt)));
 
         var user = User.Create(
-            new FirstName("Legacy"),
-            new LastName("User"),
-            new Email("legacy@example.com"),
+            FirstName.Create("Legacy").Value,
+            LastName.Create("User").Value,
+            Email.Create("legacy@example.com").Value,
             legacyHash,
             salt,
             isAdmin: false);

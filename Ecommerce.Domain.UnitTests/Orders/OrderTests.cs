@@ -1,6 +1,7 @@
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Categories;
 using Ecommerce.Domain.Orders;
+using Ecommerce.Domain.Orders.Events;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Shared;
 using Ecommerce.Domain.Users;
@@ -54,6 +55,15 @@ public class OrderTests
         Assert.Equal(100m, order.TotalPrice.Amount);
     }
 
+    [Fact]
+    public void Create_Should_RaiseOrderPlacedDomainEvent()
+    {
+        Order order = CreateOrder();
+
+        IDomainEvent domainEvent = Assert.Single(order.GetDomainEvents());
+        Assert.Equal(new OrderPlacedDomainEvent(order.Id), domainEvent);
+    }
+
     private static Order CreateOrder()
     {
         return Order.Create(UserId.New(), OrderStatus.Placed, UtcNow);
@@ -62,8 +72,8 @@ public class OrderTests
     private static Product CreateProduct(decimal priceAmount, Currency currency)
     {
         return Product.Create(
-            new ProductName("Keyboard"),
-            new ProductDescription("Mechanical keyboard"),
+            ProductName.Create("Keyboard").Value,
+            ProductDescription.Create("Mechanical keyboard").Value,
             new Money(priceAmount, currency),
             10,
             CategoryId.New(),

@@ -52,7 +52,7 @@ Controllers inject the closed handler interface directly (`ICommandHandler<AddPr
 - `AddValidatorsFromAssembly` auto-registers all validators.
 - **Query validators never run**, because no validation decorator wraps `IQueryHandler`. Validate query input in the handler (as `SearchProductQueryHandler` does with page defaults and a sort whitelist).
 - A new cross-cutting concern is a new decorator class in `Abstractions/Behaviors/`, registered with `TryDecorate`. Only add one when asked; there are no MediatR-style pipeline behaviors.
-- **Domain event handlers** (`internal sealed class XDomainEventHandler : IDomainEventHandler<XDomainEvent>`) live in Application and are picked up by the scan. None exist yet. Put the first one in the module folder next to the use case that triggers it (e.g. `Users/Register/SendWelcomeEmailDomainEventHandler.cs`).
+- **Domain event handlers** (`internal sealed class XDomainEventHandler : IDomainEventHandler<XDomainEvent>`) live in Application and are picked up by the scan. Put each in the module folder next to the use case that triggers it (`Users/Register/SendWelcomeEmailDomainEventHandler.cs`, `Orders/PlaceOrder/SendOrderConfirmationDomainEventHandler.cs`). The event carries only IDs, so the handler loads what it needs with `AsNoTracking()` and returns quietly if the entity is gone.
 
 ---
 
@@ -119,7 +119,13 @@ Rules:
 - **Ordering:**
   1. Load each referenced entity. If one is missing, `return Result.Failure<T>({Entity}Errors.NotFound);`.
   2. Run business checks such as duplicates. Failures return `{Entity}Errors.X` (e.g. `UserErrors.AlreadyExists` when `dbContext.Users.AnyAsync(...)` finds the email).
-  3. Build value objects from primitives (`new ProductName(request.Name)`, `new Money(request.PriceAmount, Currency.FromCode(request.PriceCurrency))`, `Rating.Create(...)`). **If a VO factory returns `Result`, check `IsFailure` and return its error.**
+  3. Build value objects from primitives with their `Create` (`ProductName.Create(request.Name)`, `Currency.FromCode(request.PriceCurrency)`, `Rating.Create(...)`). Build them before step 1 or 2 when a query needs them (`RegisterUserCommandHandler` checks for the email). If any fails, return `ValidationError.FromResults([name, description, currency])` (400 with every failed value):
+     ```csharp
+     if (name.IsFailure || description.IsFailure || currency.IsFailure)
+     {
+         return Result.Failure<Guid>(ValidationError.FromResults([name, description, currency]));
+     }
+     ```
   4. Change state **only through the domain**: `X.Create(...)`, `X.Update(x, ...)`, `order.AddOrderItem(...)`. Never set entity properties from a handler. Domain methods that return `Result` are propagated the same way:
      ```csharp
      Result addItemResult = order.AddOrderItem(product, item.Quantity, dateTimeProvider.UtcNow);
@@ -157,7 +163,7 @@ public class AddProductCommandValidator : AbstractValidator<AddProductCommand>
 - Lambda parameter `c` (or the entity's initial, e.g. `r` for reviews).
 - Messages use FluentValidation defaults, or inline `.WithMessage("Please provide a comment.")` when a friendlier message helps. There is no message catalog.
 - Validators check **shape** (required, ranges, lengths). Rules that need the database (existence, uniqueness) go in the handler and return a domain error.
-- **Every command has a validator.** String fields get `.MaximumLength(...)` matching their column (names/codes/emails 200, descriptions 2000), currency codes get `.Must(Currency.IsSupported)`, money amounts get `.GreaterThan(0)`, and stock quantities get `.GreaterThanOrEqualTo(0)`. Input that would otherwise fail in the database or in `Currency.FromCode` must be a 400 here.
+- **Every command has a validator.** String fields get `.MaximumLength(...)` matching their column (names/codes/emails 200, descriptions 2000), currency codes get `.Must(Currency.IsSupported)`, money amounts get `.GreaterThan(0)`, and stock quantities get `.GreaterThanOrEqualTo(0)`. The value objects check the same rules again, so the validator is for early, per-field feedback, not the only guard.
 - Collections: `RuleFor(c => c.Items).NotEmpty();` plus `RuleForEach(c => c.Items).ChildRules(item => { item.RuleFor(i => i.Quantity).GreaterThan(0); });` (see `PlaceOrderCommandValidator`).
 - On failure the decorator returns `ValidationError` (400). Its `Errors` contains `Error.BadRequest(PropertyName, ErrorMessage)` per failure, and the handler is never called.
 

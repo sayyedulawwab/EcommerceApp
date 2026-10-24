@@ -64,6 +64,51 @@ public sealed class PlaceOrderTests
         Assert.Equal("USD", order.TotalPrice.Currency.Code);
         Assert.Equal(2, order.OrderItems.Count);
         Assert.Null(order.UpdatedOnUtc);
+
+        Product?[] stock = await _factory.ExecuteScopeAsync(async sp =>
+        {
+            ApplicationDbContext db = sp.GetRequiredService<ApplicationDbContext>();
+
+            return new[]
+            {
+                await db.Set<Product>().AsNoTracking().FirstOrDefaultAsync(p => p.Id == keyboard.Id),
+                await db.Set<Product>().AsNoTracking().FirstOrDefaultAsync(p => p.Id == mouse.Id)
+            };
+        });
+
+        Assert.Equal(8, stock[0]!.Quantity);
+        Assert.Equal(7, stock[1]!.Quantity);
+    }
+
+    [Fact]
+    public async Task PlaceOrder_ShouldSendConfirmationEmail_WhenOrderIsPlaced()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        User user = UserData.Create();
+        Category category = CategoryData.Create();
+        Product keyboard = ProductData.CreateProduct(category.Id, 100m);
+
+        await SeedAsync(user, category, keyboard);
+
+        // Seeding the user raised its own welcome email.
+        _factory.Emails.Clear();
+
+        var request = new PlaceOrderRequest([new PlaceOrderProductRequest(keyboard.Id.Value, 2)]);
+
+        using HttpClient client = _factory.CreateClientForUser(user.Id.Value);
+
+        // Act
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        SentEmail email = Assert.Single(_factory.Emails.Sent);
+        Assert.Equal(user.Email.Value, email.To);
+        Assert.Equal("Your order is placed", email.Subject);
+        Assert.Contains("200.00 USD", email.Body, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -151,6 +196,43 @@ public sealed class PlaceOrderTests
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PlaceOrder_ShouldReturnBadRequestAndKeepStock_WhenStockIsInsufficient()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        User user = UserData.Create();
+        Category category = CategoryData.Create();
+        Product keyboard = ProductData.CreateProduct(category.Id, 100m);
+
+        await SeedAsync(user, category, keyboard);
+
+        var request = new PlaceOrderRequest([new PlaceOrderProductRequest(keyboard.Id.Value, keyboard.Quantity + 1)]);
+
+        using HttpClient client = _factory.CreateClientForUser(user.Id.Value);
+
+        // Act
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        (int orders, int quantity) = await _factory.ExecuteScopeAsync(async sp =>
+        {
+            ApplicationDbContext db = sp.GetRequiredService<ApplicationDbContext>();
+
+            int orderCount = await db.Set<Order>().CountAsync(o => o.UserId == user.Id);
+            Product stored = await db.Set<Product>().AsNoTracking().FirstAsync(p => p.Id == keyboard.Id);
+
+            return (orderCount, stored.Quantity);
+        });
+
+        Assert.Equal(0, orders);
+        Assert.Equal(10, quantity);
+        Assert.DoesNotContain(_factory.Emails.Sent, email => email.Subject == "Your order is placed");
     }
 
     private Task SeedAsync(params object[] entities)

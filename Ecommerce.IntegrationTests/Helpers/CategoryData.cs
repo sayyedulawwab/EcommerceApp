@@ -6,6 +6,6 @@ internal static class CategoryData
 {
     public static Category Create(string name = "Electronics", string code = "ELEC")
     {
-        return Category.Create(new CategoryName(name), new CategoryCode(code), DateTime.UtcNow);
+        return Category.Create(CategoryName.Create(name).Value, CategoryCode.Create(code).Value, DateTime.UtcNow);
     }
 }

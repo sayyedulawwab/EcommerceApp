@@ -25,16 +25,17 @@ internal sealed class AddReviewCommandHandler(
         }
 
         Result<Rating> rating = Rating.Create(request.Rating);
+        Result<Comment> comment = Comment.Create(request.Comment);
 
-        if (rating.IsFailure)
+        if (rating.IsFailure || comment.IsFailure)
         {
-            return Result.Failure<Guid>(rating.Error);
+            return Result.Failure<Guid>(ValidationError.FromResults([rating, comment]));
         }
 
         var review = Review.Create(product,
                                    new UserId(request.UserId),
                                    rating.Value,
-                                   new Comment(request.Comment),
+                                   comment.Value,
                                    dateTimeProvider.UtcNow);
 
         dbContext.Reviews.Add(review);

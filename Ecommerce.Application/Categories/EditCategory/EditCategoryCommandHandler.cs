@@ -20,10 +20,18 @@ internal sealed class EditCategoryCommandHandler(
             return Result.Failure<Guid>(CategoryErrors.NotFound);
         }
 
+        Result<CategoryName> name = CategoryName.Create(request.Name);
+        Result<CategoryCode> code = CategoryCode.Create(request.Code);
+
+        if (name.IsFailure || code.IsFailure)
+        {
+            return Result.Failure<Guid>(ValidationError.FromResults([name, code]));
+        }
+
         category = Category.Update(
             category,
-            new CategoryName(request.Name),
-            new CategoryCode(request.Code),
+            name.Value,
+            code.Value,
             dateTimeProvider.UtcNow);
 
         await dbContext.SaveChangesAsync(cancellationToken);
