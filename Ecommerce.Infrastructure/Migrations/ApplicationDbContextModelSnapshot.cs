@@ -447,7 +447,7 @@ namespace Ecommerce.Infrastructure.Migrations
                     b.HasOne("Ecommerce.Domain.Categories.Category", null)
                         .WithMany()
                         .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_products_categories_category_id");
 

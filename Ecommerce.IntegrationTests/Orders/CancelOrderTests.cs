@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Ecommerce.API.Controllers.Orders;
-using Ecommerce.Application.Orders.GetAllOrders;
+using Ecommerce.Application.Orders.SearchOrders;
 using Ecommerce.Domain.Categories;
 using Ecommerce.Domain.Coupons;
 using Ecommerce.Domain.Orders;

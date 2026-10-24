@@ -19,11 +19,33 @@ internal sealed class DeleteCategoryCommandHandler(
             return Result.Failure<Guid>(CategoryErrors.NotFound);
         }
 
+        if (await HasProductsAsync(category.Id, cancellationToken))
+        {
+            return Result.Failure<Guid>(CategoryErrors.HasProducts);
+        }
+
         dbContext.Categories.Remove(category);
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            // A product added between the check and the delete hits the foreign key. Report it as the same conflict.
+            if (await HasProductsAsync(category.Id, cancellationToken))
+            {
+                return Result.Failure<Guid>(CategoryErrors.HasProducts);
+            }
+
+            throw;
+        }
 
         return category.Id.Value;
+    }
 
+    private Task<bool> HasProductsAsync(CategoryId categoryId, CancellationToken cancellationToken)
+    {
+        return dbContext.Products.AnyAsync(product => product.CategoryId == categoryId, cancellationToken);
     }
 }

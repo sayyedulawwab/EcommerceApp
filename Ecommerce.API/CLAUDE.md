@@ -49,7 +49,7 @@ Rules:
 
 - **REST resource routes** use `[Route("api/v{v:apiVersion}/{resource-plural}")]` at class level. The verbs are `[HttpPost]` create, `[HttpGet]` list/search, `[HttpGet("{id}")]`, `[HttpPut("{id}")]`, `[HttpDelete("{id}")]`. Non-CRUD actions get a named sub-route (`[HttpPost("register")]`, `[HttpPost("login")]`).
 - `public class {Resource}Controller() : ControllerBase`, with an empty primary constructor. There is **no shared base controller**.
-- Attributes: `[ApiController]` always. `[Authorize]` at class level for protected resources, `[AllowAnonymous]` on public reads (category/product GETs). `AuthController` is anonymous.
+- Attributes: `[ApiController]` always. `[Authorize]` at class level for protected resources, `[AllowAnonymous]` on public reads (category/product GETs). `AuthController` is anonymous. Writes to products, categories and coupons are `[Authorize(Roles = Roles.Admin)]` (`Application/Abstractions/Auth/Roles.cs`); login adds the role claim when `User.IsAdmin` is true. A signed-in customer gets 403.
 - **`[MapToApiVersion(1)]` on every action.**
 - **Inject the handler as an action parameter** (`ICommandHandler<TCommand, TResponse>` / `IQueryHandler<TQuery, TResponse>`); `[ApiController]` infers `[FromServices]`. Parameter order is route values, request body/query, handler, then `CancellationToken cancellationToken` last.
 - Action names are `{Verb}{Entity}` (`AddProduct`, `GetProduct`, `SearchProduct`, `EditProduct`, `DeleteProduct`, `PlaceOrder`, `GiveReview`).

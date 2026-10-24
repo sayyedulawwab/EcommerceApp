@@ -33,6 +33,20 @@ public static class DataSeeder
             context.Set<User>().Add(newUser);
         }
 
+        // Fixed accounts, so a developer can sign in as each role.
+        foreach ((string emailAddress, bool isAdmin) in new[] { ("admin@ecommerce.test", true), ("customer@ecommerce.test", false) })
+        {
+            string salt = authService.GenerateSalt();
+
+            context.Set<User>().Add(User.Create(
+                FirstName.Create(isAdmin ? "Admin" : "Customer").Value,
+                LastName.Create("User").Value,
+                Domain.Users.Email.Create(emailAddress).Value,
+                authService.HashPassword("test1234", salt),
+                salt,
+                isAdmin));
+        }
+
         // Seed product categories
         for (int i = 0; i < 10; i++)
         {
@@ -62,7 +76,7 @@ public static class DataSeeder
             context.Set<Product>().Add(product);
         }
 
-        // Seed coupons. There's no endpoint to create them yet, because coupons need an admin role.
+        // Seed coupons.
         DateTime now = DateTime.UtcNow;
 
         context.Set<Coupon>().AddRange(

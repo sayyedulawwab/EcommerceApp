@@ -1,4 +1,5 @@
-﻿using Ecommerce.Application.Abstractions.Messaging;
+﻿using Ecommerce.Application.Abstractions.Paging;
+using Ecommerce.Application.Abstractions.Messaging;
 
 namespace Ecommerce.Application.Products.SearchProduct;
 public record SearchProductQuery(

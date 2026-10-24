@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography;
+﻿using Ecommerce.Application.Abstractions.Paging;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Ecommerce.Application.Abstractions.Caching;

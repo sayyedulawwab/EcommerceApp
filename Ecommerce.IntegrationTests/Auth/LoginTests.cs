@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using Ecommerce.API.Controllers.Auth;
+using Ecommerce.Application.Abstractions.Auth;
 using Ecommerce.Application.Users.Login;
 using Ecommerce.Domain.Users;
 using Ecommerce.Infrastructure;
@@ -113,5 +114,49 @@ public sealed class LoginTests
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Login_ShouldPutTheAdminRoleInTheToken_OnlyForAnAdmin(bool isAdmin)
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        await _factory.ExecuteScopeAsync(async sp =>
+        {
+            IAuthService authService = sp.GetRequiredService<IAuthService>();
+            string salt = authService.GenerateSalt();
+
+            var user = User.Create(
+                FirstName.Create("Ada").Value,
+                LastName.Create("Admin").Value,
+                Email.Create("ada@example.com").Value,
+                authService.HashPassword("Password123!", salt),
+                salt,
+                isAdmin);
+
+            ApplicationDbContext db = sp.GetRequiredService<ApplicationDbContext>();
+            db.Add(user);
+            await db.SaveChangesAsync();
+        });
+
+        // Act
+        HttpResponseMessage response = await _factory.Client.PostAsJsonAsync(
+            "/api/v1/auth/login",
+            new LoginUserRequest("ada@example.com", "Password123!"));
+
+        // Assert
+        AccessTokenResponse? token = await response.Content.ReadFromJsonAsync<AccessTokenResponse>();
+
+        // The JWT payload is the second, base64url-encoded part of the token. Claims keep their full ClaimTypes URI.
+        string payload = token!.AccessToken.Split('.')[1].Replace('-', '+').Replace('_', '/');
+        payload = payload.PadRight(payload.Length + ((4 - (payload.Length % 4)) % 4), '=');
+        using var json = System.Text.Json.JsonDocument.Parse(Convert.FromBase64String(payload));
+
+        bool hasAdminRole = json.RootElement.TryGetProperty(System.Security.Claims.ClaimTypes.Role, out System.Text.Json.JsonElement role) && role.GetString() == Roles.Admin;
+
+        Assert.Equal(isAdmin, hasAdminRole);
     }
 }

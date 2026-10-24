@@ -6,7 +6,7 @@ public static class CouponErrors
 {
     public static readonly Error NotFound = new(
         "Coupon.NotFound",
-        "The coupon with the specified code was not found",
+        "The coupon was not found",
         HttpStatusCode.NotFound);
 
     public static readonly Error AlreadyExists = new(
@@ -38,6 +38,17 @@ public static class CouponErrors
         "Coupon.Expired",
         "The coupon has expired",
         HttpStatusCode.BadRequest);
+
+    public static readonly Error MaxRedemptionsBelowUsage = new(
+        "Coupon.MaxRedemptionsBelowUsage",
+        "The usage limit can't be lower than the number of times the coupon has been used",
+        HttpStatusCode.Conflict);
+
+    // Orders keep a reference to their coupon, so a used coupon is expired instead of deleted.
+    public static readonly Error HasOrders = new(
+        "Coupon.HasOrders",
+        "The coupon can't be deleted because orders have used it",
+        HttpStatusCode.Conflict);
 
     // A redemption is released when an order is cancelled, so the same request can succeed later.
     public static readonly Error UsageLimitReached = new(

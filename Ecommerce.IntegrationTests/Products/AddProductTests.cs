@@ -43,9 +43,11 @@ public sealed class AddProductTests
         AddProductRequest request =
             ProductData.Create(category.Id.Value);
 
+        using HttpClient adminClient = _factory.CreateAdminClient();
+
         // Act
         HttpResponseMessage response =
-            await _factory.Client.PostAsJsonAsync(
+            await adminClient.PostAsJsonAsync(
                 "/api/v1/products",
                 request);
 
@@ -73,5 +75,20 @@ public sealed class AddProductTests
         Assert.Equal(request.PriceCurrency, product.Price.Currency.Code);
         Assert.Equal(request.Quantity, product.Quantity);
         Assert.Equal(category.Id, product.CategoryId);
+    }
+
+    [Fact]
+    public async Task AddProduct_ShouldReturnForbidden_WhenTheUserIsNotAnAdmin()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        using HttpClient customerClient = _factory.CreateClientForUser(Guid.NewGuid());
+
+        // Act
+        HttpResponseMessage response = await customerClient.PostAsJsonAsync("/api/v1/products", ProductData.Create());
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Asp.Versioning;
+using Ecommerce.Application.Abstractions.Auth;
 using Ecommerce.API.Extensions;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Application.Categories;
@@ -18,6 +19,7 @@ namespace Ecommerce.API.Controllers.Categories;
 public class CategoriesController() : ControllerBase
 {
     [MapToApiVersion(1)]
+    [Authorize(Roles = Roles.Admin)]
     [HttpPost]
     public async Task<IActionResult> AddCategory(AddCategoryRequest request, ICommandHandler<AddCategoryCommand, Guid> handler, CancellationToken cancellationToken)
     {
@@ -68,6 +70,7 @@ public class CategoriesController() : ControllerBase
     }
 
     [MapToApiVersion(1)]
+    [Authorize(Roles = Roles.Admin)]
     [HttpPut("{id}")]
     public async Task<IActionResult> EditCategory(Guid id, EditCategoryRequest request, ICommandHandler<EditCategoryCommand, Guid> handler, CancellationToken cancellationToken)
     {
@@ -84,6 +87,7 @@ public class CategoriesController() : ControllerBase
     }
 
     [MapToApiVersion(1)]
+    [Authorize(Roles = Roles.Admin)]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteCategory(Guid id, ICommandHandler<DeleteCategoryCommand, Guid> handler, CancellationToken cancellationToken)
     {

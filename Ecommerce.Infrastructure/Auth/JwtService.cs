@@ -9,17 +9,22 @@ using Microsoft.IdentityModel.Tokens;
 namespace Ecommerce.Infrastructure.Auth;
 internal sealed class JwtService(IOptions<JwtOptions> jwtOptions) : IJwtService
 {
-    public Result<string> GetAccessToken(string email, Guid userId, CancellationToken cancellationToken = default)
+    public Result<string> GetAccessToken(string email, Guid userId, bool isAdmin, CancellationToken cancellationToken = default)
     {
 
         var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Value.SecretKey));
 
         var signingCredentials = new SigningCredentials(signingKey, SecurityAlgorithms.HmacSha256);
 
-        Claim[] claims = [
+        List<Claim> claims = [
                 new Claim(ClaimTypes.Email, email),
                 new Claim(ClaimTypes.NameIdentifier, userId.ToString())
             ];
+
+        if (isAdmin)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, Roles.Admin));
+        }
 
         var jwt = new JwtSecurityToken(
                     jwtOptions.Value.Issuer,

@@ -54,7 +54,7 @@ Prerequisites: the .NET 10 SDK and Docker Desktop.
 
 3. The API is available at `http://localhost:5000` (direct) and `http://localhost:8080` (through nginx). In Development the OpenAPI document is served at `/openapi/v1.json`, and Grafana runs at `http://localhost:3000`.
 
-> In Development, the API recreates the database on every start: it drops it, applies migrations, and seeds sample data. Seeded users have the password `test1234`.
+> In Development, the API recreates the database on every start: it drops it, applies migrations, and seeds sample data. Seeded users have the password `test1234`. `admin@ecommerce.test` is an admin and `customer@ecommerce.test` is a customer.
 
 ## Running the Tests
 
@@ -71,7 +71,7 @@ dotnet test Ecommerce.IntegrationTests/Ecommerce.IntegrationTests.csproj
 
 ## API Endpoints
 
-All routes are versioned. The version can also be sent in the `X-Api-Version` header. Endpoints marked 🔒 require a `Bearer` token from `/api/v1/auth/login`.
+All routes are versioned. The version can also be sent in the `X-Api-Version` header. Endpoints marked 🔒 require a `Bearer` token from `/api/v1/auth/login`. Endpoints marked 🛡️ also require an admin: a customer gets 403.
 
 ### Auth
 
@@ -91,9 +91,9 @@ POST /api/v1/auth/register
 | ------ | ------------------------ | -------------------------------------------------------------- |
 | GET    | `/api/v1/products`       | Search products (paged)                                         |
 | GET    | `/api/v1/products/{id}`  | Get a product with its reviews                                  |
-| POST   | `/api/v1/products` 🔒    | Add a product                                                   |
-| PUT    | `/api/v1/products/{id}` 🔒 | Edit a product                                                |
-| DELETE | `/api/v1/products/{id}` 🔒 | Delete a product                                              |
+| POST   | `/api/v1/products` 🛡️    | Add a product                                                   |
+| PUT    | `/api/v1/products/{id}` 🛡️ | Edit a product                                                |
+| DELETE | `/api/v1/products/{id}` 🛡️ | Delete a product (409 if it has been ordered)                 |
 
 Search query parameters: `page`, `pageSize`, `categoryId`, `minPrice`, `maxPrice`, `keyword` (case-insensitive name match), `sortColumn` (`Name`, `PriceAmount`, `CreatedOnUtc`) and `sortOrder` (`asc`, `desc`).
 
@@ -117,9 +117,9 @@ Supported currencies: `USD`, `BDT`.
 | ------ | -------------------------- | ------------------- |
 | GET    | `/api/v1/categories`       | List categories     |
 | GET    | `/api/v1/categories/{id}`  | Get a category      |
-| POST   | `/api/v1/categories` 🔒    | Add a category      |
-| PUT    | `/api/v1/categories/{id}` 🔒 | Edit a category   |
-| DELETE | `/api/v1/categories/{id}` 🔒 | Delete a category |
+| POST   | `/api/v1/categories` 🛡️    | Add a category      |
+| PUT    | `/api/v1/categories/{id}` 🛡️ | Edit a category   |
+| DELETE | `/api/v1/categories/{id}` 🛡️ | Delete a category (409 if it has products) |
 
 ```json
 POST /api/v1/categories
@@ -130,7 +130,7 @@ POST /api/v1/categories
 
 | Method | Route               | Description                              |
 | ------ | ------------------- | ---------------------------------------- |
-| GET    | `/api/v1/orders` 🔒 | List the signed-in user's orders         |
+| GET    | `/api/v1/orders` 🔒 | Search the signed-in user's orders       |
 | POST   | `/api/v1/orders` 🔒 | Place an order for the signed-in user    |
 | POST   | `/api/v1/orders/{id}/cancel` 🔒 | Cancel a placed order: stock and the coupon use are given back |
 
@@ -145,6 +145,24 @@ POST /api/v1/orders
 ```
 
 All products in one order must use the same currency. `couponCode` is optional. A coupon takes a percentage off the order total, is valid for a period, and can be used a limited number of times. Development seeds `WELCOME10` and `FLASH25`. Out of stock or a used-up coupon returns 409.
+
+Order search query parameters, all optional: `status` (`Placed`, `Cancelled`, ...), `from` and `to` (ISO 8601 with an offset, filtering on the order date), `page` (default 1), `pageSize` (default 10, at most 100), `sortColumn` (`CreatedOnUtc` or `TotalPrice`) and `sortOrder` (`asc` or `desc`, default `desc`). The result is paged like the product search.
+
+### Coupons
+
+| Method | Route                       | Description                                         |
+| ------ | --------------------------- | --------------------------------------------------- |
+| GET    | `/api/v1/coupons` 🛡️        | List coupons with their usage                       |
+| POST   | `/api/v1/coupons` 🛡️        | Add a coupon                                        |
+| PUT    | `/api/v1/coupons/{id}` 🛡️   | Change the discount, period or usage limit          |
+| DELETE | `/api/v1/coupons/{id}` 🛡️   | Delete a coupon (409 if an order has used it)       |
+
+```json
+POST /api/v1/coupons
+{ "code": "SUMMER-20", "percentOff": 20, "startsOn": "2026-06-01T00:00:00Z", "expiresOn": "2026-07-01T00:00:00Z", "maxRedemptions": 100 }
+```
+
+Codes are stored in upper case and can't change. The usage limit is shared by all customers and can't be set below the uses so far.
 
 ### Reviews
 

@@ -1,10 +1,5 @@
 using System.Net;
-using System.Net.Http.Json;
-using Ecommerce.API.Controllers.Orders;
-using Ecommerce.Application.Orders.GetAllOrders;
 using Ecommerce.Domain.Categories;
-using Ecommerce.Domain.Coupons;
-using Ecommerce.Domain.Orders;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Users;
 using Ecommerce.Infrastructure;
@@ -26,6 +21,31 @@ public sealed class DeleteProductTests
     }
 
     [Fact]
+    public async Task DeleteProduct_ShouldDeleteIt_WhenItHasNoOrders()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        Category category = CategoryData.Create();
+        Product keyboard = ProductData.CreateProduct(category.Id, 100m);
+
+        await SeedAsync(category, keyboard);
+
+        using HttpClient adminClient = _factory.CreateAdminClient();
+
+        // Act
+        HttpResponseMessage response = await adminClient.DeleteAsync($"/api/v1/products/{keyboard.Id.Value}");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        bool exists = await _factory.ExecuteScopeAsync(sp =>
+            sp.GetRequiredService<ApplicationDbContext>().Set<Product>().AnyAsync(p => p.Id == keyboard.Id));
+
+        Assert.False(exists);
+    }
+
+    [Fact]
     public async Task DeleteProduct_ShouldReturnConflict_WhenTheProductHasBeenOrdered()
     {
         // Arrange
@@ -37,25 +57,36 @@ public sealed class DeleteProductTests
 
         await SeedAsync(user, category, keyboard);
 
-        using HttpClient client = _factory.CreateClientForUser(user.Id.Value);
+        using HttpClient customerClient = _factory.CreateClientForUser(user.Id.Value);
+        using HttpClient adminClient = _factory.CreateAdminClient();
 
-        await PlaceOrderAsync(client, keyboard, 1);
+        await OrderData.PlaceAsync(customerClient, keyboard, 1);
 
         // Act
-        HttpResponseMessage response = await client.DeleteAsync($"/api/v1/products/{keyboard.Id.Value}");
+        HttpResponseMessage response = await adminClient.DeleteAsync($"/api/v1/products/{keyboard.Id.Value}");
 
         // Assert
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
-    private static async Task<Guid> PlaceOrderAsync(HttpClient client, Product product, int quantity, string? couponCode = null)
+    [Fact]
+    public async Task DeleteProduct_ShouldReturnForbidden_WhenTheUserIsNotAnAdmin()
     {
-        var request = new PlaceOrderRequest([new PlaceOrderProductRequest(product.Id.Value, quantity)], couponCode);
+        // Arrange
+        await _factory.ResetDatabaseAsync();
 
-        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request);
-        response.EnsureSuccessStatusCode();
+        Category category = CategoryData.Create();
+        Product keyboard = ProductData.CreateProduct(category.Id, 100m);
 
-        return await response.Content.ReadFromJsonAsync<Guid>();
+        await SeedAsync(category, keyboard);
+
+        using HttpClient customerClient = _factory.CreateClientForUser(Guid.NewGuid());
+
+        // Act
+        HttpResponseMessage response = await customerClient.DeleteAsync($"/api/v1/products/{keyboard.Id.Value}");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     private Task SeedAsync(params object[] entities)

@@ -33,6 +33,7 @@ internal sealed class LoginUserQueryHandler(
         Result<string> result = jwtService.GetAccessToken(
             request.Email,
             user.Id.Value,
+            user.IsAdmin,
             cancellationToken);
 
         if (result.IsFailure)

@@ -14,6 +14,7 @@ internal sealed class TestAuthenticationHandler
 {
     public const string AuthenticationScheme = "Test";
     public const string UserIdHeaderName = "X-Test-User-Id";
+    public const string RoleHeaderName = "X-Test-Role";
     public static readonly Guid UserId =
         Guid.Parse("11111111-1111-1111-1111-111111111111");
 
@@ -31,11 +32,18 @@ internal sealed class TestAuthenticationHandler
             ? headerUserId
             : UserId;
 
-        Claim[] claims =
+        List<Claim> claims =
         [
             new(ClaimTypes.NameIdentifier, userId.ToString()),
             new(ClaimTypes.Name, "Integration Test User")
         ];
+
+        string? role = Request.Headers[RoleHeaderName];
+
+        if (!string.IsNullOrEmpty(role))
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
 
         var identity = new ClaimsIdentity(
             claims,

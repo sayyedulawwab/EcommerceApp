@@ -1,4 +1,6 @@
-﻿using Asp.Versioning;
+﻿using Ecommerce.Application.Abstractions.Paging;
+using Asp.Versioning;
+using Ecommerce.Application.Abstractions.Auth;
 using Ecommerce.API.Extensions;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Application.Products;
@@ -18,6 +20,7 @@ namespace Ecommerce.API.Controllers.Products;
 public class ProductsController() : ControllerBase
 {
     [MapToApiVersion(1)]
+    [Authorize(Roles = Roles.Admin)]
     [HttpPost]
     public async Task<IActionResult> AddProduct(AddProductRequest request, ICommandHandler<AddProductCommand, Guid> handler, CancellationToken cancellationToken)
     {
@@ -68,6 +71,7 @@ public class ProductsController() : ControllerBase
     }
 
     [MapToApiVersion(1)]
+    [Authorize(Roles = Roles.Admin)]
     [HttpPut("{id}")]
     public async Task<IActionResult> EditProduct(Guid id, EditProductRequest request, ICommandHandler<EditProductCommand, Guid> handler, CancellationToken cancellationToken)
     {
@@ -84,6 +88,7 @@ public class ProductsController() : ControllerBase
     }
 
     [MapToApiVersion(1)]
+    [Authorize(Roles = Roles.Admin)]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteProduct(Guid id, ICommandHandler<DeleteProductCommand, Guid> handler, CancellationToken cancellationToken)
     {

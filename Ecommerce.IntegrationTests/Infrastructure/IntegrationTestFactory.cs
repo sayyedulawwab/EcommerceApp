@@ -1,4 +1,5 @@
-﻿using Ecommerce.Application.Abstractions.Caching;
+﻿using Ecommerce.Application.Abstractions.Auth;
+using Ecommerce.Application.Abstractions.Caching;
 using Ecommerce.Application.Abstractions.Emails;
 using Ecommerce.Infrastructure;
 using Ecommerce.Infrastructure.Caching;
@@ -74,6 +75,16 @@ public sealed class IntegrationTestFactory
         Emails.Clear();
 
         return _databaseReset.ResetAsync(_connection);
+    }
+
+    // A signed-in admin: the only role that can change products, categories and coupons.
+    public HttpClient CreateAdminClient()
+    {
+        HttpClient client = CreateClientForUser(TestAuthenticationHandler.UserId);
+
+        client.DefaultRequestHeaders.Add(TestAuthenticationHandler.RoleHeaderName, Roles.Admin);
+
+        return client;
     }
 
     public HttpClient CreateClientForUser(Guid userId)
