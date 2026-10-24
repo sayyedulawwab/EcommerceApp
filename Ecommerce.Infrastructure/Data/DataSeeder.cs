@@ -1,5 +1,6 @@
 ﻿using Bogus;
 using Ecommerce.Domain.Categories;
+using Ecommerce.Domain.Coupons;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Shared;
 using Ecommerce.Domain.Users;
@@ -60,6 +61,13 @@ public static class DataSeeder
 
             context.Set<Product>().Add(product);
         }
+
+        // Seed coupons. There's no endpoint to create them yet, because coupons need an admin role.
+        DateTime now = DateTime.UtcNow;
+
+        context.Set<Coupon>().AddRange(
+            Coupon.Create(CouponCode.Create("WELCOME10").Value, 10, now, now.AddMonths(3), 1000, now).Value,
+            Coupon.Create(CouponCode.Create("FLASH25").Value, 25, now, now.AddDays(2), 50, now).Value);
 
         context.SaveChanges();
     }

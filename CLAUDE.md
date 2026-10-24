@@ -144,7 +144,8 @@ Each module uses the same name in every layer (plural folders in Domain, Applica
 | ------------ | --------------------- | -------------------------------------------------------- |
 | `Categories` | `Category`            | Add, Edit, Delete, GetCategories, GetCategoryById        |
 | `Products`   | `Product`             | Add, Edit, Delete, GetProductById (with reviews), SearchProduct (Dapper, paged, cached) |
-| `Orders`     | `Order` → `OrderItem` | PlaceOrder, GetAllOrders                                 |
+| `Orders`     | `Order` → `OrderItem` | PlaceOrder (optional coupon), CancelOrder, GetAllOrders (the user's own) |
+| `Coupons`    | `Coupon`              | No endpoints yet (needs an admin role); seeded in Development |
 | `Reviews`    | `Review`              | AddReview                                                |
 | `Users`      | `User`                | Register (command), Login (query → JWT); exposed via `AuthController` |
 | `Shared`     | `Money`, `Currency`   | Value objects reused across aggregates                   |
@@ -256,6 +257,7 @@ These exist in the codebase today. Leave them alone unless asked:
 
 - `AuthService.VerifyPassword` falls back to the legacy salted SHA-256 hash, so accounts created before the PBKDF2 switch can still log in. Keep the fallback until those accounts are gone, and never use it for new hashes.
 - Login reports a missing user and a wrong password with the same `UserErrors.InvalidCredentials` (401), so it doesn't reveal which emails are registered. Keep it that way.
-- `OrderResponse.ShippedOnUtc/DeliveredOnUtc/CancelledOnUtc` and `OrderItemResponse.CreatedOnUtc/UpdatedOnUtc` exist but are never populated. `ProductResponse.TotalRecords` exists only to carry the Dapper window count.
+- `OrderResponse.ShippedOnUtc/DeliveredOnUtc` and `OrderItemResponse.UpdatedOnUtc` exist but are never populated. `ProductResponse.TotalRecords` exists only to carry the Dapper window count.
 - `CacheService.RemoveByPrefixAsync` only clears keys written by the same app instance (in-process key registry).
-- No `IDomainEventHandler<>` implementations exist yet. They are auto-registered by the Scrutor scan in `Ecommerce.Application/DependencyInjection.cs`.
+- Domain event handlers are auto-registered by the Scrutor scan in `Ecommerce.Application/DependencyInjection.cs`.
+- Any signed-in user can add, edit and delete products and categories. `User.IsAdmin` exists but isn't in the token or checked yet.

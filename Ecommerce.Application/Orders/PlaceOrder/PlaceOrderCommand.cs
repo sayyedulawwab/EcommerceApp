@@ -2,4 +2,4 @@
 
 namespace Ecommerce.Application.Orders.PlaceOrder;
 public record OrderStockItem(Guid ProductId, int Quantity);
-public record PlaceOrderCommand(Guid UserId, List<OrderStockItem> OrderStockItems) : ICommand<Guid>;
+public record PlaceOrderCommand(Guid UserId, List<OrderStockItem> OrderStockItems, string? CouponCode = null) : ICommand<Guid>;

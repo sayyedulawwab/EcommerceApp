@@ -3,6 +3,7 @@ using Ecommerce.Application.Abstractions.Clock;
 using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
+using Ecommerce.Domain.Coupons;
 using Ecommerce.Domain.Orders;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Users;
@@ -36,7 +37,26 @@ internal sealed class PlaceOrderCommandHandler(
             lines.Add((product, item.Quantity));
         }
 
-        Result<Order> placeResult = OrderPlacementService.Place(new UserId(request.UserId), lines, dateTimeProvider.UtcNow);
+        Coupon? coupon = null;
+
+        if (request.CouponCode is not null)
+        {
+            Result<CouponCode> couponCode = CouponCode.Create(request.CouponCode);
+
+            if (couponCode.IsFailure)
+            {
+                return Result.Failure<Guid>(couponCode.Error);
+            }
+
+            coupon = await dbContext.Coupons.FirstOrDefaultAsync(c => c.Code == couponCode.Value, cancellationToken);
+
+            if (coupon is null)
+            {
+                return Result.Failure<Guid>(CouponErrors.NotFound);
+            }
+        }
+
+        Result<Order> placeResult = OrderPlacementService.Place(new UserId(request.UserId), lines, coupon, dateTimeProvider.UtcNow);
 
         if (placeResult.IsFailure)
         {

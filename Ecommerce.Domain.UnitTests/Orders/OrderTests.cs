@@ -66,7 +66,7 @@ public class OrderTests
 
     private static Order CreateOrder()
     {
-        return Order.Create(UserId.New(), OrderStatus.Placed, UtcNow);
+        return Order.Create(UserId.New(), UtcNow);
     }
 
     private static Product CreateProduct(decimal priceAmount, Currency currency)

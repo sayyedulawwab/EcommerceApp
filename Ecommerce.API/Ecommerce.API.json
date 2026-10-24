@@ -285,6 +285,29 @@
         }
       }
     },
+    "/api/v1/orders/{id}/cancel": {
+      "post": {
+        "tags": [
+          "Orders"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/categories": {
       "post": {
         "tags": [
@@ -665,6 +688,12 @@
             "items": {
               "$ref": "#/components/schemas/PlaceOrderProductRequest"
             }
+          },
+          "couponCode": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

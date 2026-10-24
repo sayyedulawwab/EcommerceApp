@@ -33,7 +33,7 @@ public sealed class ApplicationDbContext(DbContextOptions options, IDomainEvents
   1. `base.SaveChangesAsync` (commits).
   2. Collects domain events from every tracked `IEntity`, clears them, and calls `IDomainEventsDispatcher.DispatchAsync`.
   3. Rethrows `DbUpdateConcurrencyException` as `Application.Exceptions.ConcurrencyException`, which the API returns as 409.
-- `Product` has a concurrency token: a shadow `uint Version` mapped to PostgreSQL's `xmin` system column with `IsRowVersion()`. Placing an order removes stock, so two orders that read the same stock can't both save. Npgsql doesn't create a column for `xmin`, so its migration only adds a history row.
+- `Product`, `Order` and `Coupon` have a concurrency token: a shadow `uint Version` mapped to PostgreSQL's `xmin` system column with `IsRowVersion()`. Two orders that read the same stock or the last coupon use can't both save, and two cancels of the same order can't both give the stock back. Npgsql doesn't create a column for `xmin`, so its migration only adds a history row.
 - **Dispatch is synchronous and in-request, after commit, with no outbox.** `DomainEventsDispatcher` creates a new DI scope per event and resolves every `IDomainEventHandler<TEvent>`. A handler exception surfaces to the HTTP request (→ 500) even though the data is already saved. Keep handlers idempotent and resilient.
 
 ---
@@ -84,6 +84,7 @@ Rules:
 - **Single-value VOs** convert back through their factory: `HasConversion(vo => vo.Value, value => ProductName.Create(value).Value)`. An invalid value in the database is a bug, so `.Value` throwing there is intended.
 - **`Money`** uses `OwnsOne` with `decimal(18, 2)` amount and currency stored as its code via `Currency.FromCode(code).Value`, default `Currency.Bdt`. The resulting columns are `{prop}_amount` and `{prop}_currency`.
 - Max lengths: names/codes/emails `200`, descriptions `2000`.
+- `order_items.product_id` and `orders.coupon_id` are `Restrict`, not cascade: deleting a product or coupon must not delete order history. `DeleteProduct` returns `ProductErrors.HasOrders` (409) first.
 - **Cross-aggregate FKs** use `HasOne<OtherAggregate>().WithMany().HasForeignKey(x => x.OtherId)`, with no navigation property. Use a real navigation only where the domain has one (`OrderItem.Product`, `Order.OrderItems`).
 - List each persisted property explicitly (`builder.Property(x => x.CreatedOnUtc);`), even when it needs no extra config, for readability.
 
@@ -122,7 +123,7 @@ internal sealed class ProductQueryRepository(ISqlConnectionFactory sqlConnection
 
 - Create with: `dotnet ef migrations add <Name> --project Ecommerce.Infrastructure --startup-project Ecommerce.API`.
 - `Migrations/**` is marked `generated_code` in `.editorconfig`. **Never hand-edit it.** Change the configuration and generate a new migration.
-- Existing migrations: `Initial`, `UpdateDateTimeFields`, `MakeOrderUpdatedOnUtcNullable`.
+- Existing migrations: `Initial`, `UpdateDateTimeFields`, `MakeOrderUpdatedOnUtcNullable`, `AddProductConcurrencyToken`, `AddCouponsAndOrderCancellation` (backfills `order_items.unit_price_*` from the product's price at migration time).
 - The only acceptable hand edit is adding a data fix-up (`migrationBuilder.Sql(...)`) to a **new** migration you just generated, e.g. resetting values that the old schema forced (see `MakeOrderUpdatedOnUtcNullable`). Never edit a migration that has already been applied anywhere.
 - Before committing, check that the generated `Up`/`Down` contains only the change you intended; anything else means the model drifted.
 - Migrations are applied at startup **in Development only**, by `app.ApplyMigrations()` (extension in `Ecommerce.API/Extensions/MigrationExtensions.cs`). It runs **`EnsureDeleted()`**, then `Migrate()`, then `DataSeeder.SeedData`. The dev database is recreated on every run.

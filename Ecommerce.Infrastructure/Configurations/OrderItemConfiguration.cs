@@ -1,4 +1,5 @@
 ﻿using Ecommerce.Domain.Orders;
+using Ecommerce.Domain.Shared;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -16,15 +17,26 @@ internal sealed class OrderItemConfiguration : IEntityTypeConfiguration<OrderIte
 
         builder.Property(orderItem => orderItem.Quantity);
 
+        builder.OwnsOne(orderItem => orderItem.UnitPrice, priceBuilder =>
+        {
+            priceBuilder.Property(money => money.Amount)
+                        .HasColumnType("decimal(18, 2)");
+
+            priceBuilder.Property(money => money.Currency)
+                        .HasConversion(currency => currency.Code, code => Currency.FromCode(code).Value);
+        });
+
         builder.Property(orderItem => orderItem.CreatedOnUtc);
 
         builder.HasOne<Order>()
             .WithMany(order => order.OrderItems)
             .HasForeignKey(orderItem => orderItem.OrderId);
 
+        // Restrict, not cascade: deleting a product must not delete lines from customers' orders.
         builder.HasOne(orderItem => orderItem.Product)
                .WithMany()
-               .HasForeignKey(orderItem => orderItem.ProductId);
+               .HasForeignKey(orderItem => orderItem.ProductId)
+               .OnDelete(DeleteBehavior.Restrict);
 
     }
 }
