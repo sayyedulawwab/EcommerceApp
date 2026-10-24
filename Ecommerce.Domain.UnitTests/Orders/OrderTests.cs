@@ -77,6 +77,6 @@ public class OrderTests
             new Money(priceAmount, currency),
             10,
             CategoryId.New(),
-            UtcNow);
+            UtcNow).Value;
     }
 }

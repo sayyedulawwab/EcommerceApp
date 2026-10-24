@@ -35,6 +35,58 @@ public class ProductTests
         Assert.Equal(10, product.Quantity);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Create_Should_ReturnInvalidPrice_WhenPriceIsNotPositive(decimal amount)
+    {
+        Result<Product> result = Product.Create(
+            ProductName.Create("Keyboard").Value,
+            ProductDescription.Create("Mechanical keyboard").Value,
+            new Money(amount, Currency.Usd),
+            10,
+            CategoryId.New(),
+            UtcNow);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(ProductErrors.InvalidPrice, result.Error);
+    }
+
+    [Fact]
+    public void Create_Should_ReturnInvalidQuantity_WhenQuantityIsNegative()
+    {
+        Result<Product> result = Product.Create(
+            ProductName.Create("Keyboard").Value,
+            ProductDescription.Create("Mechanical keyboard").Value,
+            new Money(100m, Currency.Usd),
+            -1,
+            CategoryId.New(),
+            UtcNow);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(ProductErrors.InvalidQuantity, result.Error);
+    }
+
+    [Fact]
+    public void Update_Should_LeaveProductUnchanged_WhenQuantityIsNegative()
+    {
+        Product product = CreateProduct(quantity: 10);
+
+        Result result = Product.Update(
+            product,
+            ProductName.Create("Other").Value,
+            product.Description,
+            product.Price,
+            -1,
+            product.CategoryId,
+            UtcNow);
+
+        Assert.True(result.IsFailure);
+        Assert.Equal(ProductErrors.InvalidQuantity, result.Error);
+        Assert.Equal("Keyboard", product.Name.Value);
+        Assert.Equal(10, product.Quantity);
+    }
+
     private static Product CreateProduct(int quantity)
     {
         return Product.Create(
@@ -43,6 +95,6 @@ public class ProductTests
             new Money(100m, Currency.Usd),
             quantity,
             CategoryId.New(),
-            UtcNow);
+            UtcNow).Value;
     }
 }

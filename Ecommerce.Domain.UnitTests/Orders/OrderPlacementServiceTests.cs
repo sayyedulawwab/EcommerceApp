@@ -70,6 +70,6 @@ public class OrderPlacementServiceTests
             new Money(priceAmount, currency),
             quantity,
             CategoryId.New(),
-            UtcNow);
+            UtcNow).Value;
     }
 }

@@ -33,6 +33,6 @@ internal static class ProductData
             new Money(priceAmount, Currency.FromCode(currencyCode).Value),
             10,
             categoryId,
-            DateTime.UtcNow);
+            DateTime.UtcNow).Value;
     }
 }
