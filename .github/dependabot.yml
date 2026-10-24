@@ -9,6 +9,12 @@ updates:
       nuget:
         patterns:
           - "*"
+    ignore:
+      # Microsoft.AspNetCore.OpenApi 10.x requires Microsoft.OpenApi < 3.0.
+      - dependency-name: Microsoft.OpenApi
+        update-types: ["version-update:semver-major"]
+      # Asp.Versioning 10.2+ adds analyzers that fail the build. Pinned at 10.0.0 until the OpenAPI setup is migrated.
+      - dependency-name: Asp.Versioning.*
 
   - package-ecosystem: github-actions
     directory: /
