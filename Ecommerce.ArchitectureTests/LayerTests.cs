@@ -11,7 +11,8 @@ namespace Ecommerce.ArchitectureTests;
 // so that Program.cs can register it, but controllers must still go through Application.
 public class LayerTests
 {
-    private static readonly Assembly Domain = typeof(Domain.Abstractions.Entity<>).Assembly;
+    // Loaded by name, so the tests also work while a new solution's Domain project has no types yet.
+    private static readonly Assembly Domain = Assembly.Load("Ecommerce.Domain");
     private static readonly Assembly Application = typeof(Application.DependencyInjection).Assembly;
     private static readonly Assembly Infrastructure = typeof(Infrastructure.DependencyInjection).Assembly;
     private static readonly Assembly Api = typeof(Program).Assembly;
