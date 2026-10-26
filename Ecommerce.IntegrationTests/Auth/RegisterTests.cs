@@ -28,7 +28,7 @@ public sealed class RegisterTests
         var request = new RegisterUserRequest("Jane", "Doe", "jane@example.com", "Password123!");
 
         // Act
-        HttpResponseMessage response = await _factory.Client.PostAsJsonAsync("/api/v1/auth/register", request);
+        HttpResponseMessage response = await _factory.Client.PostAsJsonAsync("/api/v1/auth/register", request, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -44,7 +44,7 @@ public sealed class RegisterTests
         var request = new RegisterUserRequest("Jane", "Doe", "jane@example.com", "Password123!");
 
         // Act
-        HttpResponseMessage response = await _factory.Client.PostAsJsonAsync("/api/v1/auth/register", request);
+        HttpResponseMessage response = await _factory.Client.PostAsJsonAsync("/api/v1/auth/register", request, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -62,10 +62,10 @@ public sealed class RegisterTests
 
         var request = new RegisterUserRequest("Jane", "Doe", "jane@example.com", "Password123!");
 
-        await _factory.Client.PostAsJsonAsync("/api/v1/auth/register", request);
+        await _factory.Client.PostAsJsonAsync("/api/v1/auth/register", request, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        HttpResponseMessage response = await _factory.Client.PostAsJsonAsync("/api/v1/auth/register", request);
+        HttpResponseMessage response = await _factory.Client.PostAsJsonAsync("/api/v1/auth/register", request, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);

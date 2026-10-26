@@ -38,7 +38,7 @@ public sealed class DeleteCategoryTests
         using HttpClient adminClient = _factory.CreateAdminClient();
 
         // Act
-        HttpResponseMessage response = await adminClient.DeleteAsync($"/api/v1/categories/{category.Id.Value}");
+        HttpResponseMessage response = await adminClient.DeleteAsync($"/api/v1/categories/{category.Id.Value}", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);

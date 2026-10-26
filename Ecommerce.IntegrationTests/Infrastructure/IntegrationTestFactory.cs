@@ -46,7 +46,7 @@ public sealed class IntegrationTestFactory
             .Build();
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         await _postgres.StartAsync();
 
@@ -102,7 +102,7 @@ public sealed class IntegrationTestFactory
         return client;
     }
 
-    public new async Task DisposeAsync()
+    public override async ValueTask DisposeAsync()
     {
         if (_connection is not null)
         {

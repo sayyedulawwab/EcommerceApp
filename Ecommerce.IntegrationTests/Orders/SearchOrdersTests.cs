@@ -52,7 +52,7 @@ public sealed class SearchOrdersTests
         });
 
         // Act
-        PagedResponse<OrderResponse>? page = await ownerClient.GetFromJsonAsync<PagedResponse<OrderResponse>>("/api/v1/orders");
+        PagedResponse<OrderResponse>? page = await ownerClient.GetFromJsonAsync<PagedResponse<OrderResponse>>("/api/v1/orders", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         OrderResponse order = Assert.Single(page!.Items);
@@ -80,7 +80,7 @@ public sealed class SearchOrdersTests
 
         // Act
         PagedResponse<OrderResponse>? page = await client.GetFromJsonAsync<PagedResponse<OrderResponse>>(
-            "/api/v1/orders?sortColumn=TotalPrice&sortOrder=asc&page=1&pageSize=2");
+            "/api/v1/orders?sortColumn=TotalPrice&sortOrder=asc&page=1&pageSize=2", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal([100m, 200m], page!.Items.Select(order => order.TotalPriceAmount));
@@ -104,10 +104,10 @@ public sealed class SearchOrdersTests
 
         Guid cancelledOrderId = await OrderData.PlaceAsync(client, keyboard, 1);
         await OrderData.PlaceAsync(client, keyboard, 1);
-        await client.PostAsync($"/api/v1/orders/{cancelledOrderId}/cancel", null);
+        await client.PostAsync($"/api/v1/orders/{cancelledOrderId}/cancel", null, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        PagedResponse<OrderResponse>? page = await client.GetFromJsonAsync<PagedResponse<OrderResponse>>("/api/v1/orders?status=cancelled");
+        PagedResponse<OrderResponse>? page = await client.GetFromJsonAsync<PagedResponse<OrderResponse>>("/api/v1/orders?status=cancelled", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         OrderResponse order = Assert.Single(page!.Items);
@@ -128,7 +128,7 @@ public sealed class SearchOrdersTests
         using HttpClient client = _factory.CreateClientForUser(Guid.NewGuid());
 
         // Act
-        HttpResponseMessage response = await client.GetAsync($"/api/v1/orders?{queryString}");
+        HttpResponseMessage response = await client.GetAsync($"/api/v1/orders?{queryString}", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);

@@ -49,7 +49,7 @@ public sealed class AddProductTests
         HttpResponseMessage response =
             await adminClient.PostAsJsonAsync(
                 "/api/v1/products",
-                request);
+                request, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -86,7 +86,7 @@ public sealed class AddProductTests
         using HttpClient customerClient = _factory.CreateClientForUser(Guid.NewGuid());
 
         // Act
-        HttpResponseMessage response = await customerClient.PostAsJsonAsync("/api/v1/products", ProductData.Create());
+        HttpResponseMessage response = await customerClient.PostAsJsonAsync("/api/v1/products", ProductData.Create(), cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);

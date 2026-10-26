@@ -30,7 +30,7 @@ public sealed class AddCouponTests
         using HttpClient adminClient = _factory.CreateAdminClient();
 
         // Act
-        HttpResponseMessage response = await adminClient.PostAsJsonAsync("/api/v1/coupons", Request);
+        HttpResponseMessage response = await adminClient.PostAsJsonAsync("/api/v1/coupons", Request, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -50,10 +50,10 @@ public sealed class AddCouponTests
 
         using HttpClient adminClient = _factory.CreateAdminClient();
 
-        await adminClient.PostAsJsonAsync("/api/v1/coupons", Request);
+        await adminClient.PostAsJsonAsync("/api/v1/coupons", Request, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        HttpResponseMessage response = await adminClient.PostAsJsonAsync("/api/v1/coupons", Request with { Code = "SUMMER-20" });
+        HttpResponseMessage response = await adminClient.PostAsJsonAsync("/api/v1/coupons", Request with { Code = "SUMMER-20" }, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
@@ -68,7 +68,7 @@ public sealed class AddCouponTests
         using HttpClient customerClient = _factory.CreateClientForUser(Guid.NewGuid());
 
         // Act
-        HttpResponseMessage response = await customerClient.PostAsJsonAsync("/api/v1/coupons", Request);
+        HttpResponseMessage response = await customerClient.PostAsJsonAsync("/api/v1/coupons", Request, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);

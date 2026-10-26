@@ -53,13 +53,13 @@ Ecommerce REST API (products, categories, orders, reviews, users/auth). This fil
 dotnet build EcommerceApp.slnx
 
 # Domain unit tests (no external dependencies)
-dotnet test Ecommerce.Domain.UnitTests/Ecommerce.Domain.UnitTests.csproj
+dotnet test --project Ecommerce.Domain.UnitTests/Ecommerce.Domain.UnitTests.csproj
 
 # Architecture tests (layer dependencies, ArchUnitNET)
-dotnet test Ecommerce.ArchitectureTests/Ecommerce.ArchitectureTests.csproj
+dotnet test --project Ecommerce.ArchitectureTests/Ecommerce.ArchitectureTests.csproj
 
 # Integration tests (Docker must be running: Testcontainers starts postgres:18)
-dotnet test Ecommerce.IntegrationTests/Ecommerce.IntegrationTests.csproj
+dotnet test --project Ecommerce.IntegrationTests/Ecommerce.IntegrationTests.csproj
 
 # Add an EF migration (EF tools package lives in the API project)
 dotnet ef migrations add <Name> --project Ecommerce.Infrastructure --startup-project Ecommerce.API

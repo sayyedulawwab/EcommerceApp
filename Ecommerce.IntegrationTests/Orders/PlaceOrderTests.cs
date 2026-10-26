@@ -46,7 +46,7 @@ public sealed class PlaceOrderTests
         using HttpClient client = _factory.CreateClientForUser(user.Id.Value);
 
         // Act
-        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request);
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -101,7 +101,7 @@ public sealed class PlaceOrderTests
         using HttpClient client = _factory.CreateClientForUser(user.Id.Value);
 
         // Act
-        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request);
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -127,7 +127,7 @@ public sealed class PlaceOrderTests
         using HttpClient client = _factory.CreateClientForUser(user.Id.Value);
 
         // Act
-        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request);
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -155,7 +155,7 @@ public sealed class PlaceOrderTests
         using HttpClient client = _factory.CreateClientForUser(user.Id.Value);
 
         // Act
-        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request);
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -170,7 +170,7 @@ public sealed class PlaceOrderTests
         var request = new PlaceOrderRequest([]);
 
         // Act
-        HttpResponseMessage response = await _factory.Client.PostAsJsonAsync("/api/v1/orders", request);
+        HttpResponseMessage response = await _factory.Client.PostAsJsonAsync("/api/v1/orders", request, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -193,7 +193,7 @@ public sealed class PlaceOrderTests
         using HttpClient client = _factory.CreateClientForUser(user.Id.Value);
 
         // Act
-        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request);
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -216,7 +216,7 @@ public sealed class PlaceOrderTests
         using HttpClient client = _factory.CreateClientForUser(user.Id.Value);
 
         // Act
-        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request);
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
@@ -255,7 +255,7 @@ public sealed class PlaceOrderTests
         using HttpClient client = _factory.CreateClientForUser(user.Id.Value);
 
         // Act
-        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request);
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -293,7 +293,7 @@ public sealed class PlaceOrderTests
         using HttpClient client = _factory.CreateClientForUser(user.Id.Value);
 
         // Act
-        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request);
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -325,10 +325,10 @@ public sealed class PlaceOrderTests
 
         using HttpClient client = _factory.CreateClientForUser(user.Id.Value);
 
-        await client.PostAsJsonAsync("/api/v1/orders", request);
+        await client.PostAsJsonAsync("/api/v1/orders", request, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request);
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
@@ -351,7 +351,7 @@ public sealed class PlaceOrderTests
         using HttpClient client = _factory.CreateClientForUser(user.Id.Value);
 
         // Act
-        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request);
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);

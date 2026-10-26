@@ -49,7 +49,7 @@ public sealed class EditCouponTests
         var request = new EditCouponRequest(10, coupon.StartsOnUtc, coupon.ExpiresOnUtc, 1);
 
         // Act
-        HttpResponseMessage response = await adminClient.PutAsJsonAsync($"/api/v1/coupons/{coupon.Id.Value}", request);
+        HttpResponseMessage response = await adminClient.PutAsJsonAsync($"/api/v1/coupons/{coupon.Id.Value}", request, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);

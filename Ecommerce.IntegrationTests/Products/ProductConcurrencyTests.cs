@@ -41,15 +41,15 @@ public sealed class ProductConcurrencyTests
         ApplicationDbContext firstDb = first.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         ApplicationDbContext secondDb = second.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-        Product firstCopy = await firstDb.Set<Product>().FirstAsync(p => p.Id == keyboard.Id);
-        Product secondCopy = await secondDb.Set<Product>().FirstAsync(p => p.Id == keyboard.Id);
+        Product firstCopy = await firstDb.Set<Product>().FirstAsync(p => p.Id == keyboard.Id, cancellationToken: TestContext.Current.CancellationToken);
+        Product secondCopy = await secondDb.Set<Product>().FirstAsync(p => p.Id == keyboard.Id, cancellationToken: TestContext.Current.CancellationToken);
 
         firstCopy.RemoveStock(10, DateTime.UtcNow);
         secondCopy.RemoveStock(10, DateTime.UtcNow);
 
-        await firstDb.SaveChangesAsync();
+        await firstDb.SaveChangesAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         // Act and assert
-        await Assert.ThrowsAsync<ConcurrencyException>(() => secondDb.SaveChangesAsync());
+        await Assert.ThrowsAsync<ConcurrencyException>(() => secondDb.SaveChangesAsync(cancellationToken: TestContext.Current.CancellationToken));
     }
 }

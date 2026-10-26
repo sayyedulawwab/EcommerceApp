@@ -34,7 +34,7 @@ public sealed class DeleteProductTests
         using HttpClient adminClient = _factory.CreateAdminClient();
 
         // Act
-        HttpResponseMessage response = await adminClient.DeleteAsync($"/api/v1/products/{keyboard.Id.Value}");
+        HttpResponseMessage response = await adminClient.DeleteAsync($"/api/v1/products/{keyboard.Id.Value}", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -63,7 +63,7 @@ public sealed class DeleteProductTests
         await OrderData.PlaceAsync(customerClient, keyboard, 1);
 
         // Act
-        HttpResponseMessage response = await adminClient.DeleteAsync($"/api/v1/products/{keyboard.Id.Value}");
+        HttpResponseMessage response = await adminClient.DeleteAsync($"/api/v1/products/{keyboard.Id.Value}", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
@@ -83,7 +83,7 @@ public sealed class DeleteProductTests
         using HttpClient customerClient = _factory.CreateClientForUser(Guid.NewGuid());
 
         // Act
-        HttpResponseMessage response = await customerClient.DeleteAsync($"/api/v1/products/{keyboard.Id.Value}");
+        HttpResponseMessage response = await customerClient.DeleteAsync($"/api/v1/products/{keyboard.Id.Value}", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);

@@ -44,7 +44,7 @@ public sealed class DeleteCouponTests
         await OrderData.PlaceAsync(customerClient, keyboard, 1, "SAVE10");
 
         // Act
-        HttpResponseMessage response = await adminClient.DeleteAsync($"/api/v1/coupons/{coupon.Id.Value}");
+        HttpResponseMessage response = await adminClient.DeleteAsync($"/api/v1/coupons/{coupon.Id.Value}", cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
