@@ -30,19 +30,19 @@ public sealed class LoginTests
 
         var registerRequest = new RegisterUserRequest("Jane", "Doe", "jane@example.com", "Password123!");
 
-        HttpResponseMessage registerResponse = await _factory.Client.PostAsJsonAsync("/api/v1/auth/register", registerRequest);
+        HttpResponseMessage registerResponse = await _factory.Client.PostAsJsonAsync("/api/v1/auth/register", registerRequest, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, registerResponse.StatusCode);
 
         // Act
         HttpResponseMessage response = await _factory.Client.PostAsJsonAsync(
             "/api/v1/auth/login",
-            new LoginUserRequest("jane@example.com", "Password123!"));
+            new LoginUserRequest("jane@example.com", "Password123!"), cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        AccessTokenResponse? token = await response.Content.ReadFromJsonAsync<AccessTokenResponse>();
+        AccessTokenResponse? token = await response.Content.ReadFromJsonAsync<AccessTokenResponse>(cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.False(string.IsNullOrWhiteSpace(token?.AccessToken));
     }
@@ -55,12 +55,12 @@ public sealed class LoginTests
 
         await _factory.Client.PostAsJsonAsync(
             "/api/v1/auth/register",
-            new RegisterUserRequest("Jane", "Doe", "jane@example.com", "Password123!"));
+            new RegisterUserRequest("Jane", "Doe", "jane@example.com", "Password123!"), cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
         HttpResponseMessage response = await _factory.Client.PostAsJsonAsync(
             "/api/v1/auth/login",
-            new LoginUserRequest("jane@example.com", "WrongPassword!"));
+            new LoginUserRequest("jane@example.com", "WrongPassword!"), cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -75,7 +75,7 @@ public sealed class LoginTests
         // Act
         HttpResponseMessage response = await _factory.Client.PostAsJsonAsync(
             "/api/v1/auth/login",
-            new LoginUserRequest("missing@example.com", "Password123!"));
+            new LoginUserRequest("missing@example.com", "Password123!"), cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -110,7 +110,7 @@ public sealed class LoginTests
         // Act
         HttpResponseMessage response = await _factory.Client.PostAsJsonAsync(
             "/api/v1/auth/login",
-            new LoginUserRequest("legacy@example.com", "Password123!"));
+            new LoginUserRequest("legacy@example.com", "Password123!"), cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -145,10 +145,10 @@ public sealed class LoginTests
         // Act
         HttpResponseMessage response = await _factory.Client.PostAsJsonAsync(
             "/api/v1/auth/login",
-            new LoginUserRequest("ada@example.com", "Password123!"));
+            new LoginUserRequest("ada@example.com", "Password123!"), cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        AccessTokenResponse? token = await response.Content.ReadFromJsonAsync<AccessTokenResponse>();
+        AccessTokenResponse? token = await response.Content.ReadFromJsonAsync<AccessTokenResponse>(cancellationToken: TestContext.Current.CancellationToken);
 
         // The JWT payload is the second, base64url-encoded part of the token. Claims keep their full ClaimTypes URI.
         string payload = token!.AccessToken.Split('.')[1].Replace('-', '+').Replace('_', '/');

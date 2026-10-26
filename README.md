@@ -60,13 +60,13 @@ Prerequisites: the .NET 10 SDK and Docker Desktop.
 
 ```bash
 # Domain unit tests
-dotnet test Ecommerce.Domain.UnitTests/Ecommerce.Domain.UnitTests.csproj
+dotnet test --project Ecommerce.Domain.UnitTests/Ecommerce.Domain.UnitTests.csproj
 
 # Architecture tests
-dotnet test Ecommerce.ArchitectureTests/Ecommerce.ArchitectureTests.csproj
+dotnet test --project Ecommerce.ArchitectureTests/Ecommerce.ArchitectureTests.csproj
 
 # Integration tests (Docker must be running)
-dotnet test Ecommerce.IntegrationTests/Ecommerce.IntegrationTests.csproj
+dotnet test --project Ecommerce.IntegrationTests/Ecommerce.IntegrationTests.csproj
 ```
 
 ## API Endpoints

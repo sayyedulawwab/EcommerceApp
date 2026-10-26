@@ -26,4 +26,4 @@ jobs:
 
       # Testcontainers starts PostgreSQL in the runner's Docker for the integration tests.
       - name: Test
-        run: dotnet test EcommerceApp.slnx --no-build --configuration Release
+        run: dotnet test --solution EcommerceApp.slnx --no-build --configuration Release

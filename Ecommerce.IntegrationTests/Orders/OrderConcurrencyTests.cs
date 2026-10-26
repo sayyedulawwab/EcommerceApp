@@ -46,16 +46,16 @@ public sealed class OrderConcurrencyTests
         ApplicationDbContext firstDb = first.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         ApplicationDbContext secondDb = second.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-        Coupon firstCopy = await firstDb.Set<Coupon>().FirstAsync(c => c.Id == coupon.Id);
-        Coupon secondCopy = await secondDb.Set<Coupon>().FirstAsync(c => c.Id == coupon.Id);
+        Coupon firstCopy = await firstDb.Set<Coupon>().FirstAsync(c => c.Id == coupon.Id, cancellationToken: TestContext.Current.CancellationToken);
+        Coupon secondCopy = await secondDb.Set<Coupon>().FirstAsync(c => c.Id == coupon.Id, cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.True(firstCopy.Redeem(DateTime.UtcNow).IsSuccess);
         Assert.True(secondCopy.Redeem(DateTime.UtcNow).IsSuccess);
 
-        await firstDb.SaveChangesAsync();
+        await firstDb.SaveChangesAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         // Act and assert
-        await Assert.ThrowsAsync<ConcurrencyException>(() => secondDb.SaveChangesAsync());
+        await Assert.ThrowsAsync<ConcurrencyException>(() => secondDb.SaveChangesAsync(cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -77,22 +77,22 @@ public sealed class OrderConcurrencyTests
 
         using HttpClient client = _factory.CreateClientForUser(user.Id.Value);
 
-        HttpResponseMessage placed = await client.PostAsJsonAsync("/api/v1/orders", new PlaceOrderRequest([new PlaceOrderProductRequest(keyboard.Id.Value, 3)]));
-        var orderId = new OrderId(await placed.Content.ReadFromJsonAsync<Guid>());
+        HttpResponseMessage placed = await client.PostAsJsonAsync("/api/v1/orders", new PlaceOrderRequest([new PlaceOrderProductRequest(keyboard.Id.Value, 3)]), cancellationToken: TestContext.Current.CancellationToken);
+        var orderId = new OrderId(await placed.Content.ReadFromJsonAsync<Guid>(cancellationToken: TestContext.Current.CancellationToken));
 
         // A second cancel request reads the order while it is still placed.
         using IServiceScope scope = _factory.CreateScope();
         ApplicationDbContext staleDb = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-        Order staleOrder = await staleDb.Set<Order>().Include(o => o.OrderItems).FirstAsync(o => o.Id == orderId);
-        Dictionary<ProductId, Product> staleProducts = await staleDb.Set<Product>().Where(p => p.Id == keyboard.Id).ToDictionaryAsync(p => p.Id);
+        Order staleOrder = await staleDb.Set<Order>().Include(o => o.OrderItems).FirstAsync(o => o.Id == orderId, cancellationToken: TestContext.Current.CancellationToken);
+        Dictionary<ProductId, Product> staleProducts = await staleDb.Set<Product>().Where(p => p.Id == keyboard.Id).ToDictionaryAsync(p => p.Id, cancellationToken: TestContext.Current.CancellationToken);
 
-        HttpResponseMessage cancelled = await client.PostAsync($"/api/v1/orders/{orderId.Value}/cancel", null);
+        HttpResponseMessage cancelled = await client.PostAsync($"/api/v1/orders/{orderId.Value}/cancel", null, cancellationToken: TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.NoContent, cancelled.StatusCode);
 
         Assert.True(OrderCancellationService.Cancel(staleOrder, staleProducts, coupon: null, DateTime.UtcNow).IsSuccess);
 
         // Act and assert: the stale cancel can't give the stock back a second time.
-        await Assert.ThrowsAsync<ConcurrencyException>(() => staleDb.SaveChangesAsync());
+        await Assert.ThrowsAsync<ConcurrencyException>(() => staleDb.SaveChangesAsync(cancellationToken: TestContext.Current.CancellationToken));
     }
 }

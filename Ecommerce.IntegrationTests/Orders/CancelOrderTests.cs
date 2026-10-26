@@ -43,7 +43,7 @@ public sealed class CancelOrderTests
         Guid orderId = await PlaceOrderAsync(client, keyboard, 3, "SAVE10");
 
         // Act
-        HttpResponseMessage response = await client.PostAsync($"/api/v1/orders/{orderId}/cancel", null);
+        HttpResponseMessage response = await client.PostAsync($"/api/v1/orders/{orderId}/cancel", null, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
@@ -79,10 +79,10 @@ public sealed class CancelOrderTests
         using HttpClient client = _factory.CreateClientForUser(user.Id.Value);
 
         Guid orderId = await PlaceOrderAsync(client, keyboard, 3);
-        await client.PostAsync($"/api/v1/orders/{orderId}/cancel", null);
+        await client.PostAsync($"/api/v1/orders/{orderId}/cancel", null, cancellationToken: TestContext.Current.CancellationToken);
 
         // Act
-        HttpResponseMessage response = await client.PostAsync($"/api/v1/orders/{orderId}/cancel", null);
+        HttpResponseMessage response = await client.PostAsync($"/api/v1/orders/{orderId}/cancel", null, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
@@ -116,7 +116,7 @@ public sealed class CancelOrderTests
         Guid orderId = await PlaceOrderAsync(ownerClient, keyboard, 1);
 
         // Act
-        HttpResponseMessage response = await otherClient.PostAsync($"/api/v1/orders/{orderId}/cancel", null);
+        HttpResponseMessage response = await otherClient.PostAsync($"/api/v1/orders/{orderId}/cancel", null, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);

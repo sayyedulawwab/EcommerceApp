@@ -36,7 +36,7 @@ public sealed class GiveReviewTests
         using HttpClient client = _factory.CreateClientForUser(user.Id.Value);
 
         // Act
-        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/reviews", request);
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/reviews", request, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -68,7 +68,7 @@ public sealed class GiveReviewTests
         using HttpClient client = _factory.CreateClientForUser(user.Id.Value);
 
         // Act
-        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/reviews", request);
+        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/reviews", request, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -83,7 +83,7 @@ public sealed class GiveReviewTests
         var request = new GiveReviewRequest { ProductId = Guid.NewGuid(), Rating = 4, Comment = "Comment" };
 
         // Act
-        HttpResponseMessage response = await _factory.Client.PostAsJsonAsync("/api/v1/reviews", request);
+        HttpResponseMessage response = await _factory.Client.PostAsJsonAsync("/api/v1/reviews", request, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
