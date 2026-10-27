@@ -36,13 +36,15 @@ Ecommerce.IntegrationTests  HTTP tests against PostgreSQL in Docker
 
 Prerequisites: the .NET 10 SDK and Docker Desktop.
 
-1. Start the infrastructure (PostgreSQL, Redis, and the observability stack). This also creates the shared Docker network:
+1. Copy `.env.example` to `.env.dev` and fill in the values. `.env.*` files are ignored by git, so the secrets stay on your machine.
+
+2. Start the infrastructure (PostgreSQL, Redis, and the observability stack). This also creates the shared Docker network:
 
    ```bash
    docker compose -f infra.compose.yml --env-file .env.dev up -d
    ```
 
-2. Build and start the API:
+3. Build and start the API:
 
    ```bash
    docker compose -f docker-compose.yml -f docker-compose.override.yml --env-file .env.dev up --build
@@ -52,7 +54,7 @@ Prerequisites: the .NET 10 SDK and Docker Desktop.
 
    Infrastructure is its own compose project (`ecommerce-infra`), so stopping or rebuilding the API leaves PostgreSQL, Redis and the observability stack running. Stop it with `docker compose -f infra.compose.yml down`.
 
-3. The API is available at `http://localhost:5000` (direct) and `http://localhost:8080` (through nginx). In Development the OpenAPI document is served at `/openapi/v1.json`, and Grafana runs at `http://localhost:3000`.
+4. The API is available at `http://localhost:5000` (direct) and `http://localhost:8080` (through nginx). In Development the OpenAPI document is served at `/openapi/v1.json`, and Grafana runs at `http://localhost:3000`.
 
 > In Development, the API recreates the database on every start: it drops it, applies migrations, and seeds sample data. Seeded users have the password `test1234`. `admin@ecommerce.test` is an admin and `customer@ecommerce.test` is a customer.
 

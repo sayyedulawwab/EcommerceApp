@@ -100,7 +100,7 @@ EcommerceApp.slnx
 └── Ecommerce.IntegrationTests/       # End-to-end HTTP tests against PostgreSQL in Docker
 ```
 
-Supporting folders: `nginx/`, `otel/`, `loki/`, `tempo/`, `prometheus/`, `grafana/` (observability stack config), `docker-compose*.yml`, `infra.compose.yml`, `.env.dev` / `.env.prod`.
+Supporting folders: `nginx/`, `otel/`, `loki/`, `tempo/`, `prometheus/`, `grafana/` (observability stack config), `docker-compose*.yml`, `infra.compose.yml`, `.env.example` (copied to the git-ignored `.env.dev` / `.env.prod`; never commit them).
 
 ### Dependency direction
 
