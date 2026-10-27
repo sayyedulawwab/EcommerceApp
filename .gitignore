@@ -486,3 +486,8 @@ loki/chunks/
 loki/rules/
 loki/retention/
 tempo/data/
+
+# Environment files hold secrets; copy .env.example instead
+.env
+.env.*
+!.env.example
