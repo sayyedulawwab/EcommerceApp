@@ -1,7 +1,6 @@
-﻿using Ecommerce.Application.Abstractions.Messaging;
+using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
 using Microsoft.Extensions.Logging;
-using Serilog.Context;
 
 namespace Ecommerce.Application.Abstractions.Behaviors;
 
@@ -27,10 +26,7 @@ internal static class LoggingDecorator
             }
             else
             {
-                using (LogContext.PushProperty("Error", result.Error, true))
-                {
-                    logger.LogError("Completed command {Command} with error", commandName);
-                }
+                logger.LogError("Completed command {Command} with error {ErrorCode}: {ErrorDescription}", commandName, result.Error.Name, result.Error.Description);
             }
 
             return result;
@@ -57,10 +53,7 @@ internal static class LoggingDecorator
             }
             else
             {
-                using (LogContext.PushProperty("Error", result.Error, true))
-                {
-                    logger.LogError("Completed command {Command} with error", commandName);
-                }
+                logger.LogError("Completed command {Command} with error {ErrorCode}: {ErrorDescription}", commandName, result.Error.Name, result.Error.Description);
             }
 
             return result;
@@ -87,10 +80,7 @@ internal static class LoggingDecorator
             }
             else
             {
-                using (LogContext.PushProperty("Error", result.Error, true))
-                {
-                    logger.LogError("Completed query {Query} with error", queryName);
-                }
+                logger.LogError("Completed query {Query} with error {ErrorCode}: {ErrorDescription}", queryName, result.Error.Name, result.Error.Description);
             }
 
             return result;

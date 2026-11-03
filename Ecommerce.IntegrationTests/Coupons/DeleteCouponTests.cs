@@ -11,7 +11,6 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Ecommerce.IntegrationTests.Coupons;
 
 public sealed class DeleteCouponTests
-    : IClassFixture<IntegrationTestFactory>
 {
     private readonly IntegrationTestFactory _factory;
 

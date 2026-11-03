@@ -1,6 +1,6 @@
 # Ecommerce.Application — Conventions
 
-Use-case layer: commands, queries, handlers, validators, responses, and the ports (interfaces) that Infrastructure implements. It references **Domain only**, plus EF Core (for `DbSet<T>` and LINQ), FluentValidation, Scrutor, Serilog and logging abstractions. It does not reference Dapper or Npgsql.
+Use-case layer: commands, queries, handlers, validators, responses, and the ports (interfaces) that Infrastructure implements. It references **Domain only**, plus EF Core (for `DbSet<T>` and LINQ), FluentValidation, Scrutor and `Microsoft.Extensions.Logging.Abstractions`. It does not reference Dapper or Npgsql.
 
 ## Folder layout
 

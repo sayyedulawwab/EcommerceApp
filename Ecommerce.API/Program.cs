@@ -1,25 +1,25 @@
 using Asp.Versioning;
 using Ecommerce.API;
 using Ecommerce.API.Extensions;
-using Ecommerce.API.Logging;
 using Ecommerce.Application;
 using Ecommerce.Infrastructure;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using Serilog;
 using System.Diagnostics;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-builder.Logging.ClearProviders();
-
 Activity.DefaultIdFormat = ActivityIdFormat.W3C;
 Activity.ForceDefaultIdFormat = true;
 
-builder.Host.UseSerilog((context, loggerConfigruration) => loggerConfigruration.ReadFrom.Configuration(builder.Configuration)
-.Enrich.With<ActivityEnricher>(), writeToProviders: true);
+// Scopes carry the CorrelationId from RequestContextLoggingMiddleware to the exported log records.
+builder.Logging.AddOpenTelemetry(options =>
+{
+    options.IncludeScopes = true;
+    options.IncludeFormattedMessage = true;
+});
 
 string? otlpLogsEndpoint = builder.Configuration["Otlp:LogsEndpoint"];
 string? otlpTracesEndpoint = builder.Configuration["Otlp:TracesEndpoint"];
@@ -88,10 +88,8 @@ builder.Services.AddApiVersioning(options =>
 {
     options.DefaultApiVersion = new ApiVersion(1);
     options.ReportApiVersions = true;
-    options.AssumeDefaultVersionWhenUnspecified = true;
-    options.ApiVersionReader = ApiVersionReader.Combine(
-        new UrlSegmentApiVersionReader(),
-        new HeaderApiVersionReader("X-Api-Version"));
+    // The version is part of every route (api/v1/...), so the URL is the only place it is read from.
+    options.ApiVersionReader = new UrlSegmentApiVersionReader();
 })
 .AddMvc() // This is needed for controllers
 .AddApiExplorer(options =>
@@ -109,8 +107,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseRequestContextLogging();
-
-app.UseSerilogRequestLogging();
 
 app.UseExceptionHandler();
 

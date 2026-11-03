@@ -13,7 +13,6 @@ using System.Net.Http.Json;
 namespace Ecommerce.IntegrationTests.Products;
 
 public sealed class AddProductTests
-    : IClassFixture<IntegrationTestFactory>
 {
     private readonly IntegrationTestFactory _factory;
 

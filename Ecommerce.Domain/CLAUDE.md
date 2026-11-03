@@ -29,7 +29,7 @@ public sealed class Product : Entity<ProductId>
         CreatedOnUtc = createdOnUtc;
     }
 
-    // 2. Private parameterless constructor: for EF Core materialization
+    // 2. Private parameterless constructor: EF Core materializes through it because Money is an owned type
     private Product()
     {
     }
@@ -67,7 +67,7 @@ public sealed class Product : Entity<ProductId>
 Rules:
 
 - `public sealed class {Entity} : Entity<{Entity}Id>`. `Id` comes from the base class (`{ get; init; }`); don't redeclare it.
-- **Two private constructors:** a full one (calls `: base(id)`) and an empty one for EF.
+- **A private full constructor** (calls `: base(id)`) that EF Core also uses to materialize the entity. Add a private parameterless one (with `#pragma warning disable CS8618`) **only when the entity has an owned type** (`Money` on `Product`, `Order`, `OrderItem`): EF Core can't bind an owned type through a constructor parameter.
 - **All properties use `{ get; private set; }`.** State changes only through the entity's static/instance methods; external code never assigns properties.
 - Properties are typed as **value objects and strongly typed IDs**, not primitives (`ProductName`, `Money`, `CategoryId`). Plain `int`/`bool`/`string` is fine where no VO exists (`Quantity`, `IsAdmin`, `PasswordHash`).
 - **Timestamps:** `CreatedOnUtc` (`DateTime`) is set by `Create`. `UpdatedOnUtc` (`DateTime?`) is set by `Update`. Both are **passed in by the caller** (from `IDateTimeProvider`); the domain never reads the clock.

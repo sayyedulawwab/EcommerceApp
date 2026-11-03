@@ -16,7 +16,6 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Ecommerce.IntegrationTests.Orders;
 
 public sealed class CancelOrderTests
-    : IClassFixture<IntegrationTestFactory>
 {
     private readonly IntegrationTestFactory _factory;
 

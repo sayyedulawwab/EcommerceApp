@@ -10,7 +10,6 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Ecommerce.IntegrationTests.Products;
 
 public sealed class ProductConcurrencyTests
-    : IClassFixture<IntegrationTestFactory>
 {
     private readonly IntegrationTestFactory _factory;
 

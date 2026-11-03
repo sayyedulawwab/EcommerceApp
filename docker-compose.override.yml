@@ -7,6 +7,3 @@ services:
 
     ports:
       - "5000:8080"
-
-    volumes:
-      - ./logs:/app/logs

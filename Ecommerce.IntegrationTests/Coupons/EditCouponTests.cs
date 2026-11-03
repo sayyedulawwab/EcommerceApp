@@ -13,7 +13,6 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Ecommerce.IntegrationTests.Coupons;
 
 public sealed class EditCouponTests
-    : IClassFixture<IntegrationTestFactory>
 {
     private readonly IntegrationTestFactory _factory;
 

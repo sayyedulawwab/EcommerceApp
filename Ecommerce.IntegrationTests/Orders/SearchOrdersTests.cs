@@ -14,7 +14,6 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Ecommerce.IntegrationTests.Orders;
 
 public sealed class SearchOrdersTests
-    : IClassFixture<IntegrationTestFactory>
 {
     private readonly IntegrationTestFactory _factory;
 

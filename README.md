@@ -16,7 +16,7 @@ A REST API for an ecommerce platform: products, categories, orders, product revi
 - **PostgreSQL** with **EF Core** (write side and migrations) and **Dapper** (read-side queries)
 - **Redis** for caching
 - **FluentValidation**, **Scrutor** (handler registration and decorators)
-- **Serilog** and **OpenTelemetry**, exported through an OTLP collector to Loki, Tempo and Prometheus, and viewed in Grafana
+- **Microsoft.Extensions.Logging** and **OpenTelemetry**, exported through an OTLP collector to Loki, Tempo and Prometheus, and viewed in Grafana
 - **xUnit**, **Testcontainers**, **Respawn**, **ArchUnitNET**
 - **Docker** / Docker Compose, with nginx as a reverse proxy
 
@@ -73,7 +73,7 @@ dotnet test --project Ecommerce.IntegrationTests/Ecommerce.IntegrationTests.cspr
 
 ## API Endpoints
 
-All routes are versioned. The version can also be sent in the `X-Api-Version` header. Endpoints marked 🔒 require a `Bearer` token from `/api/v1/auth/login`. Endpoints marked 🛡️ also require an admin: a customer gets 403.
+All routes are versioned, and the version is read only from the URL (`/api/v1/...`). Endpoints marked 🔒 require a `Bearer` token from `/api/v1/auth/login`. Endpoints marked 🛡️ also require an admin: a customer gets 403.
 
 ### Auth
 
@@ -179,4 +179,4 @@ POST /api/v1/reviews
 
 ### Errors
 
-Failures return an error object `{ "name": "...", "description": "...", "code": ... }` with the matching HTTP status: 400 (validation, including a list of per-field `errors`), 401 (invalid credentials), 404 (not found), 409 (conflict, e.g. email already registered), or 500.
+Every failure returns an RFC 9457 `ProblemDetails` body (`application/problem+json`) with the matching HTTP status: 400 (validation, with a list of `{ code, detail }` in `errors`), 401 (invalid credentials), 404 (not found), 409 (conflict, e.g. email already registered, or `Concurrency.Conflict` when another request changed the same data), or 500 (`Server.Failure`). The `code` field holds the error name, such as `Product.NotFound`, and is what clients should match on.
