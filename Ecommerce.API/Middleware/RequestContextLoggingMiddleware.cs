@@ -1,19 +1,19 @@
-﻿using Microsoft.Extensions.Primitives;
-using Serilog.Context;
+using Microsoft.Extensions.Primitives;
 
 namespace Ecommerce.API.Middleware;
 
-public class RequestContextLoggingMiddleware(RequestDelegate next)
+public class RequestContextLoggingMiddleware(RequestDelegate next, ILogger<RequestContextLoggingMiddleware> logger)
 {
     private const string CorrelationIdHeaderName = "X-Correlation-Id";
 
-    public Task Invoke(HttpContext context)
+    public async Task Invoke(HttpContext context)
     {
         string correlationId = GetCorrelationId(context);
 
-        using (LogContext.PushProperty("CorrelationId", correlationId))
+        // Every log written during the request carries the CorrelationId. The scope stays open until the request completes.
+        using (logger.BeginScope(new Dictionary<string, object> { ["CorrelationId"] = correlationId }))
         {
-            return next.Invoke(context);
+            await next.Invoke(context);
         }
     }
 

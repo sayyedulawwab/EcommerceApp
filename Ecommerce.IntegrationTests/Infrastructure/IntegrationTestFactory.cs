@@ -1,23 +1,22 @@
 ﻿using Ecommerce.Application.Abstractions.Auth;
-using Ecommerce.Application.Abstractions.Caching;
 using Ecommerce.Application.Abstractions.Emails;
 using Ecommerce.Infrastructure;
-using Ecommerce.Infrastructure.Caching;
 using Ecommerce.Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
 using Npgsql;
 using Respawn;
+using StackExchange.Redis;
 using System.Data.Common;
 using System.Net.Http.Headers;
 using Testcontainers.PostgreSql;
+using Testcontainers.Redis;
 
 namespace Ecommerce.IntegrationTests.Infrastructure;
 
@@ -27,9 +26,15 @@ public sealed class IntegrationTestFactory
 {
     private readonly PostgreSqlContainer _postgres;
 
+    private readonly RedisContainer _redis;
+
+    private ConnectionMultiplexer _redisConnection = default!;
+
     private DatabaseReset _databaseReset = default!;
 
     private DbConnection _connection = default!;
+
+    private const string SelectorScheme = "TestOrBearer";
 
     public HttpClient Client { get; private set; } = default!;
 
@@ -44,11 +49,17 @@ public sealed class IntegrationTestFactory
             .WithUsername("postgres")
             .WithPassword("postgres")
             .Build();
+
+        _redis = new RedisBuilder("redis:8")
+            .Build();
     }
 
     public async ValueTask InitializeAsync()
     {
-        await _postgres.StartAsync();
+        await Task.WhenAll(_postgres.StartAsync(), _redis.StartAsync());
+
+        // allowAdmin lets the reset flush the cache between tests.
+        _redisConnection = await ConnectionMultiplexer.ConnectAsync($"{_redis.GetConnectionString()},allowAdmin=true");
 
         Client = CreateClient();
 
@@ -70,11 +81,17 @@ public sealed class IntegrationTestFactory
         _databaseReset = await DatabaseReset.CreateAsync(_connection);
     }
 
-    public Task ResetDatabaseAsync()
+    public async Task ResetDatabaseAsync()
     {
         Emails.Clear();
 
-        return _databaseReset.ResetAsync(_connection);
+        await _databaseReset.ResetAsync(_connection);
+
+        // A cached query result from an earlier test would hide the rows this test seeds.
+        foreach (IServer server in _redisConnection.GetServers())
+        {
+            await server.FlushAllDatabasesAsync();
+        }
     }
 
     // A signed-in admin: the only role that can change products, categories and coupons.
@@ -109,7 +126,14 @@ public sealed class IntegrationTestFactory
             await _connection.DisposeAsync();
         }
 
+        if (_redisConnection is not null)
+        {
+            await _redisConnection.DisposeAsync();
+        }
+
         await _postgres.DisposeAsync();
+
+        await _redis.DisposeAsync();
 
         await base.DisposeAsync();
     }
@@ -145,7 +169,7 @@ public sealed class IntegrationTestFactory
                 new Dictionary<string, string?>
                 {
                     ["ConnectionStrings:Database"] = ConnectionString,
-                    ["ConnectionStrings:Redis"] = "localhost:6379"
+                    ["ConnectionStrings:Redis"] = _redis.GetConnectionString()
                 }));
 
         builder.ConfigureServices(services =>
@@ -160,32 +184,28 @@ public sealed class IntegrationTestFactory
             services.AddSingleton<ISqlConnectionFactory>(
                 new SqlConnectionFactory(ConnectionString));
 
-            services.RemoveAll<IDistributedCache>();
-
-            services.AddDistributedMemoryCache();
-
-            services.RemoveAll<ICacheService>();
-
-            services.AddSingleton<ICacheService, CacheService>();
-
             services.RemoveAll<IEmailService>();
             services.AddSingleton<IEmailService>(Emails);
 
-            services.RemoveAll<IConfigureOptions<AuthenticationOptions>>();
-            services.RemoveAll<IPostConfigureOptions<AuthenticationOptions>>();
+            // A request with "Authorization: Test" signs in through TestAuthenticationHandler.
+            // Any other request goes through the app's real JWT bearer handler, so a test can
+            // send a real token, a bad token or no token at all.
+            services.AddAuthentication()
+                .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
+                    TestAuthenticationHandler.AuthenticationScheme,
+                    _ => { })
+                .AddPolicyScheme(SelectorScheme, SelectorScheme, options =>
+                    options.ForwardDefaultSelector = context =>
+                        context.Request.Headers.Authorization.ToString() == TestAuthenticationHandler.AuthenticationScheme
+                            ? TestAuthenticationHandler.AuthenticationScheme
+                            : JwtBearerDefaults.AuthenticationScheme);
 
-            services.AddAuthentication(options =>
+            services.PostConfigure<AuthenticationOptions>(options =>
             {
-                options.DefaultAuthenticateScheme =
-                    TestAuthenticationHandler.AuthenticationScheme;
-
-                options.DefaultChallengeScheme =
-                    TestAuthenticationHandler.AuthenticationScheme;
-            })
-            .AddScheme<AuthenticationSchemeOptions,
-                TestAuthenticationHandler>(
-                TestAuthenticationHandler.AuthenticationScheme,
-                _ => { });
+                options.DefaultScheme = SelectorScheme;
+                options.DefaultAuthenticateScheme = SelectorScheme;
+                options.DefaultChallengeScheme = SelectorScheme;
+            });
         });
     }
 }

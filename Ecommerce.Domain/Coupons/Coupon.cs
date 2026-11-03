@@ -16,12 +16,6 @@ public sealed class Coupon : Entity<CouponId>
         CreatedOnUtc = createdOnUtc;
     }
 
-    #pragma warning disable CS8618 // Used by EF Core to materialize the entity
-    private Coupon()
-    {
-    }
-    #pragma warning restore CS8618
-
     public CouponCode Code { get; private set; }
     public int PercentOff { get; private set; }
     public DateTime StartsOnUtc { get; private set; }

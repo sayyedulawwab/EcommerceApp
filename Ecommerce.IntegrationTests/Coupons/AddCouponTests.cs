@@ -10,7 +10,6 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Ecommerce.IntegrationTests.Coupons;
 
 public sealed class AddCouponTests
-    : IClassFixture<IntegrationTestFactory>
 {
     private static readonly AddCouponRequest Request = new("summer-20", 20, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow.AddDays(30), 100);
 
@@ -57,6 +56,28 @@ public sealed class AddCouponTests
 
         // Assert
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AddCoupon_ShouldCreateOnlyOneCoupon_WhenRequestsWithTheSameCodeArriveAtTheSameTime()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        using HttpClient adminClient = _factory.CreateAdminClient();
+
+        // Act: the requests can all pass the duplicate check before any of them saves. The unique index decides.
+        HttpResponseMessage[] responses = await Task.WhenAll(Enumerable.Range(0, 5).Select(_ =>
+            adminClient.PostAsJsonAsync("/api/v1/coupons", Request, cancellationToken: TestContext.Current.CancellationToken)));
+
+        // Assert
+        Assert.Single(responses, response => response.StatusCode == HttpStatusCode.Created);
+        Assert.Equal(4, responses.Count(response => response.StatusCode == HttpStatusCode.Conflict));
+
+        int count = await _factory.ExecuteScopeAsync(sp =>
+            sp.GetRequiredService<ApplicationDbContext>().Set<Coupon>().CountAsync());
+
+        Assert.Equal(1, count);
     }
 
     [Fact]

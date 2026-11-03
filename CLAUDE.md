@@ -35,13 +35,13 @@ Ecommerce REST API (products, categories, orders, reviews, users/auth). This fil
 | Scrutor                                 | Assembly scanning for handlers + decorator registration        |
 | Redis (`IDistributedCache`)             | Query result caching via `ICacheService`                       |
 | JWT Bearer                              | Auth; `[Authorize]` on controllers, `[Authorize(Roles = Roles.Admin)]` on admin writes |
-| Asp.Versioning                          | URL segment (`/api/v1/...`) + `X-Api-Version` header           |
+| Asp.Versioning                          | URL segment only (`/api/v1/...`)                               |
 | Microsoft.AspNetCore.OpenApi            | `MapOpenApi()` (Development only)                              |
-| Serilog                                 | Structured logging, `ActivityEnricher` (trace_id/span_id)      |
+| Microsoft.Extensions.Logging            | `ILogger<T>` with message templates; no third-party logging library |
 | OpenTelemetry                           | Logs/traces/metrics → OTLP collector → Loki/Tempo/Prometheus → Grafana |
 | Bogus                                   | Development data seeding (`DataSeeder`)                        |
 | SonarAnalyzer.CSharp                    | Static analysis (warnings are errors)                          |
-| Testcontainers, Respawn, WebApplicationFactory | Integration tests against real PostgreSQL               |
+| Testcontainers, Respawn, WebApplicationFactory | Integration tests against real PostgreSQL and Redis     |
 | ArchUnitNET                             | Architecture tests: layer dependency rules                     |
 
 ---
@@ -58,7 +58,7 @@ dotnet test --project Ecommerce.Domain.UnitTests/Ecommerce.Domain.UnitTests.cspr
 # Architecture tests (layer dependencies, ArchUnitNET)
 dotnet test --project Ecommerce.ArchitectureTests/Ecommerce.ArchitectureTests.csproj
 
-# Integration tests (Docker must be running: Testcontainers starts postgres:18)
+# Integration tests (Docker must be running: Testcontainers starts postgres:18 and redis:8)
 dotnet test --project Ecommerce.IntegrationTests/Ecommerce.IntegrationTests.csproj
 
 # Add an EF migration (EF tools package lives in the API project)
@@ -77,7 +77,7 @@ Build and environment notes:
   1. Upgrade the package: change its `PackageVersion` in `Directory.Packages.props`. For a transitive package, add a `PackageVersion` for it; transitive pinning moves every project to that version. Or remove the package that pulls it in.
   2. Only when no fixed version exists yet, or an urgent fix can't wait for the upgrade to be tested, suppress that one advisory in `Directory.Packages.props` with `<NuGetAuditSuppress Include="https://github.com/advisories/GHSA-..." />` and a comment saying why it's safe for now and when to remove it. Never turn the audit off or add NU1901-NU1904 to `WarningsNotAsErrors`.
 - **Pin exact package versions** (no floating `10.0.*`). Keep ASP.NET Core / EF Core packages on the same patch version: `Microsoft.EntityFrameworkCore.Relational` is pinned in Infrastructure for this reason, and `Microsoft.Extensions.ApiDescription.Server` must stay compatible with the pinned `Microsoft.OpenApi`, or the build-time OpenAPI step (which regenerates `Ecommerce.API/Ecommerce.API.json`) fails.
-- `appsettings.json` holds only environment-agnostic settings (Serilog). Connection strings, OTLP endpoints and `Jwt` values live in `appsettings.Development.json` (Docker hostnames `database-postgres`, `cache-redis`, `otel-collector`). Anything running outside Development (Production, containers) must supply them as environment variables (`ConnectionStrings__Database`, `ConnectionStrings__Redis`, `Jwt__Issuer`, `Jwt__Audience`, `Jwt__SecretKey`, `Otlp__*Endpoint`); `docker-compose.yml` does this from `.env.*` values, and compose fails fast if `JWT_SECRET_KEY` is unset. Running with `dotnet run` on the host needs overrides pointing at `localhost` (and `--no-launch-profile` to control the URL).
+- `appsettings.json` holds only environment-agnostic settings (`Logging` levels). Connection strings, OTLP endpoints and `Jwt` values live in `appsettings.Development.json` (Docker hostnames `database-postgres`, `cache-redis`, `otel-collector`). Anything running outside Development (Production, containers) must supply them as environment variables (`ConnectionStrings__Database`, `ConnectionStrings__Redis`, `Jwt__Issuer`, `Jwt__Audience`, `Jwt__SecretKey`, `Otlp__*Endpoint`); `docker-compose.yml` does this from `.env.*` values, and compose fails fast if `JWT_SECRET_KEY` is unset. Running with `dotnet run` on the host needs overrides pointing at `localhost` (and `--no-launch-profile` to control the URL).
 - `.env.prod` deliberately has no `POSTGRES_PASSWORD` or `JWT_SECRET_KEY`; provide them from the deployment environment.
 - The Docker build passes `/p:OpenApiGenerateDocuments=false` to `dotnet publish`: build-time OpenAPI generation boots the app, which has no connection string there. `Ecommerce.API.json` is regenerated by normal local builds.
 - Asp.Versioning 10.2+ adds analyzers (AV0016/AV0029/AV0030) that fail this build; the package is pinned at 10.0.0 until the OpenAPI setup is migrated.

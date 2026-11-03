@@ -9,10 +9,9 @@ Controllers/{Resource}/     {Resource}Controller.cs + {Verb}{Entity}Request.cs r
 Extensions/                 ErrorMappingExtensions (Error → IActionResult), MiddlewareExtensions,
                             MigrationExtensions (dev migrate + seed), ApplicationBuilderExtensions
 Infrastructure/             ExceptionHandler (IExceptionHandler → 409 for ConcurrencyException, else 500 ProblemDetails)
-Logging/                    ActivityEnricher (Serilog trace_id / span_id)
 Middleware/                 RequestContextLoggingMiddleware (CorrelationId)
 DependencyInjection.cs      AddPresentation()
-Program.cs                  Host, Serilog, OpenTelemetry, versioning, pipeline
+Program.cs                  Host, logging, OpenTelemetry, versioning, pipeline
 ```
 
 Resources: `auth`, `categories`, `products`, `orders`, `reviews`.
@@ -69,17 +68,20 @@ Rules:
 
 ### Error responses
 
-`ErrorMappingExtensions.ToActionResult(this Error error)` is the **only** place `Error.Code` is mapped to HTTP:
+Every failure is an RFC 9457 `ProblemDetails` (`application/problem+json`). `ErrorMappingExtensions.ToProblemDetails(this Error error)` is the **only** place `Error.Code` is mapped to HTTP, and both `ToActionResult()` and `ExceptionHandler` go through it:
 
-| `Error.Code` (`System.Net.HttpStatusCode`) | Result                                     |
-| ------------------------------------------ | ------------------------------------------ |
-| `BadRequest`                               | `BadRequestObjectResult(error)` (400). Includes `ValidationError.Errors` |
-| `Unauthorized`                             | `UnauthorizedObjectResult(error)` (401)     |
-| `NotFound`                                 | `NotFoundObjectResult(error)` (404)         |
-| `Conflict`                                 | `ConflictObjectResult(error)` (409)         |
-| `InternalServerError` / any other          | `ObjectResult(error) { StatusCode = 500 }` |
+| `Error.Code` (`System.Net.HttpStatusCode`) | Status | `title`          |
+| ------------------------------------------ | ------ | ---------------- |
+| `BadRequest`                               | 400    | `Bad Request`    |
+| `Unauthorized`                             | 401    | `Unauthorized`   |
+| `NotFound`                                 | 404    | `Not Found`      |
+| `Conflict`                                 | 409    | `Conflict`       |
+| `InternalServerError` / any other          | 500    | `Server failure` |
 
-If a domain error uses a status that isn't listed here, add a case to this switch; otherwise it is returned as 500. Unhandled exceptions go to `ExceptionHandler`. A `ConcurrencyException` becomes a 409 `ProblemDetails` ("Conflict"); anything else is logged and written as a 500 `ProblemDetails` ("Server failure").
+- `type` links the RFC 9110 section for the status, `detail` is `Error.Description`, and the `code` extension is `Error.Name` (`Category.NameAlreadyExists`), which clients branch on.
+- A `ValidationError` adds an `errors` extension: one `{ code, detail }` per failed rule.
+- If a domain error uses a status that isn't listed here, add a case to this switch; otherwise it is returned as 500.
+- Unhandled exceptions go to `ExceptionHandler`. A `ConcurrencyException` is logged as a warning and becomes a 409 with code `Concurrency.Conflict`. Anything else is logged as an error and becomes a 500 with code `Server.Failure` and a fixed message: the exception message can contain SQL, table names or stack details, so it never reaches the client.
 
 ---
 
@@ -104,17 +106,19 @@ If a domain error uses a status that isn't listed here, add a case to this switc
 ## Program.cs & pipeline
 
 - Service registration: `AddApplication()` → `AddPresentation()` → `AddInfrastructure(configuration)`, then `AddOpenApi()` and `AddApiVersioning(...)`.
-- API versioning: default `1.0`, `AssumeDefaultVersionWhenUnspecified`, `ReportApiVersions`. The version is read from the URL segment **or** the `X-Api-Version` header. The API explorer uses `GroupNameFormat = "'v'V"` and `SubstituteApiVersionInUrl`.
+- API versioning: default `1.0`, `ReportApiVersions`. The version is read from the URL segment only (`UrlSegmentApiVersionReader`), so a route without `v{n}` doesn't match. The API explorer uses `GroupNameFormat = "'v'V"` and `SubstituteApiVersionInUrl`.
 - Development only: `app.MapOpenApi()` and `app.ApplyMigrations()` (**drops**, migrates and seeds the database).
-- Middleware order (keep it): `UseRequestContextLogging()` → `UseSerilogRequestLogging()` → `UseExceptionHandler()` → `UseAuthentication()` → `UseAuthorization()` → `MapControllers()`.
+- Middleware order (keep it): `UseRequestContextLogging()` → `UseExceptionHandler()` → `UseAuthentication()` → `UseAuthorization()` → `MapControllers()`.
 - Keep `public partial class Program;` at the end; `WebApplicationFactory<Program>` needs it.
 
 ---
 
 ## Logging & observability
 
-- Serilog is configured from the `Serilog` config section (JSON file sinks `logs/log-.json`, `logs/errorlog-.json`), enriched `FromLogContext`, thread and machine name, plus `ActivityEnricher` (`trace_id`, `span_id`). `writeToProviders: true` feeds OpenTelemetry logging.
-- `RequestContextLoggingMiddleware` pushes `CorrelationId` from the `X-Correlation-Id` header, falling back to `TraceIdentifier`.
+- Logging is `Microsoft.Extensions.Logging` only. Don't add Serilog or another logging library: the default console provider covers `docker logs`, and the OpenTelemetry provider exports to OTLP with the trace and span IDs on every record. Levels come from the `Logging` section in `appsettings.json`.
+- `builder.Logging.AddOpenTelemetry` sets `IncludeScopes` (so scope values such as `CorrelationId` are exported) and `IncludeFormattedMessage`.
+- Request logs come from the ASP.NET Core traces and the `http.server.request.duration` metric, not from a per-request log line.
+- `RequestContextLoggingMiddleware` opens an `ILogger.BeginScope` with `CorrelationId` from the `X-Correlation-Id` header, falling back to `TraceIdentifier`.
 - OpenTelemetry covers traces (ASP.NET Core + HttpClient), metrics (ASP.NET Core, HttpClient, runtime) and logs. Each OTLP/HTTP-protobuf exporter is enabled only when its endpoint is configured: `Otlp:LogsEndpoint`, `Otlp:TracesEndpoint`, `Otlp:MetricsEndpoint`.
 - Command/query logging already happens in Application's `LoggingDecorator`. Don't add per-action logging in controllers.
 
@@ -122,6 +126,6 @@ If a domain error uses a status that isn't listed here, add a case to this switc
 
 ## Configuration
 
-- `appsettings.json` has only the environment-agnostic `Serilog` section. `appsettings.Development.json` has `Otlp`, `Jwt` (`Issuer`, `Audience`, `SecretKey`) and `ConnectionStrings` (`Database`, `Redis`), using Docker service names (`database-postgres`, `cache-redis`, `otel-collector`).
+- `appsettings.json` has only the environment-agnostic `Logging` section. `appsettings.Development.json` has `Otlp`, `Jwt` (`Issuer`, `Audience`, `SecretKey`) and `ConnectionStrings` (`Database`, `Redis`), using Docker service names (`database-postgres`, `cache-redis`, `otel-collector`).
 - Outside Development these must come from environment variables (`ConnectionStrings__Database`, `Jwt__SecretKey`, `Otlp__LogsEndpoint`, ...); without a connection string the host fails at startup. Without `Otlp:*` endpoints the OTLP exporters are simply off.
 - The committed JWT secret and DB password are dev values. Real secrets go in user secrets (`UserSecretsId` is set) or environment variables. Never commit new secrets.

@@ -47,10 +47,17 @@ public static class DataSeeder
                 isAdmin));
         }
 
-        // Seed product categories
-        for (int i = 0; i < 10; i++)
+        // Seed product categories. Names are unique, and Bogus repeats departments, so draw until there are 10.
+        HashSet<string> categoryNames = [];
+
+        while (categoryNames.Count < 10)
         {
-            CategoryName name = CategoryName.Create(faker.Commerce.Department()).Value;
+            categoryNames.Add(faker.Commerce.Department());
+        }
+
+        foreach (string categoryName in categoryNames)
+        {
+            CategoryName name = CategoryName.Create(categoryName).Value;
             CategoryCode code = CategoryCode.Create(faker.Random.AlphaNumeric(5)).Value;
 
             var category = Category.Create(name, code, DateTime.UtcNow);
