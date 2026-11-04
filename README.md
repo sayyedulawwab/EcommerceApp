@@ -23,13 +23,14 @@ A REST API for an ecommerce platform: products, categories, orders, product revi
 **Architecture:** Clean Architecture, Domain-Driven Design, and CQRS through lightweight custom command/query handler interfaces (no MediatR).
 
 ```
-Ecommerce.Domain            Entities, value objects, domain events
-Ecommerce.Application       Commands, queries, handlers, validators, decorators, IApplicationDbContext
-Ecommerce.Infrastructure    EF Core, Dapper query repositories, Redis cache, JWT, password hashing
-Ecommerce.API               Controllers, error mapping, middleware, startup
-Ecommerce.Domain.UnitTests  Domain rules (no database, no mocks)
-Ecommerce.ArchitectureTests Layer dependency rules (ArchUnitNET)
-Ecommerce.IntegrationTests  HTTP tests against PostgreSQL in Docker
+Ecommerce.Domain                 Entities, value objects, domain events
+Ecommerce.Application            Commands, queries, handlers, validators, decorators, IApplicationDbContext
+Ecommerce.Infrastructure         EF Core, Dapper query repositories, Redis cache, JWT, password hashing
+Ecommerce.API                    Controllers, error mapping, middleware, startup
+Ecommerce.Domain.UnitTests       Domain rules (no database, no mocks)
+Ecommerce.Application.UnitTests  Validator rules (no database, no mocks)
+Ecommerce.ArchitectureTests      Layer dependency rules (ArchUnitNET)
+Ecommerce.IntegrationTests       HTTP tests against PostgreSQL in Docker
 ```
 
 ## Getting Started
@@ -63,6 +64,9 @@ Prerequisites: the .NET 10 SDK and Docker Desktop.
 ```bash
 # Domain unit tests
 dotnet test --project Ecommerce.Domain.UnitTests/Ecommerce.Domain.UnitTests.csproj
+
+# Validator unit tests
+dotnet test --project Ecommerce.Application.UnitTests/Ecommerce.Application.UnitTests.csproj
 
 # Architecture tests
 dotnet test --project Ecommerce.ArchitectureTests/Ecommerce.ArchitectureTests.csproj

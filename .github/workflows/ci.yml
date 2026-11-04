@@ -27,6 +27,7 @@ jobs:
       - name: Unit and architecture tests
         run: |
           dotnet test --project Ecommerce.Domain.UnitTests --no-build --configuration Release
+          dotnet test --project Ecommerce.Application.UnitTests --no-build --configuration Release
           dotnet test --project Ecommerce.ArchitectureTests --no-build --configuration Release
 
       # Testcontainers starts PostgreSQL and Redis in the runner's Docker for the integration tests.

@@ -55,6 +55,9 @@ dotnet build EcommerceApp.slnx
 # Domain unit tests (no external dependencies)
 dotnet test --project Ecommerce.Domain.UnitTests/Ecommerce.Domain.UnitTests.csproj
 
+# Validator unit tests (no external dependencies)
+dotnet test --project Ecommerce.Application.UnitTests/Ecommerce.Application.UnitTests.csproj
+
 # Architecture tests (layer dependencies, ArchUnitNET)
 dotnet test --project Ecommerce.ArchitectureTests/Ecommerce.ArchitectureTests.csproj
 
@@ -96,6 +99,7 @@ EcommerceApp.slnx
 ├── Ecommerce.Infrastructure/         # EF Core DbContext/configs/migrations, Dapper query repositories, auth, caching, clock, DI
 ├── Ecommerce.API/                    # Controllers, request DTOs, error mapping, middleware, Program.cs
 ├── Ecommerce.Domain.UnitTests/       # Domain rule tests (no database, no mocks)
+├── Ecommerce.Application.UnitTests/  # Validator tests (no database, no mocks)
 ├── Ecommerce.ArchitectureTests/      # Layer dependency rules (ArchUnitNET)
 └── Ecommerce.IntegrationTests/       # End-to-end HTTP tests against PostgreSQL in Docker
 ```
@@ -236,7 +240,7 @@ Rules:
 3. **Application:** feature folder containing the Command/Query record, `internal sealed` Handler, Validator (commands), and Response. Handlers are auto-registered by Scrutor; there is nothing to wire.
 4. **API:** `{Verb}{Entity}Request` record and a controller action (versioned route, handler injected as an action parameter, `ToActionResult()` on failure).
 5. **Side effects** (emails, etc.) go in an `IDomainEventHandler<TEvent>` for an event raised by the entity, never inline in the handler. Cache invalidation is the exception: it is done inline after `SaveChangesAsync` (see the Application guide).
-6. **Tests:** HTTP tests in `Ecommerce.IntegrationTests/{Module}/` against the real PostgreSQL container, and unit tests in `Ecommerce.Domain.UnitTests/{Module}/` for new domain rules. Cover the success path **and every distinct failure path**. Never mock `DbSet` or use SQLite or the EF InMemory provider.
+6. **Tests:** HTTP tests in `Ecommerce.IntegrationTests/{Module}/` against the real PostgreSQL container, unit tests in `Ecommerce.Domain.UnitTests/{Module}/` for new domain rules, and validator tests in `Ecommerce.Application.UnitTests/{Module}/` for new validation rules. Cover the success path **and every distinct failure path**. Never mock `DbSet` or use SQLite or the EF InMemory provider.
 
 ---
 
@@ -246,9 +250,10 @@ Rules:
 - **AAA:** `// Arrange`, `// Act`, `// Assert` comments in every integration test.
 - Handlers are tested over HTTP against PostgreSQL in Testcontainers, not with mocks. Never mock `DbSet`, and never swap in SQLite or the EF InMemory provider: they don't behave like PostgreSQL.
 - Domain rules (`Order.AddOrderItem`, `Rating.Create`, ...) are plain unit tests of the entities: no database, no mocks.
+- Validator rules are unit tests of the validator: build one valid command, change one field with `with`, and assert the single error's `PropertyName` (`ValidationAssert.HasSingleError`). Integration tests keep one 400 test per endpoint; the permutations live here.
 - Build domain objects through their real factories (`User.Create(...)`).
 - Assert failures against the **domain error instance**: `Assert.Equal(OrderErrors.InvalidQuantity, result.Error)`. Over HTTP, assert the status code and the database state.
-- Naming: domain tests `{Method}_Should_{Outcome}_When{Condition}`; integration tests `{Action}_Should{Outcome}_When{Condition}`.
+- Naming: domain and validator tests `{Method}_Should_{Outcome}_When{Condition}`; integration tests `{Action}_Should{Outcome}_When{Condition}`.
 - Use `Options.Create(new XOptions { ... })` for options in tests; never mock `IOptions<T>`.
 
 ---

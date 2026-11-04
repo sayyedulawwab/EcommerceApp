@@ -93,6 +93,6 @@ Rules:
 - Don't use `!` on values that `Assert.NotNull` already proved non-null; the analyzer flags it (S8969) and the build fails.
 - Call versioned routes (`/api/v1/{resource}`) with `PostAsJsonAsync` / `GetAsync` / `PutAsJsonAsync` / `DeleteAsync`.
 - Assert the **HTTP status first**, then verify persisted state by querying `ApplicationDbContext` in a fresh scope. Compare value objects by constructing them (`ProductName.Create(...).Value`, `category.Id`).
-- Cover the success path and each failure status the endpoint can return (400 validation, 401 credentials, 403 role, 404 lookup, 409 conflict). Failures are `ProblemDetails`: read them with `ReadFromJsonAsync<ProblemDetails>()` and assert the `code` extension (`problem.Extensions["code"]?.ToString()`).
+- Cover the success path and each failure status the endpoint can return (400 validation, 401 credentials, 403 role, 404 lookup, 409 conflict). One 400 test per endpoint is enough: each validation rule is tested in `Ecommerce.Application.UnitTests`. Failures are `ProblemDetails`: read them with `ReadFromJsonAsync<ProblemDetails>()` and assert the `code` extension (`problem.Extensions["code"]?.ToString()`).
 - A rule backed by a unique index gets a concurrency test: fire the same request several times with `Task.WhenAll` and assert one 2xx, the rest 409, and one row (`AddCategoryTests`, `AddCouponTests`).
 - `Auth/BearerTokenTests` covers the real JWT path with tokens from `/api/v1/auth/login`. Other tests use the `Test` scheme helpers.
