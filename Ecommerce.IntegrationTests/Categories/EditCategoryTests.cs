@@ -5,6 +5,7 @@ using Ecommerce.Domain.Categories;
 using Ecommerce.Infrastructure;
 using Ecommerce.IntegrationTests.Helpers;
 using Ecommerce.IntegrationTests.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -98,6 +99,34 @@ public sealed class EditCategoryTests
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task EditCategory_ShouldReturnBadRequest_WhenTheNameIsEmpty()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        Category category = CategoryData.Create("Electronics", "ELEC");
+
+        await SeedAsync(category);
+
+        using HttpClient adminClient = _factory.CreateAdminClient();
+
+        // Act
+        HttpResponseMessage response = await adminClient.PutAsJsonAsync($"/api/v1/categories/{category.Id.Value}", new EditCategoryRequest("", "COMP"), cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(problem);
+        Assert.Equal("Validation.General", problem.Extensions["code"]?.ToString());
+
+        Category saved = await FindAsync(category.Id);
+
+        Assert.Equal("Electronics", saved.Name.Value);
     }
 
     private Task SeedAsync(params Category[] categories)

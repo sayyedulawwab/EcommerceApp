@@ -17,11 +17,11 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
                .HasConversion(productId => productId.Value, value => new ProductId(value));
 
         builder.Property(product => product.Name)
-               .HasMaxLength(200)
+               .HasMaxLength(ProductName.MaxLength)
                .HasConversion(name => name.Value, value => ProductName.Create(value).Value);
 
         builder.Property(product => product.Description)
-               .HasMaxLength(2000)
+               .HasMaxLength(ProductDescription.MaxLength)
                .HasConversion(description => description.Value, value => ProductDescription.Create(value).Value);
 
         builder.Property(product => product.Quantity);

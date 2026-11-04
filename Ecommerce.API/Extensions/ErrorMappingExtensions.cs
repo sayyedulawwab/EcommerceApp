@@ -25,6 +25,7 @@ public static class ErrorMappingExtensions
         {
             HttpStatusCode.BadRequest => (StatusCodes.Status400BadRequest, "Bad Request", "https://tools.ietf.org/html/rfc9110#section-15.5.1"),
             HttpStatusCode.Unauthorized => (StatusCodes.Status401Unauthorized, "Unauthorized", "https://tools.ietf.org/html/rfc9110#section-15.5.2"),
+            HttpStatusCode.Forbidden => (StatusCodes.Status403Forbidden, "Forbidden", "https://tools.ietf.org/html/rfc9110#section-15.5.4"),
             HttpStatusCode.NotFound => (StatusCodes.Status404NotFound, "Not Found", "https://tools.ietf.org/html/rfc9110#section-15.5.5"),
             HttpStatusCode.Conflict => (StatusCodes.Status409Conflict, "Conflict", "https://tools.ietf.org/html/rfc9110#section-15.5.10"),
             _ => (StatusCodes.Status500InternalServerError, "Server failure", "https://tools.ietf.org/html/rfc9110#section-15.6.1")

@@ -126,7 +126,7 @@ internal sealed class ProductQueryRepository(ISqlConnectionFactory sqlConnection
 - Existing migrations: `Initial`, `UpdateDateTimeFields`, `MakeOrderUpdatedOnUtcNullable`, `AddProductConcurrencyToken`, `AddCouponsAndOrderCancellation` (backfills `order_items.unit_price_*` from the product's price at migration time), `RestrictCategoryDelete`.
 - The only acceptable hand edit is adding a data fix-up (`migrationBuilder.Sql(...)`) to a **new** migration you just generated, e.g. resetting values that the old schema forced (see `MakeOrderUpdatedOnUtcNullable`). Never edit a migration that has already been applied anywhere.
 - Before committing, check that the generated `Up`/`Down` contains only the change you intended; anything else means the model drifted.
-- Migrations are applied at startup **in Development only**, by `app.ApplyMigrations()` (extension in `Ecommerce.API/Extensions/MigrationExtensions.cs`). It runs **`EnsureDeleted()`**, then `Migrate()`, then `DataSeeder.SeedData`. The dev database is recreated on every run.
+- Migrations are applied at startup **in Development only**, by `app.ApplyMigrations()` (extension in `Ecommerce.API/Extensions/MigrationExtensions.cs`). It runs `Migrate()`, then `DataSeeder.SeedData` only if `users` is empty, so a restart keeps the data and doesn't insert the fixed accounts twice.
 
 ---
 
