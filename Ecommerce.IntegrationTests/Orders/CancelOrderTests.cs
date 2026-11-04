@@ -10,6 +10,7 @@ using Ecommerce.Domain.Users;
 using Ecommerce.Infrastructure;
 using Ecommerce.IntegrationTests.Helpers;
 using Ecommerce.IntegrationTests.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -119,6 +120,24 @@ public sealed class CancelOrderTests
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CancelOrder_ShouldReturnBadRequest_WhenTheOrderIdIsEmpty()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        // Act
+        HttpResponseMessage response = await _factory.Client.PostAsync($"/api/v1/orders/{Guid.Empty}/cancel", null, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(problem);
+        Assert.Equal("Validation.General", problem.Extensions["code"]?.ToString());
     }
 
     private static async Task<Guid> PlaceOrderAsync(HttpClient client, Product product, int quantity, string? couponCode = null)

@@ -15,11 +15,11 @@ internal sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
                .HasConversion(categoryId => categoryId.Value, value => new CategoryId(value));
 
         builder.Property(category => category.Name)
-               .HasMaxLength(200)
+               .HasMaxLength(CategoryName.MaxLength)
                .HasConversion(name => name.Value, value => CategoryName.Create(value).Value);
 
         builder.Property(category => category.Code)
-               .HasMaxLength(200)
+               .HasMaxLength(CategoryCode.MaxLength)
                .HasConversion(code => code.Value, value => CategoryCode.Create(value).Value);
 
         // The handlers check these first. The indexes reject a duplicate that two requests save at the same time.

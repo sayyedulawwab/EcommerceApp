@@ -5,6 +5,7 @@ using Ecommerce.Infrastructure;
 using Ecommerce.Infrastructure.Data;
 using Ecommerce.IntegrationTests.Helpers;
 using Ecommerce.IntegrationTests.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
@@ -89,5 +90,30 @@ public sealed class AddProductTests
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AddProduct_ShouldReturnBadRequest_WhenTheNameIsEmpty()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        using HttpClient adminClient = _factory.CreateAdminClient();
+
+        // Act
+        HttpResponseMessage response = await adminClient.PostAsJsonAsync("/api/v1/products", ProductData.Create() with { Name = "" }, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(problem);
+        Assert.Equal("Validation.General", problem.Extensions["code"]?.ToString());
+
+        bool anyProduct = await _factory.ExecuteScopeAsync(sp =>
+            sp.GetRequiredService<ApplicationDbContext>().Set<Product>().AnyAsync());
+
+        Assert.False(anyProduct);
     }
 }

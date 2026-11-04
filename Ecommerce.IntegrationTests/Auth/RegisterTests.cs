@@ -4,6 +4,7 @@ using Ecommerce.API.Controllers.Auth;
 using Ecommerce.Domain.Users;
 using Ecommerce.Infrastructure;
 using Ecommerce.IntegrationTests.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -69,6 +70,27 @@ public sealed class RegisterTests
         // Assert
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Equal(1, await CountUsersAsync());
+    }
+
+    [Fact]
+    public async Task Register_ShouldReturnBadRequest_WhenThePasswordIsTooShort()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        var request = new RegisterUserRequest("Jane", "Doe", "jane@example.com", "short");
+
+        // Act
+        HttpResponseMessage response = await _factory.Client.PostAsJsonAsync("/api/v1/auth/register", request, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(problem);
+        Assert.Equal("Validation.General", problem.Extensions["code"]?.ToString());
+        Assert.Equal(0, await CountUsersAsync());
     }
 
     private Task<int> CountUsersAsync()

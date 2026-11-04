@@ -4,6 +4,7 @@ using Ecommerce.API.Controllers.Coupons;
 using Ecommerce.Domain.Coupons;
 using Ecommerce.Infrastructure;
 using Ecommerce.IntegrationTests.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -93,5 +94,30 @@ public sealed class AddCouponTests
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AddCoupon_ShouldReturnBadRequest_WhenThePercentOffIsOutOfRange()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        using HttpClient adminClient = _factory.CreateAdminClient();
+
+        // Act
+        HttpResponseMessage response = await adminClient.PostAsJsonAsync("/api/v1/coupons", Request with { PercentOff = 0 }, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(problem);
+        Assert.Equal("Validation.General", problem.Extensions["code"]?.ToString());
+
+        int count = await _factory.ExecuteScopeAsync(sp =>
+            sp.GetRequiredService<ApplicationDbContext>().Set<Coupon>().CountAsync());
+
+        Assert.Equal(0, count);
     }
 }

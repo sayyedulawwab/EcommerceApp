@@ -33,7 +33,7 @@ public class ProductsController() : ControllerBase
             return result.Error.ToActionResult();
         }
 
-        return Created();
+        return Created(string.Empty, result.Value);
     }
 
     [AllowAnonymous]

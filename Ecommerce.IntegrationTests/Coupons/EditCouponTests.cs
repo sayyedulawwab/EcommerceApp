@@ -8,6 +8,7 @@ using Ecommerce.Domain.Users;
 using Ecommerce.Infrastructure;
 using Ecommerce.IntegrationTests.Helpers;
 using Ecommerce.IntegrationTests.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Ecommerce.IntegrationTests.Coupons;
@@ -52,5 +53,36 @@ public sealed class EditCouponTests
 
         // Assert
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task EditCoupon_ShouldReturnBadRequest_WhenItExpiresBeforeItStarts()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        Coupon coupon = CouponData.Create();
+
+        await _factory.ExecuteScopeAsync(async sp =>
+        {
+            ApplicationDbContext db = sp.GetRequiredService<ApplicationDbContext>();
+            db.Add(coupon);
+            await db.SaveChangesAsync();
+        });
+
+        var request = new EditCouponRequest(10, coupon.ExpiresOnUtc, coupon.StartsOnUtc, 100);
+
+        using HttpClient adminClient = _factory.CreateAdminClient();
+
+        // Act
+        HttpResponseMessage response = await adminClient.PutAsJsonAsync($"/api/v1/coupons/{coupon.Id.Value}", request, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(problem);
+        Assert.Equal("Validation.General", problem.Extensions["code"]?.ToString());
     }
 }

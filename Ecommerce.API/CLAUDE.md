@@ -60,7 +60,7 @@ Rules:
 
 | Operation             | Response                                                                 |
 | --------------------- | ------------------------------------------------------------------------ |
-| Create (POST)         | 201: `Created()` (Categories, Products) or `Created(string.Empty, result.Value)` (Orders, Reviews). Stay consistent within a controller; prefer returning the id for new resources |
+| Create (POST)         | 201: `Created(string.Empty, result.Value)`, so the client gets the new id |
 | Get / list / search   | 200: `Ok(result.Value)`                                                   |
 | Update (PUT)          | 200: `Ok(new { id = result.Value })`                                      |
 | Delete (DELETE)       | 200: `Ok(new { id = result.Value })`                                      |
@@ -74,6 +74,7 @@ Every failure is an RFC 9457 `ProblemDetails` (`application/problem+json`). `Err
 | ------------------------------------------ | ------ | ---------------- |
 | `BadRequest`                               | 400    | `Bad Request`    |
 | `Unauthorized`                             | 401    | `Unauthorized`   |
+| `Forbidden`                                | 403    | `Forbidden`      |
 | `NotFound`                                 | 404    | `Not Found`      |
 | `Conflict`                                 | 409    | `Conflict`       |
 | `InternalServerError` / any other          | 500    | `Server failure` |
@@ -107,9 +108,9 @@ Every failure is an RFC 9457 `ProblemDetails` (`application/problem+json`). `Err
 
 - Service registration: `AddApplication()` → `AddPresentation()` → `AddInfrastructure(configuration)`, then `AddOpenApi()` and `AddApiVersioning(...)`.
 - API versioning: default `1.0`, `ReportApiVersions`. The version is read from the URL segment only (`UrlSegmentApiVersionReader`), so a route without `v{n}` doesn't match. The API explorer uses `GroupNameFormat = "'v'V"` and `SubstituteApiVersionInUrl`.
-- Development only: `app.MapOpenApi()` and `app.ApplyMigrations()` (**drops**, migrates and seeds the database).
+- Development only: `app.MapOpenApi()` and `app.ApplyMigrations()` (migrates, and seeds the database when it is empty).
 - Middleware order (keep it): `UseRequestContextLogging()` → `UseExceptionHandler()` → `UseAuthentication()` → `UseAuthorization()` → `MapControllers()`.
-- Keep `public partial class Program;` at the end; `WebApplicationFactory<Program>` needs it.
+- Don't add `public partial class Program;`. Since .NET 10 a source generator makes the top-level `Program` public, which is all `WebApplicationFactory<Program>` needs (analyzer ASP0027 flags the declaration as redundant).
 
 ---
 

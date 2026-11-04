@@ -1,10 +1,12 @@
 using System.Net;
+using System.Net.Http.Json;
 using Ecommerce.Domain.Categories;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Users;
 using Ecommerce.Infrastructure;
 using Ecommerce.IntegrationTests.Helpers;
 using Ecommerce.IntegrationTests.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -86,6 +88,26 @@ public sealed class DeleteProductTests
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteProduct_ShouldReturnBadRequest_WhenTheIdIsEmpty()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        using HttpClient adminClient = _factory.CreateAdminClient();
+
+        // Act
+        HttpResponseMessage response = await adminClient.DeleteAsync($"/api/v1/products/{Guid.Empty}", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(problem);
+        Assert.Equal("Validation.General", problem.Extensions["code"]?.ToString());
     }
 
     private Task SeedAsync(params object[] entities)

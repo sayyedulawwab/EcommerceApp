@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using Ecommerce.Domain.Categories;
 using Ecommerce.Domain.Coupons;
 using Ecommerce.Domain.Products;
@@ -6,6 +7,7 @@ using Ecommerce.Domain.Users;
 using Ecommerce.Infrastructure;
 using Ecommerce.IntegrationTests.Helpers;
 using Ecommerce.IntegrationTests.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Ecommerce.IntegrationTests.Coupons;
@@ -47,5 +49,25 @@ public sealed class DeleteCouponTests
 
         // Assert
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteCoupon_ShouldReturnBadRequest_WhenTheIdIsEmpty()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        using HttpClient adminClient = _factory.CreateAdminClient();
+
+        // Act
+        HttpResponseMessage response = await adminClient.DeleteAsync($"/api/v1/coupons/{Guid.Empty}", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(problem);
+        Assert.Equal("Validation.General", problem.Extensions["code"]?.ToString());
     }
 }
