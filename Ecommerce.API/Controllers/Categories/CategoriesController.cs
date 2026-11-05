@@ -32,7 +32,7 @@ public class CategoriesController() : ControllerBase
             return result.Error.ToActionResult();
         }
 
-        return Created(string.Empty, result.Value);
+        return Created(string.Empty, new { id = result.Value });
     }
 
     [AllowAnonymous]

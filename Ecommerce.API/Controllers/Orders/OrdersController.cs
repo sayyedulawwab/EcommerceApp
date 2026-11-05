@@ -40,7 +40,7 @@ public class OrdersController() : ControllerBase
             return result.Error.ToActionResult();
         }
 
-        return Created(string.Empty, result.Value);
+        return Created(string.Empty, new { id = result.Value });
     }
 
     [MapToApiVersion(1)]

@@ -14,7 +14,7 @@ internal static class OrderData
         HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/orders", request);
         response.EnsureSuccessStatusCode();
 
-        return await response.Content.ReadFromJsonAsync<Guid>();
+        return (await response.Content.ReadFromJsonAsync<IdResponse>())!.Id;
     }
 }
 
