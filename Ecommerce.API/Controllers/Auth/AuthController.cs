@@ -31,7 +31,7 @@ public class AuthController() : ControllerBase
             return result.Error.ToActionResult();
         }
 
-        return Ok(result.Value);
+        return Ok(new { id = result.Value });
     }
 
     [MapToApiVersion(1)]

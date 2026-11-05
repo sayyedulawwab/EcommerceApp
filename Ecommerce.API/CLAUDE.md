@@ -60,11 +60,11 @@ Rules:
 
 | Operation             | Response                                                                 |
 | --------------------- | ------------------------------------------------------------------------ |
-| Create (POST)         | 201: `Created(string.Empty, result.Value)`, so the client gets the new id |
+| Create (POST)         | 201: `Created(string.Empty, new { id = result.Value })`                   |
 | Get / list / search   | 200: `Ok(result.Value)`                                                   |
 | Update (PUT)          | 200: `Ok(new { id = result.Value })`                                      |
 | Delete (DELETE)       | 200: `Ok(new { id = result.Value })`                                      |
-| Register / Login      | 200: `Ok(result.Value)` (user id / `AccessTokenResponse`)                 |
+| Register / Login      | 200: `Ok(new { id = result.Value })` / `Ok(result.Value)` (`AccessTokenResponse`) |
 
 ### Error responses
 

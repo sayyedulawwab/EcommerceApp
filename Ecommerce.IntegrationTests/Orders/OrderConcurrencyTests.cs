@@ -77,7 +77,7 @@ public sealed class OrderConcurrencyTests
         using HttpClient client = _factory.CreateClientForUser(user.Id.Value);
 
         HttpResponseMessage placed = await client.PostAsJsonAsync("/api/v1/orders", new PlaceOrderRequest([new PlaceOrderProductRequest(keyboard.Id.Value, 3)]), cancellationToken: TestContext.Current.CancellationToken);
-        var orderId = new OrderId(await placed.Content.ReadFromJsonAsync<Guid>(cancellationToken: TestContext.Current.CancellationToken));
+        var orderId = new OrderId((await placed.Content.ReadFromJsonAsync<IdResponse>(cancellationToken: TestContext.Current.CancellationToken))!.Id);
 
         // A second cancel request reads the order while it is still placed.
         using IServiceScope scope = _factory.CreateScope();
