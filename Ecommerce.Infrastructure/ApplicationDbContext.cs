@@ -9,6 +9,7 @@ using Ecommerce.Domain.Reviews;
 using Ecommerce.Domain.Users;
 using Ecommerce.Infrastructure.DomainEvents;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using System.Data;
 
 namespace Ecommerce.Infrastructure;
@@ -42,6 +43,13 @@ public sealed class ApplicationDbContext(DbContextOptions options, IDomainEvents
         catch (DbUpdateConcurrencyException ex)
         {
             throw new ConcurrencyException("Concurrency exception occurred.", ex);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } postgresException)
+        {
+            throw new UniqueConstraintException("A unique constraint was violated.", ex)
+            {
+                ConstraintName = postgresException.ConstraintName
+            };
         }
     }
 
