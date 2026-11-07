@@ -36,6 +36,7 @@
   </ItemGroup>
 
   <ItemGroup Label="Infrastructure">
+    <PackageVersion Include="BCrypt.Net-Next" Version="4.2.1" />
     <PackageVersion Include="Bogus" Version="35.6.5" />
     <PackageVersion Include="Dapper" Version="2.1.89" />
     <PackageVersion Include="EFCore.NamingConventions" Version="10.0.1" />

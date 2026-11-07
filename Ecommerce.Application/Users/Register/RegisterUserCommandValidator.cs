@@ -1,3 +1,5 @@
+using System.Text;
+using Ecommerce.Application.Abstractions.Auth;
 using Ecommerce.Domain.Users;
 using FluentValidation;
 
@@ -9,6 +11,10 @@ public class RegisterUserCommandValidator : AbstractValidator<RegisterUserComman
         RuleFor(c => c.FirstName).NotEmpty().MaximumLength(FirstName.MaxLength);
         RuleFor(c => c.LastName).NotEmpty().MaximumLength(LastName.MaxLength);
         RuleFor(c => c.Email).NotEmpty().EmailAddress().MaximumLength(Email.MaxLength);
-        RuleFor(c => c.Password).NotEmpty().MinimumLength(8);
+        RuleFor(c => c.Password)
+            .NotEmpty()
+            .MinimumLength(8)
+            .Must(password => Encoding.UTF8.GetByteCount(password) <= IAuthService.MaxPasswordBytes)
+            .WithMessage($"'Password' must be at most {IAuthService.MaxPasswordBytes} bytes in UTF-8.");
     }
 }

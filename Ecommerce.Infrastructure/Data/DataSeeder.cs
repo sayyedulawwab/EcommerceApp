@@ -1,10 +1,12 @@
-﻿using Bogus;
+using System.Globalization;
+using Bogus;
 using Ecommerce.Domain.Categories;
 using Ecommerce.Domain.Coupons;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Shared;
 using Ecommerce.Domain.Users;
 using Ecommerce.Infrastructure.Auth;
+using Microsoft.Extensions.Options;
 using Currency = Ecommerce.Domain.Shared.Currency;
 
 namespace Ecommerce.Infrastructure.Data;
@@ -14,21 +16,20 @@ public static class DataSeeder
     public static void SeedData(ApplicationDbContext context)
     {
         var faker = new Faker();
-        var authService = new AuthService();
+        // One hash for every seeded user: bcrypt is slow on purpose, and the dev password is the same for all of them.
+        var authService = new AuthService(Options.Create(new PasswordHashingOptions()));
+        string passwordHash = authService.HashPassword("test1234");
+
         // Seed users
         for (int i = 0; i < 10; i++)
         {
             FirstName firstName = FirstName.Create(faker.Person.FirstName).Value;
             LastName lastName = LastName.Create(faker.Person.LastName).Value;
-            Domain.Users.Email email = Domain.Users.Email.Create(faker.Internet.Email()).Value;
-
-
-            string passwordSalt = authService.GenerateSalt();
-            string passwordHash = authService.HashPassword("test1234", passwordSalt);
+            Domain.Users.Email email = Domain.Users.Email.Create(faker.Internet.Email(uniqueSuffix: i.ToString(CultureInfo.InvariantCulture))).Value;
 
             bool isAdmin = faker.Random.Bool();
 
-            var newUser = User.Create(firstName, lastName, email, passwordHash, passwordSalt, isAdmin);
+            var newUser = User.Create(firstName, lastName, email, passwordHash, isAdmin);
 
             context.Set<User>().Add(newUser);
         }
@@ -36,14 +37,11 @@ public static class DataSeeder
         // Fixed accounts, so a developer can sign in as each role.
         foreach ((string emailAddress, bool isAdmin) in new[] { ("admin@ecommerce.test", true), ("customer@ecommerce.test", false) })
         {
-            string salt = authService.GenerateSalt();
-
             context.Set<User>().Add(User.Create(
                 FirstName.Create(isAdmin ? "Admin" : "Customer").Value,
                 LastName.Create("User").Value,
                 Domain.Users.Email.Create(emailAddress).Value,
-                authService.HashPassword("test1234", salt),
-                salt,
+                passwordHash,
                 isAdmin));
         }
 

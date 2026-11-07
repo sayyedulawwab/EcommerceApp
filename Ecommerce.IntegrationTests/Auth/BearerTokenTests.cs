@@ -106,14 +106,12 @@ public sealed class BearerTokenTests
         await _factory.ExecuteScopeAsync(async sp =>
         {
             IAuthService authService = sp.GetRequiredService<IAuthService>();
-            string salt = authService.GenerateSalt();
 
             var user = User.Create(
                 FirstName.Create("Jane").Value,
                 LastName.Create("Doe").Value,
                 Email.Create("jane@example.com").Value,
-                authService.HashPassword(Password, salt),
-                salt,
+                authService.HashPassword(Password),
                 isAdmin);
 
             ApplicationDbContext db = sp.GetRequiredService<ApplicationDbContext>();

@@ -1,13 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Security.Cryptography;
-using System.Text;
 using Ecommerce.API.Controllers.Auth;
 using Ecommerce.Application.Abstractions.Auth;
 using Ecommerce.Application.Users.Login;
 using Ecommerce.Domain.Users;
 using Ecommerce.Infrastructure;
 using Ecommerce.IntegrationTests.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Ecommerce.IntegrationTests.Auth;
@@ -81,30 +80,58 @@ public sealed class LoginTests
     }
 
     [Fact]
-    public async Task Login_ShouldReturnAccessToken_WhenUserHasLegacySha256PasswordHash()
+    public async Task Login_ShouldRehashPassword_WhenStoredHashUsesAnotherWorkFactor()
     {
         // Arrange
         await _factory.ResetDatabaseAsync();
 
-        string salt = Convert.ToBase64String(RandomNumberGenerator.GetBytes(16));
-        string legacyHash = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes("Password123!" + salt)));
+        // Work factor 4 is the bcrypt minimum; the test host is configured with 10.
+        string oldHash = BCrypt.Net.BCrypt.HashPassword("Password123!", 4);
 
-        var user = User.Create(
-            FirstName.Create("Legacy").Value,
-            LastName.Create("User").Value,
-            Email.Create("legacy@example.com").Value,
-            legacyHash,
-            salt,
-            isAdmin: false);
+        await AddUserAsync("old@example.com", oldHash);
 
-        await _factory.ExecuteScopeAsync(async sp =>
-        {
-            ApplicationDbContext db = sp.GetRequiredService<ApplicationDbContext>();
+        // Act
+        HttpResponseMessage response = await _factory.Client.PostAsJsonAsync(
+            "/api/v1/auth/login",
+            new LoginUserRequest("old@example.com", "Password123!"), cancellationToken: TestContext.Current.CancellationToken);
 
-            db.Add(user);
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-            await db.SaveChangesAsync();
-        });
+        string storedHash = await GetPasswordHashAsync("old@example.com");
+
+        Assert.NotEqual(oldHash, storedHash);
+        Assert.StartsWith("$2a$10$", storedHash, StringComparison.Ordinal);
+        Assert.True(BCrypt.Net.BCrypt.Verify("Password123!", storedHash));
+    }
+
+    [Fact]
+    public async Task Login_ShouldKeepTheStoredHash_WhenItAlreadyUsesTheConfiguredWorkFactor()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        string hash = BCrypt.Net.BCrypt.HashPassword("Password123!", 10);
+
+        await AddUserAsync("current@example.com", hash);
+
+        // Act
+        HttpResponseMessage response = await _factory.Client.PostAsJsonAsync(
+            "/api/v1/auth/login",
+            new LoginUserRequest("current@example.com", "Password123!"), cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(hash, await GetPasswordHashAsync("current@example.com"));
+    }
+
+    [Fact]
+    public async Task Login_ShouldReturnUnauthorized_WhenTheStoredHashIsNotBcrypt()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        await AddUserAsync("legacy@example.com", "bGVnYWN5LWhhc2gtZnJvbS1iZWZvcmUtYmNyeXB0");
 
         // Act
         HttpResponseMessage response = await _factory.Client.PostAsJsonAsync(
@@ -112,7 +139,26 @@ public sealed class LoginTests
             new LoginUserRequest("legacy@example.com", "Password123!"), cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Login_ShouldReturnUnauthorized_WhenThePasswordOnlyMatchesTheFirst72Bytes()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        string password = new('a', 72);
+
+        await AddUserAsync("long@example.com", BCrypt.Net.BCrypt.HashPassword(password, 10));
+
+        // Act
+        HttpResponseMessage response = await _factory.Client.PostAsJsonAsync(
+            "/api/v1/auth/login",
+            new LoginUserRequest("long@example.com", password + "b"), cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Theory]
@@ -126,14 +172,12 @@ public sealed class LoginTests
         await _factory.ExecuteScopeAsync(async sp =>
         {
             IAuthService authService = sp.GetRequiredService<IAuthService>();
-            string salt = authService.GenerateSalt();
 
             var user = User.Create(
                 FirstName.Create("Ada").Value,
                 LastName.Create("Admin").Value,
                 Email.Create("ada@example.com").Value,
-                authService.HashPassword("Password123!", salt),
-                salt,
+                authService.HashPassword("Password123!"),
                 isAdmin);
 
             ApplicationDbContext db = sp.GetRequiredService<ApplicationDbContext>();
@@ -157,5 +201,35 @@ public sealed class LoginTests
         bool hasAdminRole = json.RootElement.TryGetProperty(System.Security.Claims.ClaimTypes.Role, out System.Text.Json.JsonElement role) && role.GetString() == Roles.Admin;
 
         Assert.Equal(isAdmin, hasAdminRole);
+    }
+
+    private Task AddUserAsync(string email, string passwordHash)
+    {
+        return _factory.ExecuteScopeAsync(async sp =>
+        {
+            ApplicationDbContext db = sp.GetRequiredService<ApplicationDbContext>();
+
+            db.Add(User.Create(
+                FirstName.Create("Test").Value,
+                LastName.Create("User").Value,
+                Email.Create(email).Value,
+                passwordHash,
+                isAdmin: false));
+
+            await db.SaveChangesAsync();
+        });
+    }
+
+    private Task<string> GetPasswordHashAsync(string email)
+    {
+        Email userEmail = Email.Create(email).Value;
+
+        return _factory.ExecuteScopeAsync(sp =>
+            sp.GetRequiredService<ApplicationDbContext>()
+                .Set<User>()
+                .AsNoTracking()
+                .Where(user => user.Email == userEmail)
+                .Select(user => user.PasswordHash)
+                .SingleAsync());
     }
 }

@@ -28,7 +28,6 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
                .HasConversion(email => email.Value, value => Domain.Users.Email.Create(value).Value);
 
         builder.Property(user => user.PasswordHash);
-        builder.Property(user => user.PasswordSalt);
         builder.Property(user => user.IsAdmin);
     }
 }

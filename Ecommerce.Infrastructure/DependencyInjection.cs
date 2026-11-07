@@ -72,6 +72,11 @@ public static class DependencyInjection
         services.ConfigureOptions<JwtBearerOptionsSetup>();
 
         services.AddSingleton<IJwtService, JwtService>();
+        services.AddOptions<PasswordHashingOptions>()
+            .BindConfiguration("PasswordHashing")
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
         services.AddSingleton<IAuthService, AuthService>();
     }
 }

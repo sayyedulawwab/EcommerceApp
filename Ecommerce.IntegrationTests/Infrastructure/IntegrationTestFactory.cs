@@ -169,7 +169,9 @@ public sealed class IntegrationTestFactory
                 new Dictionary<string, string?>
                 {
                     ["ConnectionStrings:Database"] = ConnectionString,
-                    ["ConnectionStrings:Redis"] = _redis.GetConnectionString()
+                    ["ConnectionStrings:Redis"] = _redis.GetConnectionString(),
+                    // The lowest accepted bcrypt cost, so the many logins in these tests stay fast.
+                    ["PasswordHashing:WorkFactor"] = "10"
                 }));
 
         builder.ConfigureServices(services =>

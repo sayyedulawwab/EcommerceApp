@@ -73,6 +73,43 @@ public sealed class RegisterTests
     }
 
     [Fact]
+    public async Task Register_ShouldStoreABcryptHash_WhenUserIsCreated()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        var request = new RegisterUserRequest("Jane", "Doe", "jane@example.com", "Password123!");
+
+        // Act
+        HttpResponseMessage response = await _factory.Client.PostAsJsonAsync("/api/v1/auth/register", request, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        string hash = await _factory.ExecuteScopeAsync(sp =>
+            sp.GetRequiredService<ApplicationDbContext>().Set<User>().Select(user => user.PasswordHash).SingleAsync());
+
+        Assert.StartsWith("$2a$10$", hash, StringComparison.Ordinal);
+        Assert.NotEqual(request.Password, hash);
+    }
+
+    [Fact]
+    public async Task Register_ShouldReturnBadRequest_WhenThePasswordIsLongerThan72Bytes()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        var request = new RegisterUserRequest("Jane", "Doe", "jane@example.com", new string('a', 73));
+
+        // Act
+        HttpResponseMessage response = await _factory.Client.PostAsJsonAsync("/api/v1/auth/register", request, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(0, await CountUsersAsync());
+    }
+
+    [Fact]
     public async Task Register_ShouldReturnBadRequest_WhenThePasswordIsTooShort()
     {
         // Arrange

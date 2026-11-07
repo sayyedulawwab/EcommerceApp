@@ -29,10 +29,9 @@ internal sealed class RegisterUserCommandHandler(
             return Result.Failure<Guid>(UserErrors.AlreadyExists);
         }
 
-        string passwordSalt = authService.GenerateSalt();
-        string hashedPassword = authService.HashPassword(request.Password, passwordSalt);
+        string hashedPassword = authService.HashPassword(request.Password);
 
-        var user = User.Create(firstName.Value, lastName.Value, email.Value, hashedPassword, passwordSalt, false);
+        var user = User.Create(firstName.Value, lastName.Value, email.Value, hashedPassword, false);
 
         dbContext.Users.Add(user);
 
