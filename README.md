@@ -4,7 +4,7 @@ A REST API for an ecommerce platform: products, categories, orders, product revi
 
 ## Features
 
-- **Products:** add, edit, delete, get by id (with its reviews), and search with filtering, sorting, paging and Redis caching
+- **Products:** add, edit, delete, get by id (with its reviews), and search with filtering, sorting, paging and Redis caching (HybridCache: in-memory in front of Redis, cleared by tag)
 - **Categories:** add, edit, delete, list, and get by id
 - **Orders:** place an order for the signed-in user (with an optional coupon), cancel it before payment, and list the user's own orders
 - **Reviews:** rate (1–5) and comment on a product
