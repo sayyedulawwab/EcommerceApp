@@ -13,6 +13,7 @@ Configurations/             {Entity}Configuration : IEntityTypeConfiguration<{En
 Data/                       ISqlConnectionFactory + SqlConnectionFactory (Npgsql), DateOnlyTypeHandler (Dapper), DataSeeder (Bogus)
 DomainEvents/               IDomainEventsDispatcher, DomainEventsDispatcher
 Emails/                     EmailService (stub, no-op)
+Health/                     DatabaseHealthCheck, RedisHealthCheck (behind GET /health)
 Migrations/                 EF generated code: never hand-edit
 Repositories/               Dapper query repositories ({Entity}QueryRepository)
 DependencyInjection.cs      AddInfrastructure(services, configuration)
@@ -126,6 +127,7 @@ internal sealed class ProductQueryRepository(ISqlConnectionFactory sqlConnection
 - Existing migrations: `Initial`, `UpdateDateTimeFields`, `MakeOrderUpdatedOnUtcNullable`, `AddProductConcurrencyToken`, `AddCouponsAndOrderCancellation` (backfills `order_items.unit_price_*` from the product's price at migration time), `RestrictCategoryDelete`.
 - The only acceptable hand edit is adding a data fix-up (`migrationBuilder.Sql(...)`) to a **new** migration you just generated, e.g. resetting values that the old schema forced (see `MakeOrderUpdatedOnUtcNullable`). Never edit a migration that has already been applied anywhere.
 - Before committing, check that the generated `Up`/`Down` contains only the change you intended; anything else means the model drifted.
+- In every other environment migrations are applied by the migration bundle (`deploy/migrations.Dockerfile`, run by `deploy/deploy.sh` before the containers switch), never at startup.
 - Migrations are applied at startup **in Development only**, by `app.ApplyMigrations()` (extension in `Ecommerce.API/Extensions/MigrationExtensions.cs`). It runs `Migrate()`, then `DataSeeder.SeedData` only if `users` is empty, so a restart keeps the data and doesn't insert the fixed accounts twice.
 
 ---

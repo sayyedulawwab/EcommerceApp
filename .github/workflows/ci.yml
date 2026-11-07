@@ -3,17 +3,27 @@ name: CI
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
+
+# No permissions unless a job asks for them. Pull requests (including from forks) never get a secret and
+# never get write access: only the publish job, which runs on pushes to main, can write packages.
+permissions: {}
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
       # Standard property for CI builds: deterministic paths in the build output.
       ContinuousIntegrationBuild: true
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
         with:
           dotnet-version: 10.0.x
 
@@ -33,3 +43,72 @@ jobs:
       # Testcontainers starts PostgreSQL and Redis in the runner's Docker for the integration tests.
       - name: Integration tests
         run: dotnet test --project Ecommerce.IntegrationTests --no-build --configuration Release
+
+  # Proves on every pull request that both images still build. Nothing is pushed.
+  images:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build API image
+        run: docker build --file Ecommerce.API/Dockerfile --tag ecommerce-api:ci .
+
+      - name: Build migration bundle image
+        run: docker build --file deploy/migrations.Dockerfile --tag ecommerce-migrations:ci .
+
+  # Runs only after a merge to main, once the tests above passed. It is the only job with a write token.
+  # The server pulls what this job publishes (deploy/deploy.sh); nothing here connects to the server.
+  publish:
+    if: github.event_name == 'push'
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    # Two quick merges publish one after the other, so the moving "main" tag never goes backwards.
+    concurrency:
+      group: publish-images
+      cancel-in-progress: false
+    env:
+      REVISION: ${{ github.sha }}
+      SOURCE_URL: ${{ github.server_url }}/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Log in to GHCR
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GITHUB_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+
+      # Order matters: the bundle first, then the API image, and the moving "main" tag last. The server
+      # follows "main", so it never sees an API image whose migrations are not published yet.
+      - name: Build and push the migration bundle image
+        run: |
+          repo="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}"
+          docker build --file deploy/migrations.Dockerfile \
+            --label "org.opencontainers.image.revision=${REVISION}" \
+            --label "org.opencontainers.image.source=${SOURCE_URL}" \
+            --tag "${repo}/ecommerce-migrations:${REVISION}" .
+          docker push "${repo}/ecommerce-migrations:${REVISION}"
+
+      - name: Build and push the API image
+        run: |
+          repo="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}"
+          docker build --file Ecommerce.API/Dockerfile \
+            --label "org.opencontainers.image.revision=${REVISION}" \
+            --label "org.opencontainers.image.source=${SOURCE_URL}" \
+            --tag "${repo}/ecommerce-api:${REVISION}" .
+          docker push "${repo}/ecommerce-api:${REVISION}"
+
+      - name: Move the main tag to this commit
+        run: |
+          repo="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}"
+          docker tag "${repo}/ecommerce-api:${REVISION}" "${repo}/ecommerce-api:main"
+          docker push "${repo}/ecommerce-api:main"
