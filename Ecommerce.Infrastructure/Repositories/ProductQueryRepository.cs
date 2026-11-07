@@ -51,7 +51,8 @@ internal sealed class ProductQueryRepository(ISqlConnectionFactory sqlConnection
         }
         if (!string.IsNullOrEmpty(query.Keyword))
         {
-            conditions.Add("p.name ILIKE '%' || @Keyword || '%'");
+            // The keyword is text to find, not a pattern: % and _ are escaped in the parameter below.
+            conditions.Add("p.name ILIKE '%' || @Keyword || '%' ESCAPE '\\'");
         }
 
         // Add conditions if there are any
@@ -61,11 +62,13 @@ internal sealed class ProductQueryRepository(ISqlConnectionFactory sqlConnection
         }
 
         // Handle sorting
-        string[] allowedSortColumns = ["Name", "PriceAmount", "CreatedOnUtc"]; // Add all allowed columns here
+        // Column names cannot be parameters, so only these values are ever appended to the SQL.
+        string[] allowedSortColumns = ["Name", "PriceAmount", "CreatedOnUtc"];
         string sortColumn = query.SortColumn is { } column && allowedSortColumns.Contains(column) ? column : "CreatedOnUtc"; // Default to CreatedOnUtc if invalid
         string sortOrder = query.SortOrder?.ToLower(CultureInfo.CurrentCulture) == "desc" ? "DESC" : "ASC"; // Default to ASC if invalid
 
-        sqlBuilder.AppendFormat(CultureInfo.InvariantCulture, " ORDER BY {0} {1}", sortColumn, sortOrder);
+        // The ID is the last sort key, so rows with equal values keep one order and a page never repeats or skips a row.
+        sqlBuilder.AppendFormat(CultureInfo.InvariantCulture, " ORDER BY {0} {1}, p.id", sortColumn, sortOrder);
 
         // Add pagination
         sqlBuilder.Append(" OFFSET (@PageSize * (@Page - 1)) ROWS FETCH NEXT @PageSize ROWS ONLY;");
@@ -78,7 +81,7 @@ internal sealed class ProductQueryRepository(ISqlConnectionFactory sqlConnection
             query.CategoryId,
             query.MinPrice,
             query.MaxPrice,
-            query.Keyword,
+            Keyword = EscapeLikePattern(query.Keyword),
             Page = page,
             PageSize = pageSize
         }, cancellationToken: cancellationToken);
@@ -87,4 +90,10 @@ internal sealed class ProductQueryRepository(ISqlConnectionFactory sqlConnection
 
         return products.ToList();
     }
+
+    // ILIKE treats % and _ as wildcards and \ as the escape character, so each one gets a \ in front of it.
+    private static string? EscapeLikePattern(string? value) =>
+        value?.Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("%", "\\%", StringComparison.Ordinal)
+            .Replace("_", "\\_", StringComparison.Ordinal);
 }
