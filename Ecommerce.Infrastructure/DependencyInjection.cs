@@ -1,13 +1,11 @@
 ﻿using Dapper;
 using Ecommerce.Application.Abstractions.Auth;
-using Ecommerce.Application.Abstractions.Caching;
 using Ecommerce.Application.Abstractions.Clock;
 using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Emails;
 using Ecommerce.Application.Products;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Infrastructure.Auth;
-using Ecommerce.Infrastructure.Caching;
 using Ecommerce.Infrastructure.Clock;
 using Ecommerce.Infrastructure.Data;
 using Ecommerce.Infrastructure.DomainEvents;
@@ -15,6 +13,7 @@ using Ecommerce.Infrastructure.Emails;
 using Ecommerce.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -35,7 +34,13 @@ public static class DependencyInjection
             redisOptions.Configuration = connection;
         });
 
-        services.AddSingleton<ICacheService, CacheService>();
+        // HybridCache keeps results in memory (L1) and in Redis (L2, the IDistributedCache above).
+        // These lifetimes are starting values, not measured ones.
+        services.AddHybridCache(hybridOptions => hybridOptions.DefaultEntryOptions = new HybridCacheEntryOptions
+        {
+            Expiration = TimeSpan.FromMinutes(5),
+            LocalCacheExpiration = TimeSpan.FromMinutes(1)
+        });
 
         AddPersistence(services, configuration);
         AddAuthentication(services);
