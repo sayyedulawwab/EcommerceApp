@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
 using Respawn;
+using System.Security.Cryptography;
 using StackExchange.Redis;
 using System.Data.Common;
 using System.Net.Http.Headers;
@@ -170,6 +171,8 @@ public sealed class IntegrationTestFactory
                 {
                     ["ConnectionStrings:Database"] = ConnectionString,
                     ["ConnectionStrings:Redis"] = _redis.GetConnectionString(),
+                    // A new random signing key for every run: no key is committed anywhere.
+                    ["Jwt:SecretKey"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(48)),
                     // The lowest accepted bcrypt cost, so the many logins in these tests stay fast.
                     ["PasswordHashing:WorkFactor"] = "10"
                 }));
