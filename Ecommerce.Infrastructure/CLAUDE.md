@@ -7,7 +7,6 @@ Implements the Application ports, including `IApplicationDbContext`. Persistence
 ```
 ApplicationDbContext.cs     DbContext + IApplicationDbContext + domain-event dispatch
 Auth/                       AuthService, JwtService, JwtOptions, JwtOptionsSetup, JwtBearerOptionsSetup
-Caching/                    CacheService (IDistributedCache/Redis), PrivateResolver
 Clock/                      DateTimeProvider
 Configurations/             {Entity}Configuration : IEntityTypeConfiguration<{Entity}>
 Data/                       ISqlConnectionFactory + SqlConnectionFactory (Npgsql), DateOnlyTypeHandler (Dapper), DataSeeder (Bogus)
@@ -113,7 +112,9 @@ internal sealed class ProductQueryRepository(ISqlConnectionFactory sqlConnection
 - `ISqlConnectionFactory` is internal to Infrastructure; Application never sees a connection.
 - Write SQL against **snake_case** tables/columns and alias each column **`AS PascalCase`** to match the response property.
 - **Always parameterize values** (`@Param` plus an anonymous object). Never interpolate user input. Dynamic `ORDER BY` columns come **only from a whitelist array**; direction is normalized to `ASC`/`DESC`.
-- Get the paged total from **`COUNT(*) OVER () AS TotalRecords`** on each row (no second COUNT query).
+- Get the paged total from a **separate `SELECT COUNT(*)`** sent with the page query in the same command (`QueryMultipleAsync`, one round trip), and return both as a `ProductSearchResult`. Build the `WHERE` clause once and use it in both statements so the total always matches the filters. A `COUNT(*) OVER ()` column was measured and is slower when there is no keyword (it sorts every matching row), but it was somewhat faster than the two statements when a keyword filtered the rows (the filter runs once instead of twice).
+- Every `ORDER BY` ends with the primary key (`p.id`), so rows with equal sort values keep one order and offset pages never repeat or skip a row.
+- A user keyword used with `ILIKE` goes through `EscapeLikePattern` (escapes `\`, `%`, `_`) and the SQL says `ESCAPE '\'`, so it matches as plain text. `products.name` has a trigram GIN index (`pg_trgm`, enabled with `HasPostgresExtension` in `OnModelCreating`) so the `'%...%'` search can use an index.
 - Pass the `cancellationToken` through `CommandDefinition`.
 - Register each one in `AddPersistence`: `services.AddScoped<IXQueryRepository, XQueryRepository>();`.
 
@@ -123,7 +124,7 @@ internal sealed class ProductQueryRepository(ISqlConnectionFactory sqlConnection
 
 - Create with: `dotnet ef migrations add <Name> --project Ecommerce.Infrastructure --startup-project Ecommerce.API`.
 - `Migrations/**` is marked `generated_code` in `.editorconfig`. **Never hand-edit it.** Change the configuration and generate a new migration.
-- Existing migrations: `Initial`, `UpdateDateTimeFields`, `MakeOrderUpdatedOnUtcNullable`, `AddProductConcurrencyToken`, `AddCouponsAndOrderCancellation` (backfills `order_items.unit_price_*` from the product's price at migration time), `RestrictCategoryDelete`.
+- Existing migrations: `Initial`, `UpdateDateTimeFields`, `MakeOrderUpdatedOnUtcNullable`, `AddProductConcurrencyToken`, `AddCouponsAndOrderCancellation` (backfills `order_items.unit_price_*` from the product's price at migration time), `RestrictCategoryDelete`, `AddCategoryUniqueIndexes`, `AddProductNameTrigramIndex` (enables `pg_trgm`, adds `ix_products_name`).
 - The only acceptable hand edit is adding a data fix-up (`migrationBuilder.Sql(...)`) to a **new** migration you just generated, e.g. resetting values that the old schema forced (see `MakeOrderUpdatedOnUtcNullable`). Never edit a migration that has already been applied anywhere.
 - Before committing, check that the generated `Up`/`Down` contains only the change you intended; anything else means the model drifted.
 - Migrations are applied at startup **in Development only**, by `app.ApplyMigrations()` (extension in `Ecommerce.API/Extensions/MigrationExtensions.cs`). It runs `Migrate()`, then `DataSeeder.SeedData` only if `users` is empty, so a restart keeps the data and doesn't insert the fixed accounts twice.
@@ -137,8 +138,8 @@ internal sealed class ProductQueryRepository(ISqlConnectionFactory sqlConnection
 | `IDateTimeProvider` → `DateTimeProvider`          | Transient  | `UtcNow => DateTime.UtcNow`                              |
 | `IEmailService` → `EmailService`                  | Transient  | Stub, returns `Task.CompletedTask`                        |
 | `IDomainEventsDispatcher` → `DomainEventsDispatcher` | Transient |                                                         |
-| `IDistributedCache` (Redis)                       | –          | `ConnectionStrings:Redis`                                |
-| `ICacheService` → `CacheService`                  | Singleton  |                                                          |
+| `IDistributedCache` (Redis)                       | –          | `ConnectionStrings:Redis`; the L2 cache of `HybridCache`  |
+| `HybridCache`                                     | Singleton  | `AddHybridCache`: 5 minutes in Redis, 1 minute in memory  |
 | `ApplicationDbContext`                            | Scoped     | `UseNpgsql(...).UseSnakeCaseNamingConvention()`, `ConnectionStrings:Database` |
 | `IApplicationDbContext` → same `ApplicationDbContext` | Scoped | `sp.GetRequiredService<ApplicationDbContext>()`           |
 | `I{Entity}QueryRepository` → `{Entity}QueryRepository` | Scoped | Registered explicitly, one line each                     |
@@ -180,8 +181,11 @@ Consumers take `IOptions<T>`. Follow this pattern for new settings.
 
 ## Caching
 
-- `CacheService` serializes with **Newtonsoft.Json** and uses `PrivateResolver` plus `AllowNonPublicDefaultConstructor`, so types with private setters and constructors round-trip.
-- Keys are tracked in a **static in-process `ConcurrentDictionary`** to support `RemoveByPrefixAsync`. Prefix removal therefore only clears keys written by the same app instance.
+- `AddHybridCache` registers `HybridCache` with default entry options of 5 minutes in Redis (`Expiration`) and 1 minute in memory (`LocalCacheExpiration`). These are unmeasured starting values. The L2 cache is the Redis `IDistributedCache` registered next to it.
+- Values are serialized with `System.Text.Json` (the `HybridCache` default), so cached responses need public `init`/`set` properties. There is no custom cache wrapper or key registry.
+- Tag invalidation (`RemoveByTagAsync`) is logical: it records "ignore entries created before now" for the tag in Redis and in the calling instance's memory. Other instances' in-memory copies are not touched and live until `LocalCacheExpiration`.
+- The integration test factory clears Redis and also calls `RemoveByTagAsync("*")` between tests, because flushing Redis alone leaves the in-memory copies.
+
 
 ---
 

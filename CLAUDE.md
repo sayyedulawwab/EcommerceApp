@@ -33,7 +33,7 @@ Ecommerce REST API (products, categories, orders, reviews, users/auth). This fil
 | Dapper                                  | Hand-written SQL reads behind query repositories in Infrastructure |
 | FluentValidation                        | One validator per command, run by `ValidationDecorator`        |
 | Scrutor                                 | Assembly scanning for handlers + decorator registration        |
-| Redis (`IDistributedCache`)             | Query result caching via `ICacheService`                       |
+| Redis + `HybridCache`                   | Query result caching: in-memory (L1) in front of Redis (L2), cleared by tag |
 | JWT Bearer                              | Auth; `[Authorize]` on controllers, `[Authorize(Roles = Roles.Admin)]` on admin writes |
 | Asp.Versioning                          | URL segment only (`/api/v1/...`)                               |
 | Microsoft.AspNetCore.OpenApi            | `MapOpenApi()` (Development only)                              |
@@ -115,7 +115,7 @@ Infrastructure → Application → Domain    (implements the Application abstrac
 ```
 
 - **Domain** references nothing: no EF, no Dapper, no attributes.
-- **Application** defines the ports (`IApplicationDbContext`, `IProductQueryRepository`, `IDateTimeProvider`, `ICacheService`, `IAuthService`, `IJwtService`, `IEmailService`). It references EF Core (for `DbSet<T>` and LINQ in handlers) but not Dapper or Npgsql.
+- **Application** defines the ports (`IApplicationDbContext`, `IProductQueryRepository`, `IDateTimeProvider`, `IAuthService`, `IJwtService`, `IEmailService`). It references EF Core (for `DbSet<T>` and LINQ in handlers) and the `HybridCache` abstraction (`Microsoft.Extensions.Caching.Abstractions`), but not Dapper, Npgsql or Redis.
 - **Infrastructure** implements those ports. `ApplicationDbContext` implements `IApplicationDbContext`; the Dapper query repositories implement the query repository interfaces.
 
 ### Layer responsibilities
@@ -136,9 +136,9 @@ Infrastructure → Application → Domain    (implements the Application abstrac
 3. The decorator chain runs **`LoggingDecorator` (outer) → `ValidationDecorator` → handler**. On validation failure it returns `ValidationError` (400) without calling the handler.
 4. The handler runs its lookups (failures return `Result.Failure`), builds value objects, calls the domain `Create`/`Update`, stages new or removed entities with `dbContext.{Set}.Add`/`Remove` (tracked entities need no `Update` call), then `dbContext.SaveChangesAsync`.
 5. `ApplicationDbContext.SaveChangesAsync` saves, then **dispatches the collected domain events synchronously** (each in a new DI scope).
-6. The handler invalidates cache prefixes if needed and returns `Result<T>`. The controller returns 2xx, or `result.Error.ToActionResult()`.
+6. The handler clears the product cache by tag if needed (a failed clear is logged, not returned) and returns `Result<T>`. The controller returns 2xx, or `result.Error.ToActionResult()`.
 
-**Query** (GET): `LoggingDecorator` → handler, with **no validation decorator**. The handler reads through `IApplicationDbContext` with `AsNoTracking()` (simple reads), or through a Dapper query repository (multi-table joins, selected columns, stored procedures, SQL that is easier or faster by hand), optionally via the cache.
+**Query** (GET): `LoggingDecorator` (outer) → `ValidationDecorator` → handler. A query with a validator returns `ValidationError` (400) before the handler runs; a query without one passes straight through. The handler reads through `IApplicationDbContext` with `AsNoTracking()` (simple reads), or through a Dapper query repository (multi-table joins, selected columns, stored procedures, SQL that is easier or faster by hand), optionally via the cache.
 
 ---
 
@@ -149,7 +149,7 @@ Each module uses the same name in every layer (plural folders in Domain, Applica
 | Module       | Aggregate(s)          | Operations                                               |
 | ------------ | --------------------- | -------------------------------------------------------- |
 | `Categories` | `Category`            | Add, Edit, Delete, GetCategories, GetCategoryById        |
-| `Products`   | `Product`             | Add, Edit, Delete, GetProductById (with reviews), SearchProduct (Dapper, paged, cached) |
+| `Products`   | `Product`             | Add, Edit, Delete, GetProductById (with reviews), SearchProduct (Dapper, paged, cached, trigram-indexed keyword) |
 | `Orders`     | `Order` → `OrderItem` | PlaceOrder (optional coupon), CancelOrder, SearchOrders (the user's own; paged, sorted, filtered) |
 | `Coupons`    | `Coupon`              | Add, Edit, Delete, GetCoupons (admins only)               |
 | `Reviews`    | `Review`              | AddReview                                                |
@@ -264,7 +264,7 @@ These exist in the codebase today. Leave them alone unless asked:
 
 - `AuthService.VerifyPassword` falls back to the legacy salted SHA-256 hash, so accounts created before the PBKDF2 switch can still log in. Keep the fallback until those accounts are gone, and never use it for new hashes.
 - Login reports a missing user and a wrong password with the same `UserErrors.InvalidCredentials` (401), so it doesn't reveal which emails are registered. Keep it that way.
-- `OrderResponse.ShippedOnUtc/DeliveredOnUtc` and `OrderItemResponse.UpdatedOnUtc` exist but are never populated. `ProductResponse.TotalRecords` exists only to carry the Dapper window count.
-- `CacheService.RemoveByPrefixAsync` only clears keys written by the same app instance (in-process key registry).
+- `OrderResponse.ShippedOnUtc/DeliveredOnUtc` and `OrderItemResponse.UpdatedOnUtc` exist but are never populated.
+- `HybridCache` has no backplane. `RemoveByTagAsync` clears the calling instance's in-memory copy and marks the tag in Redis, but other running instances keep serving their own in-memory copy until it expires (`LocalCacheExpiration`, 1 minute). With several instances, a product change can show as stale for up to that long on the others.
 - Domain event handlers are auto-registered by the Scrutor scan in `Ecommerce.Application/DependencyInjection.cs`.
 - A coupon's usage limit is shared by all customers ("the first 100 orders"). There's no per-customer limit.

@@ -1,14 +1,16 @@
-﻿using Ecommerce.Application.Abstractions.Caching;
-using Ecommerce.Application.Abstractions.Data;
+﻿using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Products;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Logging;
 
 namespace Ecommerce.Application.Products.DeleteProduct;
 internal sealed class DeleteProductCommandHandler(
     IApplicationDbContext dbContext,
-    ICacheService cacheService)
+    HybridCache cache,
+    ILogger<DeleteProductCommandHandler> logger)
     : ICommandHandler<DeleteProductCommand, Guid>
 {
     public async Task<Result<Guid>> Handle(DeleteProductCommand request, CancellationToken cancellationToken)
@@ -42,7 +44,7 @@ internal sealed class DeleteProductCommandHandler(
             throw;
         }
 
-        await cacheService.RemoveByPrefixAsync("products", cancellationToken);
+        await ProductCache.ClearAsync(cache, logger, cancellationToken);
 
         return product.Id.Value;
     }

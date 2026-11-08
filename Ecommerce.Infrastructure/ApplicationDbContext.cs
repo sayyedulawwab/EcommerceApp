@@ -24,6 +24,9 @@ public sealed class ApplicationDbContext(DbContextOptions options, IDomainEvents
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // Needed by the trigram index on products.name.
+        modelBuilder.HasPostgresExtension("pg_trgm");
+
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
 
         base.OnModelCreating(modelBuilder);

@@ -1,5 +1,4 @@
-﻿using Ecommerce.Application.Abstractions.Caching;
-using Ecommerce.Application.Abstractions.Clock;
+﻿using Ecommerce.Application.Abstractions.Clock;
 using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
@@ -7,12 +6,15 @@ using Ecommerce.Domain.Categories;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Shared;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Logging;
 
 namespace Ecommerce.Application.Products.EditProduct;
 internal sealed class EditProductCommandHandler(
     IApplicationDbContext dbContext,
     IDateTimeProvider dateTimeProvider,
-    ICacheService cacheService)
+    HybridCache cache,
+    ILogger<EditProductCommandHandler> logger)
     : ICommandHandler<EditProductCommand, Guid>
 {
     public async Task<Result<Guid>> Handle(EditProductCommand request, CancellationToken cancellationToken)
@@ -49,7 +51,7 @@ internal sealed class EditProductCommandHandler(
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        await cacheService.RemoveByPrefixAsync("products", cancellationToken);
+        await ProductCache.ClearAsync(cache, logger, cancellationToken);
 
         return product.Id.Value;
     }

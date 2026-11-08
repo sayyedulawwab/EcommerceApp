@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -92,6 +93,12 @@ public sealed class IntegrationTestFactory
         {
             await server.FlushAllDatabasesAsync();
         }
+
+        // Flushing Redis does not clear the in-memory copies the app keeps in front of it.
+        // "*" is HybridCache's tag for every entry.
+        HybridCache cache = Services.GetRequiredService<HybridCache>();
+
+        await cache.RemoveByTagAsync("*");
     }
 
     // A signed-in admin: the only role that can change products, categories and coupons.

@@ -20,6 +20,11 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
                .HasMaxLength(ProductName.MaxLength)
                .HasConversion(name => name.Value, value => ProductName.Create(value).Value);
 
+        // Lets the keyword search (ILIKE '%...%') use an index instead of reading every row.
+        builder.HasIndex(product => product.Name)
+               .HasMethod("gin")
+               .HasOperators("gin_trgm_ops");
+
         builder.Property(product => product.Description)
                .HasMaxLength(ProductDescription.MaxLength)
                .HasConversion(description => description.Value, value => ProductDescription.Create(value).Value);
