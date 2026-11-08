@@ -109,7 +109,8 @@ Every failure is an RFC 9457 `ProblemDetails` (`application/problem+json`). `Err
 - Service registration: `AddApplication()` → `AddPresentation()` → `AddInfrastructure(configuration)`, then `AddOpenApi()` and `AddApiVersioning(...)`.
 - API versioning: default `1.0`, `ReportApiVersions`. The version is read from the URL segment only (`UrlSegmentApiVersionReader`), so a route without `v{n}` doesn't match. The API explorer uses `GroupNameFormat = "'v'V"` and `SubstituteApiVersionInUrl`.
 - Development only: `app.MapOpenApi()` and `app.ApplyMigrations()` (migrates, and seeds the database when it is empty).
-- Middleware order (keep it): `UseRequestContextLogging()` → `UseExceptionHandler()` → `UseAuthentication()` → `UseAuthorization()` → `MapControllers()`.
+- Middleware order (keep it): `UseRequestContextLogging()` → `UseExceptionHandler()` → `UseAuthentication()` → `UseAuthorization()` → `MapControllers()`, then `MapHealthChecks("/health")`.
+- `GET /health` is anonymous, unversioned and returns only `Healthy` (200) or `Unhealthy` (503): never details or exceptions. The checks (`DatabaseHealthCheck`, `RedisHealthCheck`) live in Infrastructure's `Health/`. The compose healthcheck and the deploy script rely on it.
 - Don't add `public partial class Program;`. Since .NET 10 a source generator makes the top-level `Program` public, which is all `WebApplicationFactory<Program>` needs (analyzer ASP0027 flags the declaration as redundant).
 
 ---

@@ -121,4 +121,8 @@ app.UseRateLimiter();
 
 app.MapControllers();
 
+// Anonymous liveness and readiness probe for the deploy script and monitoring. The default response is
+// the plain text status (Healthy, Unhealthy) with 200 or 503, and nothing else.
+app.MapHealthChecks("/health").AllowAnonymous();
+
 await app.RunAsync();

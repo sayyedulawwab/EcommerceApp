@@ -11,6 +11,7 @@ using Ecommerce.Infrastructure.Clock;
 using Ecommerce.Infrastructure.Data;
 using Ecommerce.Infrastructure.DomainEvents;
 using Ecommerce.Infrastructure.Emails;
+using Ecommerce.Infrastructure.Health;
 using Ecommerce.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -46,6 +47,11 @@ public static class DependencyInjection
 
         AddPersistence(services, configuration);
         AddAuthentication(services);
+
+        // Status only: the endpoint is anonymous, so it never reports details or exceptions.
+        services.AddHealthChecks()
+            .AddCheck<DatabaseHealthCheck>("database")
+            .AddCheck<RedisHealthCheck>("redis");
 
         return services;
     }
