@@ -16,8 +16,8 @@ services:
       Jwt__Audience: ${JWT_AUDIENCE:-Ecommerce}
       Jwt__SecretKey: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY}
       # nginx sets X-Forwarded-For. Only a sender inside this network is believed, so a client can not choose its own rate-limit IP.
-      # The default is the Docker private range; narrow it to the subnet of ecommerce-network if you can.
-      ForwardedHeaders__KnownNetworks__0: ${TRUSTED_PROXY_NETWORK:-172.16.0.0/12}
+      # The default is the fixed subnet infra.compose.yml gives ecommerce-network.
+      ForwardedHeaders__KnownNetworks__0: ${TRUSTED_PROXY_NETWORK:-172.28.0.0/24}
       Otlp__LogsEndpoint: http://otel-collector:4318/v1/logs
       Otlp__TracesEndpoint: http://otel-collector:4318/v1/traces
       Otlp__MetricsEndpoint: http://otel-collector:4318/v1/metrics

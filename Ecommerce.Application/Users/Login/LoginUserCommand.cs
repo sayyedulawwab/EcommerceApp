@@ -2,4 +2,4 @@
 
 namespace Ecommerce.Application.Users.Login;
 
-public record LoginUserQuery(string Email, string Password) : IQuery<AuthTokensResponse>;
+public record LoginUserCommand(string Email, string Password) : ICommand<AuthTokensResponse>;

@@ -136,3 +136,7 @@ networks:
   ecommerce-network:
     name: ecommerce-network
     driver: bridge
+    # Fixed subnet: the API trusts X-Forwarded-For only from this range (TRUSTED_PROXY_NETWORK in docker-compose.yml).
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24

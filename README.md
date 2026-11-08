@@ -45,6 +45,17 @@ Prerequisites: the .NET 10 SDK and Docker Desktop.
    docker compose -f infra.compose.yml --env-file .env.dev up -d
    ```
 
+   `ecommerce-network` has a fixed subnet, `172.28.0.0/24`, and the API believes `X-Forwarded-For` only from that range. A network created before this change has a random subnet and keeps it, so remove and recreate it once (this stops the infrastructure and deletes nothing in the named volumes):
+
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.override.yml --env-file .env.dev down
+   docker compose -f infra.compose.yml --env-file .env.dev down
+   docker network rm ecommerce-network
+   docker compose -f infra.compose.yml --env-file .env.dev up -d
+   ```
+
+   If `172.28.0.0/24` clashes with a network you already use, change the subnet in `infra.compose.yml` and set `TRUSTED_PROXY_NETWORK` in `.env.dev` to the same value.
+
 3. Build and start the API:
 
    ```bash

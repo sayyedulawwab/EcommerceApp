@@ -44,12 +44,12 @@ public class AuthController() : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login(
         LoginUserRequest request,
-        IQueryHandler<LoginUserQuery, AuthTokensResponse> handler,
+        ICommandHandler<LoginUserCommand, AuthTokensResponse> handler,
         CancellationToken cancellationToken)
     {
-        var query = new LoginUserQuery(request.Email, request.Password);
+        var command = new LoginUserCommand(request.Email, request.Password);
 
-        Result<AuthTokensResponse> result = await handler.Handle(query, cancellationToken);
+        Result<AuthTokensResponse> result = await handler.Handle(command, cancellationToken);
 
         if (result.IsFailure)
         {

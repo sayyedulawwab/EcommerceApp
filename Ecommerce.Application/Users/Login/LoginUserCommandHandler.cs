@@ -8,15 +8,15 @@ using Ecommerce.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Application.Users.Login;
-internal sealed class LoginUserQueryHandler(
+internal sealed class LoginUserCommandHandler(
     IApplicationDbContext dbContext,
     IAuthService authService,
     IJwtService jwtService,
     IDateTimeProvider dateTimeProvider)
-    : IQueryHandler<LoginUserQuery, AuthTokensResponse>
+    : ICommandHandler<LoginUserCommand, AuthTokensResponse>
 {
     public async Task<Result<AuthTokensResponse>> Handle(
-        LoginUserQuery request,
+        LoginUserCommand request,
         CancellationToken cancellationToken)
     {
         Result<Email> email = Email.Create(request.Email);

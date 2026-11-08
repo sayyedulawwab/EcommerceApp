@@ -5,7 +5,7 @@ namespace Ecommerce.API.Infrastructure;
 
 // The API sits behind nginx, which sets X-Forwarded-For to the address it saw. Those headers are only
 // believed when the request comes from a proxy listed in ForwardedHeaders:KnownProxies or
-// ForwardedHeaders:KnownNetworks (CIDR, e.g. 172.16.0.0/12). With nothing listed, nobody is trusted, so a client
+// ForwardedHeaders:KnownNetworks (CIDR, e.g. 172.28.0.0/24). With nothing listed, nobody is trusted, so a client
 // can't pick its own IP (and its own rate-limit bucket) by sending the header itself.
 internal static class ForwardedHeadersSetup
 {

@@ -78,7 +78,7 @@ public record PlaceOrderCommand(Guid UserId, List<OrderStockItem> OrderStockItem
 - **Write commands return `Guid`**: the affected entity's id (create, edit and delete alike).
 - List queries return `IReadOnlyList<{Entity}Response>`. Single-item queries return `{Entity}Response`. Paged queries return `PagedList<{Entity}Response>`.
 - The acting user is a command field (`Guid UserId`) supplied by the controller from JWT claims.
-- Login is modeled as a query (`LoginUserQuery : IQuery<AccessTokenResponse>`) because it changes no state.
+- Login is a command (`LoginUserCommand : ICommand<AuthTokensResponse>`) because it stores a refresh token (and may rehash the password). Queries stay read-only.
 
 ---
 
@@ -258,7 +258,7 @@ Rules:
 ## Auth use cases
 
 - Register: `dbContext.Users.AnyAsync(user => user.Email == new Email(...))` duplicate check → `UserErrors.AlreadyExists`, then `IAuthService.HashPassword(password)`, then `User.Create(..., isAdmin: false)`. A `UniqueConstraintException` on save (two requests passed the check together) also returns `UserErrors.AlreadyExists`. The validator caps the password at 72 UTF-8 bytes (bcrypt limit).
-- Login: load by email, then `IAuthService.VerifyPassword(password, hash)`; for an unknown email it calls `VerifyAgainstDummyHash` instead. A missing user **and** a wrong password both return `UserErrors.InvalidCredentials` (401), so the API never reveals whether an email is registered. If `NeedsRehash`, the new hash is saved. Then it issues `IJwtService.GetAccessToken(...)` plus a new refresh token (a `RefreshToken` row holding only the hash) and returns `AuthTokensResponse`. Login is still an `IQuery` although it writes.
+- Login: load by email, then `IAuthService.VerifyPassword(password, hash)`; for an unknown email it calls `VerifyAgainstDummyHash` instead. A missing user **and** a wrong password both return `UserErrors.InvalidCredentials` (401), so the API never reveals whether an email is registered. If `NeedsRehash`, the new hash is saved. Then it issues `IJwtService.GetAccessToken(...)` plus a new refresh token (a `RefreshToken` row holding only the hash) and returns `AuthTokensResponse`.
 - Refresh (`Users/Refresh`): hash the presented token and look it up. Unknown or expired: `UserErrors.InvalidRefreshToken` (401). Already revoked, or lost the conditional revoke to a concurrent request: revoke **all** of that user's refresh tokens, then 401. Otherwise revoke it and issue a new access and refresh token pair. Logout (`Users/Logout`) revokes the presented token and always succeeds.
 - There is no password-change endpoint. When one is added it must revoke all of the user's refresh tokens.
 - Never compare password hashes in a handler; always go through `VerifyPassword` (constant-time, handles legacy hashes).

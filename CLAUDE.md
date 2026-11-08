@@ -155,7 +155,7 @@ Each module uses the same name in every layer (plural folders in Domain, Applica
 | `Orders`     | `Order` → `OrderItem` | PlaceOrder (optional coupon), CancelOrder, SearchOrders (the user's own; paged, sorted, filtered) |
 | `Coupons`    | `Coupon`              | Add, Edit, Delete, GetCoupons (admins only)               |
 | `Reviews`    | `Review`              | AddReview                                                |
-| `Users`      | `User`, `RefreshToken` | Register (command), Login (query → access + refresh token), Refresh, Logout; exposed via `AuthController` |
+| `Users`      | `User`, `RefreshToken` | Register (command), Login (command → access + refresh token), Refresh, Logout; exposed via `AuthController` |
 | `Shared`     | `Money`, `Currency`   | Value objects reused across aggregates                   |
 
 ---
