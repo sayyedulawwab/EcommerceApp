@@ -127,17 +127,6 @@ public sealed class AddProductTests
     public async Task AddProduct_ShouldCreateProductAndLogWarning_WhenTheCacheCannotBeCleared()
     {
         // Arrange
-        await _factory.ResetDatabaseAsync();
-
-        Category category = CategoryData.Create();
-
-        await _factory.ExecuteScopeAsync(async sp =>
-        {
-            ApplicationDbContext db = sp.GetRequiredService<ApplicationDbContext>();
-            db.Add(category);
-            await db.SaveChangesAsync();
-        });
-
         using var logs = new CapturingLoggerProvider();
 
         await using WebApplicationFactory<Program> factoryWithBrokenCache = _factory.WithWebHostBuilder(builder =>
@@ -154,6 +143,18 @@ public sealed class AddProductTests
 
         adminClient.DefaultRequestHeaders.Authorization = new("Test");
         adminClient.DefaultRequestHeaders.Add(TestAuthenticationHandler.RoleHeaderName, Roles.Admin);
+
+        // Starting this host seeds the development data, so reset only after it is up.
+        await _factory.ResetDatabaseAsync();
+
+        Category category = CategoryData.Create();
+
+        await _factory.ExecuteScopeAsync(async sp =>
+        {
+            ApplicationDbContext db = sp.GetRequiredService<ApplicationDbContext>();
+            db.Add(category);
+            await db.SaveChangesAsync();
+        });
 
         // Act
         HttpResponseMessage response = await adminClient.PostAsJsonAsync("/api/v1/products", ProductData.Create(category.Id.Value), cancellationToken: TestContext.Current.CancellationToken);
