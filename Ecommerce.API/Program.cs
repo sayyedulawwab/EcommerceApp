@@ -81,7 +81,7 @@ builder.Services.AddOpenTelemetry()
 
 builder.Services
     .AddApplication()
-    .AddPresentation()
+    .AddPresentation(builder.Configuration)
     .AddInfrastructure(builder.Configuration);
 
 builder.Services.AddApiVersioning(options =>
@@ -106,6 +106,9 @@ if (app.Environment.IsDevelopment())
     app.ApplyMigrations();
 }
 
+// First, so everything after it sees the real client address from a trusted proxy.
+app.UseForwardedHeaders();
+
 app.UseRequestContextLogging();
 
 app.UseExceptionHandler();
@@ -113,6 +116,8 @@ app.UseExceptionHandler();
 app.UseAuthentication();
 
 app.UseAuthorization();
+
+app.UseRateLimiter();
 
 app.MapControllers();
 

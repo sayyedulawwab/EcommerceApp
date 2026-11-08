@@ -11,7 +11,6 @@ internal static class UserData
             LastName.Create("Customer").Value,
             Email.Create(email).Value,
             "passwordHash",
-            "passwordSalt",
             isAdmin: false);
     }
 }

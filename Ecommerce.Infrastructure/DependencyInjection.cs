@@ -1,4 +1,5 @@
-﻿using Dapper;
+﻿using System.Reflection;
+using Dapper;
 using Ecommerce.Application.Abstractions.Auth;
 using Ecommerce.Application.Abstractions.Clock;
 using Ecommerce.Application.Abstractions.Data;
@@ -16,6 +17,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Ecommerce.Infrastructure;
 public static class DependencyInjection
@@ -74,9 +76,24 @@ public static class DependencyInjection
 
         services.ConfigureOptions<JwtOptionsSetup>();
 
+        // Fail at startup, not on the first login, when the key is missing or too short.
+        services.AddSingleton<IValidateOptions<JwtOptions>, JwtOptionsValidator>();
+        OptionsBuilder<JwtOptions> jwtOptionsBuilder = services.AddOptions<JwtOptions>();
+
+        // The build-time OpenAPI step boots the app without any configuration, so it is the one host that skips the check.
+        if (Assembly.GetEntryAssembly()?.GetName().Name != "GetDocument.Insider")
+        {
+            jwtOptionsBuilder.ValidateOnStart();
+        }
+
         services.ConfigureOptions<JwtBearerOptionsSetup>();
 
         services.AddSingleton<IJwtService, JwtService>();
+        services.AddOptions<PasswordHashingOptions>()
+            .BindConfiguration("PasswordHashing")
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
         services.AddSingleton<IAuthService, AuthService>();
     }
 }

@@ -58,6 +58,31 @@ public class RegisterUserCommandValidatorTests
     }
 
     [Fact]
+    public void Validate_Should_ReturnNoErrors_WhenPasswordIs72Bytes()
+    {
+        ValidationResult result = Validator.Validate(ValidCommand with { Password = new string('a', 72) });
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void Validate_Should_ReturnError_WhenPasswordIsLongerThan72Bytes()
+    {
+        ValidationResult result = Validator.Validate(ValidCommand with { Password = new string('a', 73) });
+
+        ValidationAssert.HasSingleError(result, nameof(RegisterUserCommand.Password));
+    }
+
+    [Fact]
+    public void Validate_Should_ReturnError_WhenPasswordIsShortInCharactersButLongerThan72Bytes()
+    {
+        // 'é' is 2 bytes in UTF-8, so 37 of them are 74 bytes.
+        ValidationResult result = Validator.Validate(ValidCommand with { Password = new string('é', 37) });
+
+        ValidationAssert.HasSingleError(result, nameof(RegisterUserCommand.Password));
+    }
+
+    [Fact]
     public void Validate_Should_ReturnNoErrors_WhenPasswordIs8Characters()
     {
         ValidationResult result = Validator.Validate(ValidCommand with { Password = "12345678" });
