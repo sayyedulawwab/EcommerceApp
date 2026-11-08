@@ -5,26 +5,14 @@ using Ecommerce.Application.Abstractions.Paging;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Orders;
 using Ecommerce.Domain.Users;
-using FluentValidation;
-using FluentValidation.Results;
 using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.Application.Orders.SearchOrders;
-internal sealed class SearchOrdersQueryHandler(
-    IApplicationDbContext dbContext,
-    IValidator<SearchOrdersQuery> validator)
+internal sealed class SearchOrdersQueryHandler(IApplicationDbContext dbContext)
     : IQueryHandler<SearchOrdersQuery, PagedList<OrderResponse>>
 {
     public async Task<Result<PagedList<OrderResponse>>> Handle(SearchOrdersQuery request, CancellationToken cancellationToken)
     {
-        // No decorator validates queries, so the handler runs the validator itself.
-        ValidationResult validation = await validator.ValidateAsync(request, cancellationToken);
-
-        if (!validation.IsValid)
-        {
-            return Result.Failure<PagedList<OrderResponse>>(new ValidationError(validation.Errors.Select(f => Error.BadRequest(f.PropertyName, f.ErrorMessage)).ToArray()));
-        }
-
         // Customers see only their own orders.
         IQueryable<Order> query = dbContext.Orders
             .AsNoTracking()

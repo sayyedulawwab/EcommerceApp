@@ -1,6 +1,7 @@
 ﻿using Ecommerce.Application.Abstractions.Auth;
 using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
+using Ecommerce.Application.Exceptions;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Users;
 using Microsoft.EntityFrameworkCore;
@@ -29,14 +30,21 @@ internal sealed class RegisterUserCommandHandler(
             return Result.Failure<Guid>(UserErrors.AlreadyExists);
         }
 
-        string passwordSalt = authService.GenerateSalt();
-        string hashedPassword = authService.HashPassword(request.Password, passwordSalt);
+        string hashedPassword = authService.HashPassword(request.Password);
 
-        var user = User.Create(firstName.Value, lastName.Value, email.Value, hashedPassword, passwordSalt, false);
+        var user = User.Create(firstName.Value, lastName.Value, email.Value, hashedPassword, false);
 
         dbContext.Users.Add(user);
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (UniqueConstraintException)
+        {
+            // Another request registered the same email after the check above.
+            return Result.Failure<Guid>(UserErrors.AlreadyExists);
+        }
 
         return user.Id.Value;
     }

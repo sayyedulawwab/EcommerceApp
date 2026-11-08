@@ -6,8 +6,7 @@ Implements the Application ports, including `IApplicationDbContext`. Persistence
 
 ```
 ApplicationDbContext.cs     DbContext + IApplicationDbContext + domain-event dispatch
-Auth/                       AuthService, JwtService, JwtOptions, JwtOptionsSetup, JwtBearerOptionsSetup
-Caching/                    CacheService (IDistributedCache/Redis), PrivateResolver
+Auth/                       AuthService (bcrypt), PasswordHashingOptions, JwtService, JwtOptions, JwtOptionsSetup, JwtOptionsValidator, JwtBearerOptionsSetup
 Clock/                      DateTimeProvider
 Configurations/             {Entity}Configuration : IEntityTypeConfiguration<{Entity}>
 Data/                       ISqlConnectionFactory + SqlConnectionFactory (Npgsql), DateOnlyTypeHandler (Dapper), DataSeeder (Bogus)
@@ -114,7 +113,9 @@ internal sealed class ProductQueryRepository(ISqlConnectionFactory sqlConnection
 - `ISqlConnectionFactory` is internal to Infrastructure; Application never sees a connection.
 - Write SQL against **snake_case** tables/columns and alias each column **`AS PascalCase`** to match the response property.
 - **Always parameterize values** (`@Param` plus an anonymous object). Never interpolate user input. Dynamic `ORDER BY` columns come **only from a whitelist array**; direction is normalized to `ASC`/`DESC`.
-- Get the paged total from **`COUNT(*) OVER () AS TotalRecords`** on each row (no second COUNT query).
+- Get the paged total from a **separate `SELECT COUNT(*)`** sent with the page query in the same command (`QueryMultipleAsync`, one round trip), and return both as a `ProductSearchResult`. Build the `WHERE` clause once and use it in both statements so the total always matches the filters. A `COUNT(*) OVER ()` column was measured and is slower when there is no keyword (it sorts every matching row), but it was somewhat faster than the two statements when a keyword filtered the rows (the filter runs once instead of twice).
+- Every `ORDER BY` ends with the primary key (`p.id`), so rows with equal sort values keep one order and offset pages never repeat or skip a row.
+- A user keyword used with `ILIKE` goes through `EscapeLikePattern` (escapes `\`, `%`, `_`) and the SQL says `ESCAPE '\'`, so it matches as plain text. `products.name` has a trigram GIN index (`pg_trgm`, enabled with `HasPostgresExtension` in `OnModelCreating`) so the `'%...%'` search can use an index.
 - Pass the `cancellationToken` through `CommandDefinition`.
 - Register each one in `AddPersistence`: `services.AddScoped<IXQueryRepository, XQueryRepository>();`.
 
@@ -124,7 +125,7 @@ internal sealed class ProductQueryRepository(ISqlConnectionFactory sqlConnection
 
 - Create with: `dotnet ef migrations add <Name> --project Ecommerce.Infrastructure --startup-project Ecommerce.API`.
 - `Migrations/**` is marked `generated_code` in `.editorconfig`. **Never hand-edit it.** Change the configuration and generate a new migration.
-- Existing migrations: `Initial`, `UpdateDateTimeFields`, `MakeOrderUpdatedOnUtcNullable`, `AddProductConcurrencyToken`, `AddCouponsAndOrderCancellation` (backfills `order_items.unit_price_*` from the product's price at migration time), `RestrictCategoryDelete`.
+- Existing migrations: `Initial`, `UpdateDateTimeFields`, `MakeOrderUpdatedOnUtcNullable`, `AddProductConcurrencyToken`, `AddCouponsAndOrderCancellation` (backfills `order_items.unit_price_*` from the product's price at migration time), `RestrictCategoryDelete`, `AddCategoryUniqueIndexes`, `AddProductNameTrigramIndex` (enables `pg_trgm`, adds `ix_products_name`).
 - The only acceptable hand edit is adding a data fix-up (`migrationBuilder.Sql(...)`) to a **new** migration you just generated, e.g. resetting values that the old schema forced (see `MakeOrderUpdatedOnUtcNullable`). Never edit a migration that has already been applied anywhere.
 - Before committing, check that the generated `Up`/`Down` contains only the change you intended; anything else means the model drifted.
 - In every other environment migrations are applied by the migration bundle (`deploy/migrations.Dockerfile`, run by `deploy/deploy.sh` before the containers switch), never at startup.
@@ -139,8 +140,8 @@ internal sealed class ProductQueryRepository(ISqlConnectionFactory sqlConnection
 | `IDateTimeProvider` → `DateTimeProvider`          | Transient  | `UtcNow => DateTime.UtcNow`                              |
 | `IEmailService` → `EmailService`                  | Transient  | Stub, returns `Task.CompletedTask`                        |
 | `IDomainEventsDispatcher` → `DomainEventsDispatcher` | Transient |                                                         |
-| `IDistributedCache` (Redis)                       | –          | `ConnectionStrings:Redis`                                |
-| `ICacheService` → `CacheService`                  | Singleton  |                                                          |
+| `IDistributedCache` (Redis)                       | –          | `ConnectionStrings:Redis`; the L2 cache of `HybridCache`  |
+| `HybridCache`                                     | Singleton  | `AddHybridCache`: 5 minutes in Redis, 1 minute in memory  |
 | `ApplicationDbContext`                            | Scoped     | `UseNpgsql(...).UseSnakeCaseNamingConvention()`, `ConnectionStrings:Database` |
 | `IApplicationDbContext` → same `ApplicationDbContext` | Scoped | `sp.GetRequiredService<ApplicationDbContext>()`           |
 | `I{Entity}QueryRepository` → `{Entity}QueryRepository` | Scoped | Registered explicitly, one line each                     |
@@ -173,17 +174,23 @@ Consumers take `IOptions<T>`. Follow this pattern for new settings.
 
 ## Auth
 
-- `JwtService`: HS256, claims `ClaimTypes.Email` + `ClaimTypes.NameIdentifier` (user id), 1-hour expiry, issuer/audience/secret from the `Jwt` section.
-- `JwtBearerOptionsSetup` (`IConfigureNamedOptions<JwtBearerOptions>`) validates issuer, audience, lifetime and signing key.
-- `AuthService`: 128-bit random salt (Base64), and **PBKDF2-HMAC-SHA512, 210,000 iterations, 64-byte output** (`Rfc2898DeriveBytes.Pbkdf2`, no extra package), stored as Base64.
-- `VerifyPassword` compares in constant time (`CryptographicOperations.FixedTimeEquals`). It also accepts the **legacy** `SHA256(password + salt)` hash, so accounts registered before the switch can still log in. New hashes are always PBKDF2. Changing the parameters invalidates existing hashes unless you add another fallback.
+- `JwtService`: issues the access token with `JsonWebTokenHandler` (not `JwtSecurityTokenHandler`): HS256, claims `ClaimTypes.Email` + `ClaimTypes.NameIdentifier` (user id) + `ClaimTypes.Role` for admins, 15-minute expiry (`Jwt:AccessTokenLifetimeMinutes`). It also makes refresh tokens: 32 bytes from `RandomNumberGenerator`, Base64Url, and hashes them with SHA-256 (hex) for storage.
+- `JwtBearerOptionsSetup` (`IConfigureNamedOptions<JwtBearerOptions>`) validates issuer, audience, lifetime (30 s clock skew), signing key and the algorithm (HS256 only). Validation runs through `JsonWebTokenHandler`: `UseSecurityTokenValidators` stays `false`. The claims keep the `ClaimTypes.*` names `JwtService` wrote, so `ClaimTypes.NameIdentifier` resolves in controllers whatever `MapInboundClaims` is.
+- `JwtOptionsValidator` (`IValidateOptions<JwtOptions>`, run by `ValidateOnStart`): the host fails to start when `Jwt:SecretKey` is missing or shorter than 32 bytes. There is **no signing key in any committed file**: set it with `dotnet user-secrets` (`UserSecretsId` is on the API project) or the `Jwt__SecretKey` environment variable. The one host that skips the check is the build-time OpenAPI generator (`GetDocument.Insider`), which boots the app without configuration.
+- `AuthService`: **bcrypt** through `BCrypt.Net-Next`, work factor 12 by default (`PasswordHashing:WorkFactor`, accepted range 10 to 16). The salt is inside the hash, so `users` has no salt column. No pre-hashing: bcrypt only uses the first 72 bytes of a password, so the register validator rejects longer ones (72 UTF-8 bytes) and login never matches them.
+- `VerifyPassword` returns `false` for a stored value that is not a bcrypt hash (no exception). `NeedsRehash` is true when the stored work factor differs from the configured one; login then saves a new hash. `VerifyAgainstDummyHash` does the same work for an unknown email, so login takes about as long whether or not the email exists.
+- `RefreshToken` rows (table `refresh_tokens`, unique index on `token_hash`) are revoked with `ExecuteUpdateAsync` and a `RevokedOnUtc IS NULL` condition, so only one of two concurrent refreshes with the same token wins.
+- `UniqueConstraintException` (a `DbUpdateException`): `ApplicationDbContext.SaveChangesAsync` throws it for PostgreSQL error 23505, with the constraint name. Handlers that already catch `DbUpdateException` keep working; the register handler catches this one to return 409.
 
 ---
 
 ## Caching
 
-- `CacheService` serializes with **Newtonsoft.Json** and uses `PrivateResolver` plus `AllowNonPublicDefaultConstructor`, so types with private setters and constructors round-trip.
-- Keys are tracked in a **static in-process `ConcurrentDictionary`** to support `RemoveByPrefixAsync`. Prefix removal therefore only clears keys written by the same app instance.
+- `AddHybridCache` registers `HybridCache` with default entry options of 5 minutes in Redis (`Expiration`) and 1 minute in memory (`LocalCacheExpiration`). These are unmeasured starting values. The L2 cache is the Redis `IDistributedCache` registered next to it.
+- Values are serialized with `System.Text.Json` (the `HybridCache` default), so cached responses need public `init`/`set` properties. There is no custom cache wrapper or key registry.
+- Tag invalidation (`RemoveByTagAsync`) is logical: it records "ignore entries created before now" for the tag in Redis and in the calling instance's memory. Other instances' in-memory copies are not touched and live until `LocalCacheExpiration`.
+- The integration test factory clears Redis and also calls `RemoveByTagAsync("*")` between tests, because flushing Redis alone leaves the in-memory copies.
+
 
 ---
 

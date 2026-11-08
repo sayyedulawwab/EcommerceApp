@@ -4,11 +4,11 @@ A REST API for an ecommerce platform: products, categories, orders, product revi
 
 ## Features
 
-- **Products:** add, edit, delete, get by id (with its reviews), and search with filtering, sorting, paging and Redis caching
+- **Products:** add, edit, delete, get by id (with its reviews), and search with filtering, sorting, paging and Redis caching (HybridCache: in-memory in front of Redis, cleared by tag)
 - **Categories:** add, edit, delete, list, and get by id
 - **Orders:** place an order for the signed-in user (with an optional coupon), cancel it before payment, and list the user's own orders
 - **Reviews:** rate (1–5) and comment on a product
-- **Users:** register and log in (JWT bearer tokens, PBKDF2-hashed passwords)
+- **Users:** register and log in (bcrypt-hashed passwords, 15-minute JWT access tokens, rotating refresh tokens, per-IP rate limit on `/auth`)
 
 ## Technologies
 
@@ -37,13 +37,24 @@ Ecommerce.IntegrationTests       HTTP tests against PostgreSQL in Docker
 
 Prerequisites: the .NET 10 SDK and Docker Desktop.
 
-1. Copy `.env.example` to `.env.dev` and fill in the values. `.env.*` files are ignored by git, so the secrets stay on your machine.
+1. Copy `.env.example` to `.env.dev` and fill in the values. `.env.*` files are ignored by git, so the secrets stay on your machine. `JWT_SECRET_KEY` has no default and must be at least 32 bytes; the API will not start without it. Generate one with `openssl rand -base64 48`. To run the API on the host with `dotnet run` instead, store the key with `dotnet user-secrets set "Jwt:SecretKey" "<value>" --project Ecommerce.API`.
 
 2. Start the infrastructure (PostgreSQL, Redis, and the observability stack). This also creates the shared Docker network:
 
    ```bash
    docker compose -f infra.compose.yml --env-file .env.dev up -d
    ```
+
+   `ecommerce-network` has a fixed subnet, `172.28.0.0/24`, and the API believes `X-Forwarded-For` only from that range. A network created before this change has a random subnet and keeps it, so remove and recreate it once (this stops the infrastructure and deletes nothing in the named volumes):
+
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.override.yml --env-file .env.dev down
+   docker compose -f infra.compose.yml --env-file .env.dev down
+   docker network rm ecommerce-network
+   docker compose -f infra.compose.yml --env-file .env.dev up -d
+   ```
+
+   If `172.28.0.0/24` clashes with a network you already use, change the subnet in `infra.compose.yml` and set `TRUSTED_PROXY_NETWORK` in `.env.dev` to the same value.
 
 3. Build and start the API:
 

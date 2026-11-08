@@ -9,6 +9,7 @@ using Ecommerce.Domain.Reviews;
 using Ecommerce.Domain.Users;
 using Ecommerce.Infrastructure.DomainEvents;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using System.Data;
 
 namespace Ecommerce.Infrastructure;
@@ -21,9 +22,13 @@ public sealed class ApplicationDbContext(DbContextOptions options, IDomainEvents
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // Needed by the trigram index on products.name.
+        modelBuilder.HasPostgresExtension("pg_trgm");
+
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
 
         base.OnModelCreating(modelBuilder);
@@ -42,6 +47,10 @@ public sealed class ApplicationDbContext(DbContextOptions options, IDomainEvents
         catch (DbUpdateConcurrencyException ex)
         {
             throw new ConcurrencyException("Concurrency exception occurred.", ex);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } postgresException)
+        {
+            throw new UniqueConstraintException("A unique constraint was violated.", ex, postgresException.ConstraintName);
         }
     }
 

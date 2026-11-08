@@ -1,15 +1,15 @@
-﻿using Ecommerce.Application.Abstractions.Paging;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Ecommerce.Application.Abstractions.Caching;
 using Ecommerce.Application.Abstractions.Messaging;
+using Ecommerce.Application.Abstractions.Paging;
 using Ecommerce.Domain.Abstractions;
+using Microsoft.Extensions.Caching.Hybrid;
 
 namespace Ecommerce.Application.Products.SearchProduct;
 internal sealed class SearchProductQueryHandler(
     IProductQueryRepository productQueryRepository,
-    ICacheService cacheService)
+    HybridCache cache)
     : IQueryHandler<SearchProductQuery, PagedList<ProductResponse>>
 {
     public async Task<Result<PagedList<ProductResponse>>> Handle(SearchProductQuery request, CancellationToken cancellationToken)
@@ -19,24 +19,14 @@ internal sealed class SearchProductQueryHandler(
 
         string cacheKey = $"products-{GenerateCacheKey(request)}";
 
-        IEnumerable<ProductResponse>? cachedProductResponses = await cacheService.GetAsync<IEnumerable<ProductResponse>?>(cacheKey, cancellationToken);
+        // On a miss the factory queries the database; concurrent requests for the same key share that one call.
+        ProductSearchResult result = await cache.GetOrCreateAsync<ProductSearchResult>(
+            cacheKey,
+            async token => await productQueryRepository.SearchAsync(request, page, pageSize, token),
+            tags: [ProductCache.Tag],
+            cancellationToken: cancellationToken);
 
-        if (cachedProductResponses is not null && cachedProductResponses.Any())
-        {
-            long totalRecordsFromCache = cachedProductResponses.FirstOrDefault()?.TotalRecords ?? 0;
-            var pagedProductsFromCache = PagedList<ProductResponse>.Create(cachedProductResponses, page, pageSize, totalRecordsFromCache);
-            return pagedProductsFromCache;
-        }
-
-        IReadOnlyList<ProductResponse> products = await productQueryRepository.SearchAsync(request, page, pageSize, cancellationToken);
-
-        long totalRecords = products.Count > 0 ? products[0].TotalRecords : 0;
-
-        await cacheService.SetAsync(cacheKey, products, cancellationToken);
-
-        var pagedProducts = PagedList<ProductResponse>.Create(products, page, pageSize, totalRecords);
-
-        return pagedProducts;
+        return PagedList<ProductResponse>.Create(result.Items, page, pageSize, result.TotalCount);
     }
 
 

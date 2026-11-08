@@ -5,7 +5,7 @@ namespace Ecommerce.API;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddPresentation(this IServiceCollection services)
+    public static IServiceCollection AddPresentation(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddOpenApi(options => options.AddDocumentTransformer((document, _, _) =>
         {
@@ -34,6 +34,9 @@ public static class DependencyInjection
 
         services.AddControllers();
         services.AddEndpointsApiExplorer();
+
+        services.AddTrustedForwardedHeaders(configuration);
+        services.AddAuthRateLimiting();
 
         services.AddExceptionHandler<ExceptionHandler>();
         services.AddProblemDetails();

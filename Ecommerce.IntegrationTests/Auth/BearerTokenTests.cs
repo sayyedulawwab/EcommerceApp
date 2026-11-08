@@ -3,11 +3,17 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Ecommerce.API.Controllers.Auth;
 using Ecommerce.API.Controllers.Categories;
+using Ecommerce.API.Controllers.Orders;
 using Ecommerce.Application.Abstractions.Auth;
-using Ecommerce.Application.Users.Login;
+using Ecommerce.Application.Users;
+using Ecommerce.Domain.Orders;
+using Ecommerce.Domain.Products;
+using Ecommerce.Domain.Categories;
 using Ecommerce.Domain.Users;
 using Ecommerce.Infrastructure;
+using Ecommerce.IntegrationTests.Helpers;
 using Ecommerce.IntegrationTests.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Ecommerce.IntegrationTests.Auth;
@@ -74,6 +80,42 @@ public sealed class BearerTokenTests
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    [Fact]
+    public async Task PlaceOrder_ShouldUseTheUserIdFromTheToken_WhenTheTokenComesFromLogin()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        Category category = CategoryData.Create();
+        Product product = ProductData.CreateProduct(category.Id);
+
+        await _factory.ExecuteScopeAsync(async sp =>
+        {
+            ApplicationDbContext db = sp.GetRequiredService<ApplicationDbContext>();
+            db.AddRange(category, product);
+            await db.SaveChangesAsync();
+        });
+
+        using HttpClient client = await CreateSignedInClientAsync(isAdmin: false);
+
+        UserId userId = await _factory.ExecuteScopeAsync(sp =>
+            sp.GetRequiredService<ApplicationDbContext>().Set<User>().Select(user => user.Id).SingleAsync());
+
+        // Act
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/v1/orders",
+            new PlaceOrderRequest([new PlaceOrderProductRequest(product.Id.Value, 1)]),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        Order order = await _factory.ExecuteScopeAsync(sp =>
+            sp.GetRequiredService<ApplicationDbContext>().Set<Order>().SingleAsync());
+
+        Assert.Equal(userId, order.UserId);
+    }
+
     [Theory]
     [InlineData(false, HttpStatusCode.Forbidden)]
     [InlineData(true, HttpStatusCode.Created)]
@@ -91,6 +133,26 @@ public sealed class BearerTokenTests
         Assert.Equal(expectedStatusCode, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Login_ShouldIssueAnAccessTokenValidFor15MinutesWithTheUserIdClaim()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        string token = await LoginAsync(isAdmin: false);
+
+        UserId userId = await _factory.ExecuteScopeAsync(sp =>
+            sp.GetRequiredService<ApplicationDbContext>().Set<User>().Select(user => user.Id).SingleAsync());
+
+        // Act
+        Microsoft.IdentityModel.JsonWebTokens.JsonWebToken jwt = new Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler().ReadJsonWebToken(token);
+
+        // Assert
+        Assert.Equal(TimeSpan.FromMinutes(15), jwt.ValidTo - jwt.ValidFrom);
+        Assert.Equal("HS256", jwt.Alg);
+        Assert.Equal(userId.Value.ToString(), jwt.Claims.Single(claim => claim.Type == System.Security.Claims.ClaimTypes.NameIdentifier).Value);
+    }
+
     private async Task<HttpClient> CreateSignedInClientAsync(bool isAdmin)
     {
         string token = await LoginAsync(isAdmin);
@@ -106,14 +168,12 @@ public sealed class BearerTokenTests
         await _factory.ExecuteScopeAsync(async sp =>
         {
             IAuthService authService = sp.GetRequiredService<IAuthService>();
-            string salt = authService.GenerateSalt();
 
             var user = User.Create(
                 FirstName.Create("Jane").Value,
                 LastName.Create("Doe").Value,
                 Email.Create("jane@example.com").Value,
-                authService.HashPassword(Password, salt),
-                salt,
+                authService.HashPassword(Password),
                 isAdmin);
 
             ApplicationDbContext db = sp.GetRequiredService<ApplicationDbContext>();
@@ -125,7 +185,7 @@ public sealed class BearerTokenTests
             "/api/v1/auth/login",
             new LoginUserRequest("jane@example.com", Password), cancellationToken: TestContext.Current.CancellationToken);
 
-        AccessTokenResponse? token = await response.Content.ReadFromJsonAsync<AccessTokenResponse>(cancellationToken: TestContext.Current.CancellationToken);
+        AuthTokensResponse? token = await response.Content.ReadFromJsonAsync<AuthTokensResponse>(cancellationToken: TestContext.Current.CancellationToken);
 
         return token!.AccessToken;
     }

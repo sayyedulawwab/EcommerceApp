@@ -7,11 +7,13 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
 using Respawn;
+using System.Security.Cryptography;
 using StackExchange.Redis;
 using System.Data.Common;
 using System.Net.Http.Headers;
@@ -92,6 +94,12 @@ public sealed class IntegrationTestFactory
         {
             await server.FlushAllDatabasesAsync();
         }
+
+        // Flushing Redis does not clear the in-memory copies the app keeps in front of it.
+        // "*" is HybridCache's tag for every entry.
+        HybridCache cache = Services.GetRequiredService<HybridCache>();
+
+        await cache.RemoveByTagAsync("*");
     }
 
     // A signed-in admin: the only role that can change products, categories and coupons.
@@ -169,7 +177,13 @@ public sealed class IntegrationTestFactory
                 new Dictionary<string, string?>
                 {
                     ["ConnectionStrings:Database"] = ConnectionString,
-                    ["ConnectionStrings:Redis"] = _redis.GetConnectionString()
+                    ["ConnectionStrings:Redis"] = _redis.GetConnectionString(),
+                    // A new random signing key for every run: no key is committed anywhere.
+                    ["Jwt:SecretKey"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(48)),
+                    // The lowest accepted bcrypt cost, so the many logins in these tests stay fast.
+                    ["PasswordHashing:WorkFactor"] = "10",
+                    // High enough that the many auth calls in these tests are never throttled. RateLimitTests lowers it.
+                    ["RateLimiting:Auth:PermitLimit"] = "100000"
                 }));
 
         builder.ConfigureServices(services =>

@@ -18,4 +18,9 @@ public static class UserErrors
         "User.InvalidCredentials",
         "The provided credentials were invalid",
         HttpStatusCode.Unauthorized);
+
+    public static readonly Error InvalidRefreshToken = new(
+        "User.InvalidRefreshToken",
+        "The refresh token is invalid, expired or already used",
+        HttpStatusCode.Unauthorized);
 }
