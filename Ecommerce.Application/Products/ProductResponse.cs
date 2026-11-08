@@ -13,5 +13,4 @@ public sealed class ProductResponse
     public DateTime? UpdatedOnUtc { get; init; }
     public Guid CategoryId { get; init; }
     public List<ReviewResponse> Reviews { get; init; } = [];
-    public long TotalRecords { get; init; }
 }

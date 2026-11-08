@@ -1,6 +1,6 @@
 # Ecommerce.Application — Conventions
 
-Use-case layer: commands, queries, handlers, validators, responses, and the ports (interfaces) that Infrastructure implements. It references **Domain only**, plus EF Core (for `DbSet<T>` and LINQ), FluentValidation, Scrutor and `Microsoft.Extensions.Logging.Abstractions`. It does not reference Dapper or Npgsql.
+Use-case layer: commands, queries, handlers, validators, responses, and the ports (interfaces) that Infrastructure implements. It references **Domain only**, plus EF Core (for `DbSet<T>` and LINQ), FluentValidation, Scrutor, `Microsoft.Extensions.Logging.Abstractions` and `Microsoft.Extensions.Caching.Abstractions` (for `HybridCache`). It does not reference Dapper, Npgsql or Redis.
 
 ## Folder layout
 
@@ -8,7 +8,6 @@ Use-case layer: commands, queries, handlers, validators, responses, and the port
 Abstractions/
   Auth/        IAuthService (bcrypt hash/verify/rehash), IJwtService (access token, refresh token generation and hashing)
   Behaviors/   LoggingDecorator, ValidationDecorator
-  Caching/     ICacheService
   Clock/       IDateTimeProvider
   Data/        IApplicationDbContext (DbSets + SaveChangesAsync)
   Emails/      IEmailService
@@ -48,9 +47,9 @@ Controllers inject the closed handler interface directly (`ICommandHandler<AddPr
 ### DI and decorators (`DependencyInjection.AddApplication`)
 
 - Scrutor scans this assembly and registers **every** `IQueryHandler<,>`, `ICommandHandler<>`, `ICommandHandler<,>` and `IDomainEventHandler<>` implementation (including `internal` ones) as **scoped**. New handlers need no registration.
-- Decorators are applied with `TryDecorate`. The resulting order is **`LoggingDecorator` → `ValidationDecorator` → handler** for commands, and **`LoggingDecorator` → handler** for queries.
+- Decorators are applied with `TryDecorate`. The resulting order is **`LoggingDecorator` → `ValidationDecorator` → handler** for both commands and queries.
 - `AddValidatorsFromAssembly` auto-registers all validators.
-- **Query validators never run**, because no validation decorator wraps `IQueryHandler`. Validate query input in the handler (as `SearchProductQueryHandler` does with page defaults and a sort whitelist). `SearchOrdersQueryHandler` injects `IValidator<SearchOrdersQuery>` and runs it itself, returning a `ValidationError`.
+- **Query validators run too**: `ValidationDecorator.QueryHandler` wraps every `IQueryHandler`, exactly like the command one. A query with a `{Query}Validator` (`SearchProductQueryValidator`, `SearchOrdersQueryValidator`) gets a 400 `ValidationError` before its handler runs; a query without one is not affected. Handlers do not inject `IValidator`.
 - A new cross-cutting concern is a new decorator class in `Abstractions/Behaviors/`, registered with `TryDecorate`. Only add one when asked; there are no MediatR-style pipeline behaviors.
 - **Domain event handlers** (`internal sealed class XDomainEventHandler : IDomainEventHandler<XDomainEvent>`) live in Application and are picked up by the scan. Put each in the module folder next to the use case that triggers it (`Users/Register/SendWelcomeEmailDomainEventHandler.cs`, `Orders/PlaceOrder/SendOrderConfirmationDomainEventHandler.cs`). The event carries only IDs, so the handler loads what it needs with `AsNoTracking()` and returns quietly if the entity is gone.
 
@@ -114,7 +113,7 @@ internal sealed class EditCategoryCommandHandler(
 
 Rules:
 
-- **`internal sealed class`** with a **primary constructor**. Dependencies are `IApplicationDbContext`, query repositories, and Application ports (`IDateTimeProvider`, `ICacheService`, `IAuthService`, ...). Never inject `ApplicationDbContext` or other Infrastructure types.
+- **`internal sealed class`** with a **primary constructor**. Dependencies are `IApplicationDbContext`, query repositories, `HybridCache`, and Application ports (`IDateTimeProvider`, `IAuthService`, ...). Never inject `ApplicationDbContext` or other Infrastructure types.
 - The `Handle` parameter is named `request`.
 - **Ordering:**
   1. Load each referenced entity. If one is missing, `return Result.Failure<T>({Entity}Errors.NotFound);`.
@@ -137,7 +136,7 @@ Rules:
      ```
   5. Stage new or removed entities with `dbContext.{Set}.Add` / `Remove`. An entity loaded through the DbContext is tracked, so an edit needs no `Update` call.
   6. `await dbContext.SaveChangesAsync(cancellationToken);`. Exactly once, at the end, and **never on a failure path**.
-  7. Invalidate the cache if the write affects cached reads (see Caching).
+  7. Clear the product cache if the write affects cached reads (see Caching).
   8. `return entity.Id.Value;` (implicit `Result<Guid>`).
 - Timestamps always come from `dateTimeProvider.UtcNow`.
 - Pass `cancellationToken` through every async call.
@@ -163,6 +162,7 @@ public class AddProductCommandValidator : AbstractValidator<AddProductCommand>
 - Lambda parameter `c` (or the entity's initial, e.g. `r` for reviews).
 - Messages use FluentValidation defaults, or inline `.WithMessage("Please provide a comment.")` when a friendlier message helps. There is no message catalog.
 - Validators check **shape** (required, ranges, lengths). Rules that need the database (existence, uniqueness) go in the handler and return a domain error.
+- **Every command has a validator, and a query that takes user input gets one too** (`SearchProductQueryValidator`: sort column whitelist, page size at most 100).
 - **Every command has a validator.** String fields get `.MaximumLength(...)` matching their column (names/codes/emails 200, descriptions 2000), currency codes get `.Must(Currency.IsSupported)`, money amounts get `.GreaterThan(0)`, and stock quantities get `.GreaterThanOrEqualTo(0)`. The value objects check the same rules again, so the validator is for early, per-field feedback, not the only guard.
 - Collections: `RuleFor(c => c.Items).NotEmpty();` plus `RuleForEach(c => c.Items).ChildRules(item => { item.RuleFor(i => i.Quantity).GreaterThan(0); });` (see `PlaceOrderCommandValidator`).
 - On failure the decorator returns `ValidationError` (400). Its `Errors` contains `Error.BadRequest(PropertyName, ErrorMessage)` per failure, and the handler is never called.
@@ -228,13 +228,13 @@ public sealed class ProductResponse
 Commands and simple reads use `IApplicationDbContext`. A read goes behind a **query repository** when the SQL is better written by hand: joins over several tables that return selected columns, search with dynamic filters and paging, stored procedures, or operations that are easier or faster in raw SQL. The interface lives in Application (`Products/IProductQueryRepository.cs`), the Dapper implementation in Infrastructure (`Repositories/ProductQueryRepository.cs`). The handler keeps the defaults, caching and paging:
 
 ```csharp
-IReadOnlyList<ProductResponse> products = await productQueryRepository.SearchAsync(request, page, pageSize, cancellationToken);
+ProductSearchResult result = await cache.GetOrCreateAsync<ProductSearchResult>(
+    cacheKey,
+    async token => await productQueryRepository.SearchAsync(request, page, pageSize, token),
+    tags: [ProductCache.Tag],
+    cancellationToken: cancellationToken);
 
-long totalRecords = products.Count > 0 ? products[0].TotalRecords : 0;
-
-await cacheService.SetAsync(cacheKey, products, cancellationToken);
-
-return PagedList<ProductResponse>.Create(products, page, pageSize, totalRecords);
+return PagedList<ProductResponse>.Create(result.Items, page, pageSize, result.TotalCount);
 ```
 
 Rules:
@@ -243,15 +243,16 @@ Rules:
 - Don't add a query repository for reads LINQ handles well. Don't add generic CRUD repositories.
 - Default `page = 1` and `pageSize = 10` when the input is ≤ 0.
 - Return `PagedList<T>.Create(items, page, pageSize, totalCount)`. It lives in `Application/Abstractions/Paging/PagedList.cs` and exposes `Items`, `Page`, `PageSize`, `TotalCount`, `HasPreviousPage`, `HasNextPage`. Reuse it; don't create another paging type.
-- The SQL rules (snake_case, parameters, whitelisted `ORDER BY`, `COUNT(*) OVER ()`) are in the Infrastructure guide.
+- The SQL rules (snake_case, parameters, whitelisted `ORDER BY`, a separate `COUNT(*)`) are in the Infrastructure guide.
 
 ---
 
 ## Caching
 
-- `ICacheService`: `GetAsync<T>`, `SetAsync<T>`, `RemoveAsync`, `RemoveByPrefixAsync`. Backed by Redis, with no expiration set.
-- **Cached queries** build the key `"{prefix}-{hash}"`, where the hash is Base64(SHA-256(JSON of every query parameter)). Return the cached value if it is present and non-empty; otherwise query and `SetAsync`.
-- **Writes that affect cached data** call `await cacheService.RemoveByPrefixAsync("products", cancellationToken);` **after** `SaveChangesAsync`. Every product command (Add/Edit/Delete) does this. Use a per-module prefix for any new cached query.
+- Handlers inject **`HybridCache`** (from `Microsoft.Extensions.Caching.Abstractions`) directly. It is already an abstraction with a replaceable implementation, like `ILogger<T>`, so there is no wrapper port. Infrastructure registers the implementation (see its guide).
+- **Cached queries** build the key `"{prefix}-{hash}"`, where the hash is Base64(SHA-256(JSON of every query parameter)), so user input never becomes part of a key as-is. They call `cache.GetOrCreateAsync(key, factory, tags: [ProductCache.Tag], cancellationToken: ...)`; the factory runs the query on a miss. Cached types must round-trip through `System.Text.Json` (public `init`/`set` properties).
+- **Writes that affect cached data** call `await ProductCache.ClearAsync(cache, logger, cancellationToken);` **after** `SaveChangesAsync` (Add/Edit/Delete product, PlaceOrder, CancelOrder). It calls `RemoveByTagAsync` and, if that throws, logs a warning instead of failing: the data is already saved, so the request succeeds and stale entries expire on their own. Give a new module its own tag constant.
+- `HybridCache` has no cross-instance invalidation for the in-memory layer (see the root guide's Known Quirks).
 
 ---
 

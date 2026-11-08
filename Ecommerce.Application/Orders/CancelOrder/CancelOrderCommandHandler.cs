@@ -1,19 +1,22 @@
-using Ecommerce.Application.Abstractions.Caching;
 using Ecommerce.Application.Abstractions.Clock;
 using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
+using Ecommerce.Application.Products;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Coupons;
 using Ecommerce.Domain.Orders;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Users;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Logging;
 
 namespace Ecommerce.Application.Orders.CancelOrder;
 internal sealed class CancelOrderCommandHandler(
     IApplicationDbContext dbContext,
     IDateTimeProvider dateTimeProvider,
-    ICacheService cacheService)
+    HybridCache cache,
+    ILogger<CancelOrderCommandHandler> logger)
     : ICommandHandler<CancelOrderCommand>
 {
     public async Task<Result> Handle(CancelOrderCommand request, CancellationToken cancellationToken)
@@ -50,7 +53,7 @@ internal sealed class CancelOrderCommandHandler(
         await dbContext.SaveChangesAsync(cancellationToken);
 
         // The product search is cached, and cancelling changed the stock it shows.
-        await cacheService.RemoveByPrefixAsync("products", cancellationToken);
+        await ProductCache.ClearAsync(cache, logger, cancellationToken);
 
         return Result.Success();
     }
