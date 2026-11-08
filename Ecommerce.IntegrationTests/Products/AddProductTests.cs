@@ -127,6 +127,10 @@ public sealed class AddProductTests
     public async Task AddProduct_ShouldCreateProductAndLogWarning_WhenTheCacheCannotBeCleared()
     {
         // Arrange
+        // Starting the extra host seeds development data when it finds no users. Start it on an empty
+        // database (leftovers from other tests can collide with the seed), then reset to remove the seed.
+        await _factory.ResetDatabaseAsync();
+
         using var logs = new CapturingLoggerProvider();
 
         await using WebApplicationFactory<Program> factoryWithBrokenCache = _factory.WithWebHostBuilder(builder =>
@@ -144,7 +148,6 @@ public sealed class AddProductTests
         adminClient.DefaultRequestHeaders.Authorization = new("Test");
         adminClient.DefaultRequestHeaders.Add(TestAuthenticationHandler.RoleHeaderName, Roles.Admin);
 
-        // Starting this host seeds the development data, so reset only after it is up.
         await _factory.ResetDatabaseAsync();
 
         Category category = CategoryData.Create();
