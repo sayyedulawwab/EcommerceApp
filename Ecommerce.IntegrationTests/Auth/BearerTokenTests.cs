@@ -5,7 +5,7 @@ using Ecommerce.API.Controllers.Auth;
 using Ecommerce.API.Controllers.Categories;
 using Ecommerce.API.Controllers.Orders;
 using Ecommerce.Application.Abstractions.Auth;
-using Ecommerce.Application.Users.Login;
+using Ecommerce.Application.Users;
 using Ecommerce.Domain.Orders;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Categories;
@@ -133,6 +133,26 @@ public sealed class BearerTokenTests
         Assert.Equal(expectedStatusCode, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Login_ShouldIssueAnAccessTokenValidFor15MinutesWithTheUserIdClaim()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        string token = await LoginAsync(isAdmin: false);
+
+        UserId userId = await _factory.ExecuteScopeAsync(sp =>
+            sp.GetRequiredService<ApplicationDbContext>().Set<User>().Select(user => user.Id).SingleAsync());
+
+        // Act
+        Microsoft.IdentityModel.JsonWebTokens.JsonWebToken jwt = new Microsoft.IdentityModel.JsonWebTokens.JsonWebTokenHandler().ReadJsonWebToken(token);
+
+        // Assert
+        Assert.Equal(TimeSpan.FromMinutes(15), jwt.ValidTo - jwt.ValidFrom);
+        Assert.Equal("HS256", jwt.Alg);
+        Assert.Equal(userId.Value.ToString(), jwt.Claims.Single(claim => claim.Type == System.Security.Claims.ClaimTypes.NameIdentifier).Value);
+    }
+
     private async Task<HttpClient> CreateSignedInClientAsync(bool isAdmin)
     {
         string token = await LoginAsync(isAdmin);
@@ -165,7 +185,7 @@ public sealed class BearerTokenTests
             "/api/v1/auth/login",
             new LoginUserRequest("jane@example.com", Password), cancellationToken: TestContext.Current.CancellationToken);
 
-        AccessTokenResponse? token = await response.Content.ReadFromJsonAsync<AccessTokenResponse>(cancellationToken: TestContext.Current.CancellationToken);
+        AuthTokensResponse? token = await response.Content.ReadFromJsonAsync<AuthTokensResponse>(cancellationToken: TestContext.Current.CancellationToken);
 
         return token!.AccessToken;
     }

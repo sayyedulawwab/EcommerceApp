@@ -22,6 +22,7 @@ public sealed class ApplicationDbContext(DbContextOptions options, IDomainEvents
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

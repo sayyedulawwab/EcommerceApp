@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Ecommerce.API.Controllers.Auth;
 using Ecommerce.Application.Abstractions.Auth;
-using Ecommerce.Application.Users.Login;
+using Ecommerce.Application.Users;
 using Ecommerce.Domain.Users;
 using Ecommerce.Infrastructure;
 using Ecommerce.IntegrationTests.Infrastructure;
@@ -40,7 +40,7 @@ public sealed class LoginTests
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        AccessTokenResponse? token = await response.Content.ReadFromJsonAsync<AccessTokenResponse>(cancellationToken: TestContext.Current.CancellationToken);
+        AuthTokensResponse? token = await response.Content.ReadFromJsonAsync<AuthTokensResponse>(cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.False(string.IsNullOrWhiteSpace(token?.AccessToken));
     }
@@ -191,7 +191,7 @@ public sealed class LoginTests
             new LoginUserRequest("ada@example.com", "Password123!"), cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        AccessTokenResponse? token = await response.Content.ReadFromJsonAsync<AccessTokenResponse>(cancellationToken: TestContext.Current.CancellationToken);
+        AuthTokensResponse? token = await response.Content.ReadFromJsonAsync<AuthTokensResponse>(cancellationToken: TestContext.Current.CancellationToken);
 
         // The JWT payload is the second, base64url-encoded part of the token. Claims keep their full ClaimTypes URI.
         string payload = token!.AccessToken.Split('.')[1].Replace('-', '+').Replace('_', '/');
