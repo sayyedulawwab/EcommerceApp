@@ -46,10 +46,7 @@ public sealed class ApplicationDbContext(DbContextOptions options, IDomainEvents
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } postgresException)
         {
-            throw new UniqueConstraintException("A unique constraint was violated.", ex)
-            {
-                ConstraintName = postgresException.ConstraintName
-            };
+            throw new UniqueConstraintException("A unique constraint was violated.", ex, postgresException.ConstraintName);
         }
     }
 
