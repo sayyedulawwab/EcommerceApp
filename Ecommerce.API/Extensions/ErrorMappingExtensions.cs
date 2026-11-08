@@ -28,6 +28,7 @@ public static class ErrorMappingExtensions
             HttpStatusCode.Forbidden => (StatusCodes.Status403Forbidden, "Forbidden", "https://tools.ietf.org/html/rfc9110#section-15.5.4"),
             HttpStatusCode.NotFound => (StatusCodes.Status404NotFound, "Not Found", "https://tools.ietf.org/html/rfc9110#section-15.5.5"),
             HttpStatusCode.Conflict => (StatusCodes.Status409Conflict, "Conflict", "https://tools.ietf.org/html/rfc9110#section-15.5.10"),
+            HttpStatusCode.TooManyRequests => (StatusCodes.Status429TooManyRequests, "Too Many Requests", "https://tools.ietf.org/html/rfc6585#section-4"),
             _ => (StatusCodes.Status500InternalServerError, "Server failure", "https://tools.ietf.org/html/rfc9110#section-15.6.1")
         };
 
