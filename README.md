@@ -8,7 +8,7 @@ A REST API for an ecommerce platform: products, categories, orders, product revi
 - **Categories:** add, edit, delete, list, and get by id
 - **Orders:** place an order for the signed-in user (with an optional coupon), cancel it before payment, and list the user's own orders
 - **Reviews:** rate (1–5) and comment on a product
-- **Users:** register and log in (JWT bearer tokens, PBKDF2-hashed passwords)
+- **Users:** register and log in (bcrypt-hashed passwords, 15-minute JWT access tokens, rotating refresh tokens, per-IP rate limit on `/auth`)
 
 ## Technologies
 
@@ -37,7 +37,7 @@ Ecommerce.IntegrationTests       HTTP tests against PostgreSQL in Docker
 
 Prerequisites: the .NET 10 SDK and Docker Desktop.
 
-1. Copy `.env.example` to `.env.dev` and fill in the values. `.env.*` files are ignored by git, so the secrets stay on your machine.
+1. Copy `.env.example` to `.env.dev` and fill in the values. `.env.*` files are ignored by git, so the secrets stay on your machine. `JWT_SECRET_KEY` has no default and must be at least 32 bytes; the API will not start without it. Generate one with `openssl rand -base64 48`. To run the API on the host with `dotnet run` instead, store the key with `dotnet user-secrets set "Jwt:SecretKey" "<value>" --project Ecommerce.API`.
 
 2. Start the infrastructure (PostgreSQL, Redis, and the observability stack). This also creates the shared Docker network:
 

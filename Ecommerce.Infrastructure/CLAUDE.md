@@ -6,7 +6,7 @@ Implements the Application ports, including `IApplicationDbContext`. Persistence
 
 ```
 ApplicationDbContext.cs     DbContext + IApplicationDbContext + domain-event dispatch
-Auth/                       AuthService, JwtService, JwtOptions, JwtOptionsSetup, JwtBearerOptionsSetup
+Auth/                       AuthService (bcrypt), PasswordHashingOptions, JwtService, JwtOptions, JwtOptionsSetup, JwtOptionsValidator, JwtBearerOptionsSetup
 Caching/                    CacheService (IDistributedCache/Redis), PrivateResolver
 Clock/                      DateTimeProvider
 Configurations/             {Entity}Configuration : IEntityTypeConfiguration<{Entity}>
@@ -171,10 +171,13 @@ Consumers take `IOptions<T>`. Follow this pattern for new settings.
 
 ## Auth
 
-- `JwtService`: HS256, claims `ClaimTypes.Email` + `ClaimTypes.NameIdentifier` (user id), 1-hour expiry, issuer/audience/secret from the `Jwt` section.
-- `JwtBearerOptionsSetup` (`IConfigureNamedOptions<JwtBearerOptions>`) validates issuer, audience, lifetime and signing key.
-- `AuthService`: 128-bit random salt (Base64), and **PBKDF2-HMAC-SHA512, 210,000 iterations, 64-byte output** (`Rfc2898DeriveBytes.Pbkdf2`, no extra package), stored as Base64.
-- `VerifyPassword` compares in constant time (`CryptographicOperations.FixedTimeEquals`). It also accepts the **legacy** `SHA256(password + salt)` hash, so accounts registered before the switch can still log in. New hashes are always PBKDF2. Changing the parameters invalidates existing hashes unless you add another fallback.
+- `JwtService`: issues the access token with `JsonWebTokenHandler` (not `JwtSecurityTokenHandler`): HS256, claims `ClaimTypes.Email` + `ClaimTypes.NameIdentifier` (user id) + `ClaimTypes.Role` for admins, 15-minute expiry (`Jwt:AccessTokenLifetimeMinutes`). It also makes refresh tokens: 32 bytes from `RandomNumberGenerator`, Base64Url, and hashes them with SHA-256 (hex) for storage.
+- `JwtBearerOptionsSetup` (`IConfigureNamedOptions<JwtBearerOptions>`) validates issuer, audience, lifetime (30 s clock skew), signing key and the algorithm (HS256 only). Validation runs through `JsonWebTokenHandler`: `UseSecurityTokenValidators` stays `false`. The claims keep the `ClaimTypes.*` names `JwtService` wrote, so `ClaimTypes.NameIdentifier` resolves in controllers whatever `MapInboundClaims` is.
+- `JwtOptionsValidator` (`IValidateOptions<JwtOptions>`, run by `ValidateOnStart`): the host fails to start when `Jwt:SecretKey` is missing or shorter than 32 bytes. There is **no signing key in any committed file**: set it with `dotnet user-secrets` (`UserSecretsId` is on the API project) or the `Jwt__SecretKey` environment variable. The one host that skips the check is the build-time OpenAPI generator (`GetDocument.Insider`), which boots the app without configuration.
+- `AuthService`: **bcrypt** through `BCrypt.Net-Next`, work factor 12 by default (`PasswordHashing:WorkFactor`, accepted range 10 to 16). The salt is inside the hash, so `users` has no salt column. No pre-hashing: bcrypt only uses the first 72 bytes of a password, so the register validator rejects longer ones (72 UTF-8 bytes) and login never matches them.
+- `VerifyPassword` returns `false` for a stored value that is not a bcrypt hash (no exception). `NeedsRehash` is true when the stored work factor differs from the configured one; login then saves a new hash. `VerifyAgainstDummyHash` does the same work for an unknown email, so login takes about as long whether or not the email exists.
+- `RefreshToken` rows (table `refresh_tokens`, unique index on `token_hash`) are revoked with `ExecuteUpdateAsync` and a `RevokedOnUtc IS NULL` condition, so only one of two concurrent refreshes with the same token wins.
+- `UniqueConstraintException` (a `DbUpdateException`): `ApplicationDbContext.SaveChangesAsync` throws it for PostgreSQL error 23505, with the constraint name. Handlers that already catch `DbUpdateException` keep working; the register handler catches this one to return 409.
 
 ---
 
