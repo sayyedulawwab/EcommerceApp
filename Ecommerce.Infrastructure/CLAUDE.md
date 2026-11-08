@@ -112,7 +112,7 @@ internal sealed class ProductQueryRepository(ISqlConnectionFactory sqlConnection
 - `ISqlConnectionFactory` is internal to Infrastructure; Application never sees a connection.
 - Write SQL against **snake_case** tables/columns and alias each column **`AS PascalCase`** to match the response property.
 - **Always parameterize values** (`@Param` plus an anonymous object). Never interpolate user input. Dynamic `ORDER BY` columns come **only from a whitelist array**; direction is normalized to `ASC`/`DESC`.
-- Get the paged total from **`COUNT(*) OVER () AS TotalRecords`** on each row (no second COUNT query).
+- Get the paged total from a **separate `SELECT COUNT(*)`** sent with the page query in the same command (`QueryMultipleAsync`, one round trip), and return both as a `ProductSearchResult`. Build the `WHERE` clause once and use it in both statements so the total always matches the filters. A `COUNT(*) OVER ()` column was measured and is slower when there is no keyword (it sorts every matching row), but it was somewhat faster than the two statements when a keyword filtered the rows (the filter runs once instead of twice).
 - Every `ORDER BY` ends with the primary key (`p.id`), so rows with equal sort values keep one order and offset pages never repeat or skip a row.
 - A user keyword used with `ILIKE` goes through `EscapeLikePattern` (escapes `\`, `%`, `_`) and the SQL says `ESCAPE '\'`, so it matches as plain text. `products.name` has a trigram GIN index (`pg_trgm`, enabled with `HasPostgresExtension` in `OnModelCreating`) so the `'%...%'` search can use an index.
 - Pass the `cancellationToken` through `CommandDefinition`.

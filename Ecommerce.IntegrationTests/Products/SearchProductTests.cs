@@ -84,6 +84,41 @@ public sealed class SearchProductTests
     }
 
     [Theory]
+    [InlineData("", 1, 2, 5, 2)]
+    [InlineData("", 3, 2, 5, 1)]
+    [InlineData("", 4, 2, 5, 0)]
+    [InlineData("keyboard", 1, 2, 3, 2)]
+    [InlineData("keyboard", 2, 2, 3, 1)]
+    [InlineData("keyboard", 5, 2, 3, 0)]
+    [InlineData("nothing matches this", 1, 2, 0, 0)]
+    public async Task SearchProduct_ShouldReturnTheTotalOfAllMatches_OnEveryPage(string keyword, int page, int pageSize, int expectedTotal, int expectedItems)
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        Category category = CategoryData.Create();
+
+        await SeedAsync(category);
+        await SeedAsync(
+            ProductData.CreateProduct(category.Id, name: "Mechanical keyboard"),
+            ProductData.CreateProduct(category.Id, name: "Wireless keyboard"),
+            ProductData.CreateProduct(category.Id, name: "Keyboard tray"),
+            ProductData.CreateProduct(category.Id, name: "Mouse"),
+            ProductData.CreateProduct(category.Id, name: "Monitor"));
+
+        using HttpClient client = _factory.CreateClient();
+
+        // Act
+        PagedResponse<ProductResponse> result = await SearchAsync(client, $"/api/v1/products?page={page}&pageSize={pageSize}&keyword={Uri.EscapeDataString(keyword)}");
+
+        // Assert
+        Assert.Equal(expectedTotal, result.TotalCount);
+        Assert.Equal(expectedItems, result.Items.Count);
+        Assert.Equal(page > 1, result.HasPreviousPage);
+        Assert.Equal(page * pageSize < expectedTotal, result.HasNextPage);
+    }
+
+    [Theory]
     [InlineData("100%", "100% cotton shirt")]
     [InlineData("e_c", "snake_case lamp")]
     [InlineData("k\\s", "back\\slash")]

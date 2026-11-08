@@ -264,7 +264,7 @@ These exist in the codebase today. Leave them alone unless asked:
 
 - `AuthService.VerifyPassword` falls back to the legacy salted SHA-256 hash, so accounts created before the PBKDF2 switch can still log in. Keep the fallback until those accounts are gone, and never use it for new hashes.
 - Login reports a missing user and a wrong password with the same `UserErrors.InvalidCredentials` (401), so it doesn't reveal which emails are registered. Keep it that way.
-- `OrderResponse.ShippedOnUtc/DeliveredOnUtc` and `OrderItemResponse.UpdatedOnUtc` exist but are never populated. `ProductResponse.TotalRecords` exists only to carry the Dapper window count.
+- `OrderResponse.ShippedOnUtc/DeliveredOnUtc` and `OrderItemResponse.UpdatedOnUtc` exist but are never populated.
 - `HybridCache` has no backplane. `RemoveByTagAsync` clears the calling instance's in-memory copy and marks the tag in Redis, but other running instances keep serving their own in-memory copy until it expires (`LocalCacheExpiration`, 1 minute). With several instances, a product change can show as stale for up to that long on the others.
 - Domain event handlers are auto-registered by the Scrutor scan in `Ecommerce.Application/DependencyInjection.cs`.
 - A coupon's usage limit is shared by all customers ("the first 100 orders"). There's no per-customer limit.

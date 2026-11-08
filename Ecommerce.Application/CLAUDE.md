@@ -228,15 +228,13 @@ public sealed class ProductResponse
 Commands and simple reads use `IApplicationDbContext`. A read goes behind a **query repository** when the SQL is better written by hand: joins over several tables that return selected columns, search with dynamic filters and paging, stored procedures, or operations that are easier or faster in raw SQL. The interface lives in Application (`Products/IProductQueryRepository.cs`), the Dapper implementation in Infrastructure (`Repositories/ProductQueryRepository.cs`). The handler keeps the defaults, caching and paging:
 
 ```csharp
-IReadOnlyList<ProductResponse> products = await cache.GetOrCreateAsync<IReadOnlyList<ProductResponse>>(
+ProductSearchResult result = await cache.GetOrCreateAsync<ProductSearchResult>(
     cacheKey,
     async token => await productQueryRepository.SearchAsync(request, page, pageSize, token),
     tags: [ProductCache.Tag],
     cancellationToken: cancellationToken);
 
-long totalRecords = products.Count > 0 ? products[0].TotalRecords : 0;
-
-return PagedList<ProductResponse>.Create(products, page, pageSize, totalRecords);
+return PagedList<ProductResponse>.Create(result.Items, page, pageSize, result.TotalCount);
 ```
 
 Rules:
@@ -245,7 +243,7 @@ Rules:
 - Don't add a query repository for reads LINQ handles well. Don't add generic CRUD repositories.
 - Default `page = 1` and `pageSize = 10` when the input is ≤ 0.
 - Return `PagedList<T>.Create(items, page, pageSize, totalCount)`. It lives in `Application/Abstractions/Paging/PagedList.cs` and exposes `Items`, `Page`, `PageSize`, `TotalCount`, `HasPreviousPage`, `HasNextPage`. Reuse it; don't create another paging type.
-- The SQL rules (snake_case, parameters, whitelisted `ORDER BY`, `COUNT(*) OVER ()`) are in the Infrastructure guide.
+- The SQL rules (snake_case, parameters, whitelisted `ORDER BY`, a separate `COUNT(*)`) are in the Infrastructure guide.
 
 ---
 

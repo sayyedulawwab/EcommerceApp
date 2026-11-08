@@ -20,15 +20,13 @@ internal sealed class SearchProductQueryHandler(
         string cacheKey = $"products-{GenerateCacheKey(request)}";
 
         // On a miss the factory queries the database; concurrent requests for the same key share that one call.
-        IReadOnlyList<ProductResponse> products = await cache.GetOrCreateAsync<IReadOnlyList<ProductResponse>>(
+        ProductSearchResult result = await cache.GetOrCreateAsync<ProductSearchResult>(
             cacheKey,
             async token => await productQueryRepository.SearchAsync(request, page, pageSize, token),
             tags: [ProductCache.Tag],
             cancellationToken: cancellationToken);
 
-        long totalRecords = products.Count > 0 ? products[0].TotalRecords : 0;
-
-        return PagedList<ProductResponse>.Create(products, page, pageSize, totalRecords);
+        return PagedList<ProductResponse>.Create(result.Items, page, pageSize, result.TotalCount);
     }
 
 
