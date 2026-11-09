@@ -47,7 +47,7 @@ internal sealed class LoginUserCommandHandler(
         }
 
         Result<string> accessToken = jwtService.GetAccessToken(
-            request.Email,
+            email.Value.Value,
             user.Id.Value,
             user.IsAdmin,
             cancellationToken);

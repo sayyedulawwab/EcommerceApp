@@ -75,6 +75,28 @@ public sealed class RegisterTests
     }
 
     [Fact]
+    public async Task Register_ShouldReturnConflict_WhenEmailDiffersOnlyInCase()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        HttpResponseMessage first = await _factory.Client.PostAsJsonAsync(
+            "/api/v1/auth/register",
+            new RegisterUserRequest("Jane", "Doe", "Jane@Example.com", "Password123!"), cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+
+        // Act
+        HttpResponseMessage response = await _factory.Client.PostAsJsonAsync(
+            "/api/v1/auth/register",
+            new RegisterUserRequest("Jane", "Doe", "jane@example.com", "Password123!"), cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal(1, await CountUsersAsync());
+    }
+
+    [Fact]
     public async Task Register_ShouldCreateOneUserAndReturnConflictForTheRest_WhenTheSameEmailIsRegisteredAtTheSameTime()
     {
         // Arrange

@@ -17,19 +17,25 @@ public record Email
 
     public static Result<Email> Create(string? value)
     {
-        if (string.IsNullOrWhiteSpace(value) || value.Length > MaxLength)
+        string? trimmed = value?.Trim();
+
+        if (string.IsNullOrEmpty(trimmed) || trimmed.Length > MaxLength)
         {
             return Result.Failure<Email>(Invalid);
         }
 
         // The same check as FluentValidation's EmailAddress(): one '@' with text on both sides.
-        int at = value.IndexOf('@', StringComparison.Ordinal);
+        int at = trimmed.IndexOf('@', StringComparison.Ordinal);
 
-        if (at <= 0 || at == value.Length - 1 || value.IndexOf('@', at + 1) >= 0)
+        if (at <= 0 || at == trimmed.Length - 1 || trimmed.IndexOf('@', at + 1) >= 0)
         {
             return Result.Failure<Email>(Invalid);
         }
 
-        return new Email(value);
+        // Users expect an email to be case-insensitive. Storing one lowercase form lets the unique index
+        // on users.email also catch addresses that differ only in case.
+#pragma warning disable CA1308 // Lowercase is the stored form on purpose; the rule prefers uppercase for comparisons.
+        return new Email(trimmed.ToLowerInvariant());
+#pragma warning restore CA1308
     }
 }

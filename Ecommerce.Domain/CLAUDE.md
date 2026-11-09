@@ -121,7 +121,7 @@ All value objects are **records**. Each lives in its own file in the module fold
 
 | Kind              | Shape                                                                                         | Examples                                    |
 | ----------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| Validated         | private constructor, `public static Result<T> Create(...)`, `public static readonly Error Invalid` on the type, `MaxLength` const for strings | `ProductName`, `ProductDescription`, `CategoryName`, `CategoryCode`, `FirstName`, `LastName`, `Email`, `Comment`, `Rating` (1–5) |
+| Validated         | private constructor, `public static Result<T> Create(...)`, `public static readonly Error Invalid` on the type, `MaxLength` const for strings | `ProductName`, `ProductDescription`, `CategoryName`, `CategoryCode`, `FirstName`, `LastName`, `Email` (trimmed and stored lowercase, so the unique index catches case-only duplicates), `Comment`, `Rating` (1–5) |
 | Smart enum        | private constructor, `static readonly` instances, `All`, `IsSupported(code)`, `Result<Currency> FromCode(code)` | `Currency` (`Usd`, `Bdt`)                   |
 | Composite         | positional record with behavior                                                               | `Money(decimal Amount, Currency Currency)`  |
 
