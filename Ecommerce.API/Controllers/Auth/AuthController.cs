@@ -14,11 +14,11 @@ using Microsoft.AspNetCore.RateLimiting;
 namespace Ecommerce.API.Controllers.Auth;
 [Route("api/v{v:apiVersion}/auth")]
 [ApiController]
-[EnableRateLimiting(AuthRateLimitOptions.PolicyName)]
 public class AuthController() : ControllerBase
 {
     [MapToApiVersion(1)]
     [HttpPost("register")]
+    [EnableRateLimiting(CredentialsRateLimitOptions.PolicyName)]
     public async Task<IActionResult> Register(
         RegisterUserRequest request,
         ICommandHandler<RegisterUserCommand, Guid> handler,
@@ -42,6 +42,7 @@ public class AuthController() : ControllerBase
 
     [MapToApiVersion(1)]
     [HttpPost("login")]
+    [EnableRateLimiting(CredentialsRateLimitOptions.PolicyName)]
     public async Task<IActionResult> Login(
         LoginUserRequest request,
         ICommandHandler<LoginUserCommand, AuthTokensResponse> handler,
@@ -61,6 +62,7 @@ public class AuthController() : ControllerBase
 
     [MapToApiVersion(1)]
     [HttpPost("refresh")]
+    [EnableRateLimiting(TokensRateLimitOptions.PolicyName)]
     public async Task<IActionResult> Refresh(
         RefreshTokenRequest request,
         ICommandHandler<RefreshAccessTokenCommand, AuthTokensResponse> handler,
@@ -80,6 +82,7 @@ public class AuthController() : ControllerBase
 
     [MapToApiVersion(1)]
     [HttpPost("logout")]
+    [EnableRateLimiting(TokensRateLimitOptions.PolicyName)]
     public async Task<IActionResult> Logout(
         LogoutRequest request,
         ICommandHandler<LogoutUserCommand> handler,

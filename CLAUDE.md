@@ -36,7 +36,7 @@ Ecommerce REST API (products, categories, orders, reviews, users/auth). This fil
 | Redis + `HybridCache`                   | Query result caching: in-memory (L1) in front of Redis (L2), cleared by tag |
 | JWT Bearer (`JsonWebTokenHandler`)       | Auth; 15-minute access token + rotating refresh token; `[Authorize]` on controllers, `[Authorize(Roles = Roles.Admin)]` on admin writes |
 | BCrypt.Net-Next                         | Password hashing (bcrypt, work factor 12)                      |
-| Microsoft.AspNetCore.RateLimiting       | Per-IP limit on the `/auth` endpoints                          |
+| Microsoft.AspNetCore.RateLimiting       | Per-IP sliding-window limits on the `/auth` endpoints                |
 | Asp.Versioning                          | URL segment only (`/api/v1/...`)                               |
 | Microsoft.AspNetCore.OpenApi            | `MapOpenApi()` (Development only)                              |
 | Microsoft.Extensions.Logging            | `ILogger<T>` with message templates; no third-party logging library |
