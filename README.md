@@ -8,7 +8,7 @@ A REST API for an ecommerce platform: products, categories, orders, product revi
 - **Categories:** add, edit, delete, list, and get by id
 - **Orders:** place an order for the signed-in user (with an optional coupon), cancel it before payment, and list the user's own orders
 - **Reviews:** rate (1–5) and comment on a product
-- **Users:** register and log in (bcrypt-hashed passwords, 15-minute JWT access tokens, rotating refresh tokens, per-IP rate limit on `/auth`)
+- **Users:** register and log in (bcrypt-hashed passwords, 15-minute JWT access tokens, rotating refresh tokens, per-IP sliding-window rate limits on `/auth`, emails stored lowercase)
 
 ## Technologies
 

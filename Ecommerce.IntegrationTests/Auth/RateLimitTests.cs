@@ -51,7 +51,30 @@ public sealed class RateLimitTests
     }
 
     [Fact]
-    public async Task Auth_ShouldShareOneLimitAcrossItsEndpoints_WhenTheSameClientCallsThem()
+    public async Task Register_ShouldShareTheCredentialsLimitWithLogin_WhenTheSameClientCallsBoth()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        using WebApplicationFactory<Program> factory = CreateFactoryWithLimit();
+        using HttpClient client = factory.CreateClient();
+
+        for (int i = 0; i < PermitLimit; i++)
+        {
+            await client.PostAsJsonAsync(
+                "/api/v1/auth/login", new LoginUserRequest("nobody@example.com", "Password123!"), cancellationToken: TestContext.Current.CancellationToken);
+        }
+
+        // Act
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/v1/auth/register", new RegisterUserRequest("Jane", "Doe", "jane@example.com", "Password123!"), cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.TooManyRequests, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Logout_ShouldShareTheTokensLimitWithRefresh_WhenTheSameClientCallsBoth()
     {
         // Arrange
         await _factory.ResetDatabaseAsync();
@@ -71,6 +94,76 @@ public sealed class RateLimitTests
 
         // Assert
         Assert.Equal(HttpStatusCode.TooManyRequests, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Login_ShouldNotBeLimited_WhenTokenEndpointsExhaustTheirOwnLimit()
+    {
+        // Arrange: many clients behind one IP keep refreshing.
+        await _factory.ResetDatabaseAsync();
+
+        using WebApplicationFactory<Program> factory = CreateFactoryWithLimit();
+        using HttpClient client = factory.CreateClient();
+
+        for (int i = 0; i < PermitLimit + 1; i++)
+        {
+            await client.PostAsJsonAsync(
+                "/api/v1/auth/refresh", new RefreshTokenRequest("some-token"), cancellationToken: TestContext.Current.CancellationToken);
+        }
+
+        // Act
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/v1/auth/login", new LoginUserRequest("nobody@example.com", "Password123!"), cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert: the login reaches the handler (401 for an unknown user) instead of being throttled.
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Refresh_ShouldNotBeLimited_WhenCredentialEndpointsExhaustTheirOwnLimit()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        using WebApplicationFactory<Program> factory = CreateFactoryWithLimit();
+        using HttpClient client = factory.CreateClient();
+
+        for (int i = 0; i < PermitLimit + 1; i++)
+        {
+            await client.PostAsJsonAsync(
+                "/api/v1/auth/login", new LoginUserRequest("nobody@example.com", "Password123!"), cancellationToken: TestContext.Current.CancellationToken);
+        }
+
+        // Act
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/v1/auth/refresh", new RefreshTokenRequest("some-token"), cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotEqual(HttpStatusCode.TooManyRequests, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Refresh_ShouldReturnTooManyRequests_WhenTheTokensLimitIsExceeded()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        using WebApplicationFactory<Program> factory = CreateFactoryWithLimit();
+        using HttpClient client = factory.CreateClient();
+
+        // Act
+        List<HttpResponseMessage> responses = [];
+
+        for (int i = 0; i < PermitLimit + 1; i++)
+        {
+            responses.Add(await client.PostAsJsonAsync(
+                "/api/v1/auth/refresh", new RefreshTokenRequest("some-token"), cancellationToken: TestContext.Current.CancellationToken));
+        }
+
+        // Assert
+        Assert.All(responses.Take(PermitLimit), response => Assert.NotEqual(HttpStatusCode.TooManyRequests, response.StatusCode));
+        Assert.Equal(HttpStatusCode.TooManyRequests, responses[PermitLimit].StatusCode);
+        Assert.True(responses[PermitLimit].Headers.Contains("Retry-After"));
     }
 
     [Fact]
@@ -185,8 +278,10 @@ public sealed class RateLimitTests
             builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
                 new Dictionary<string, string?>
                 {
-                    ["RateLimiting:Auth:PermitLimit"] = PermitLimit.ToString(CultureInfo.InvariantCulture),
-                    ["RateLimiting:Auth:WindowSeconds"] = "600",
+                    ["RateLimiting:Credentials:PermitLimit"] = PermitLimit.ToString(CultureInfo.InvariantCulture),
+                    ["RateLimiting:Credentials:WindowSeconds"] = "600",
+                    ["RateLimiting:Tokens:PermitLimit"] = PermitLimit.ToString(CultureInfo.InvariantCulture),
+                    ["RateLimiting:Tokens:WindowSeconds"] = "600",
                     ["ForwardedHeaders:KnownProxies:0"] = "10.0.0.5"
                 }));
 
@@ -218,8 +313,10 @@ public sealed class RateLimitTests
             builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
                 new Dictionary<string, string?>
                 {
-                    ["RateLimiting:Auth:PermitLimit"] = PermitLimit.ToString(CultureInfo.InvariantCulture),
-                    ["RateLimiting:Auth:WindowSeconds"] = "600"
+                    ["RateLimiting:Credentials:PermitLimit"] = PermitLimit.ToString(CultureInfo.InvariantCulture),
+                    ["RateLimiting:Credentials:WindowSeconds"] = "600",
+                    ["RateLimiting:Tokens:PermitLimit"] = PermitLimit.ToString(CultureInfo.InvariantCulture),
+                    ["RateLimiting:Tokens:WindowSeconds"] = "600"
                 })));
     }
 }

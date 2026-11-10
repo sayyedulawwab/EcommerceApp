@@ -57,6 +57,33 @@ public class ValueObjectTests
     }
 
     [Theory]
+    [InlineData("Jane@Example.COM", "jane@example.com")]
+    [InlineData("  jane@example.com	", "jane@example.com")]
+    [InlineData(" JANE@Example.com ", "jane@example.com")]
+    public void EmailCreate_Should_TrimAndLowercase_WhenValueHasWhitespaceOrUpperCase(string value, string expected)
+    {
+        Result<Email> result = Email.Create(value);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(expected, result.Value.Value);
+    }
+
+    [Fact]
+    public void EmailCreate_Should_BeEqual_WhenAddressesDifferOnlyInCase()
+    {
+        Assert.Equal(Email.Create("Jane@Example.com").Value, Email.Create("jane@example.com").Value);
+    }
+
+    [Fact]
+    public void EmailCreate_Should_CheckLengthAfterTrimming()
+    {
+        string address = new string('a', Email.MaxLength - "@b.co".Length) + "@b.co";
+
+        Assert.True(Email.Create($"  {address}  ").IsSuccess);
+        Assert.True(Email.Create(address + "x").IsFailure);
+    }
+
+    [Theory]
     [InlineData("jane")]
     [InlineData("@example.com")]
     [InlineData("jane@")]

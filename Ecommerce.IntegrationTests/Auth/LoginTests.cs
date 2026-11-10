@@ -46,6 +46,25 @@ public sealed class LoginTests
     }
 
     [Fact]
+    public async Task Login_ShouldReturnAccessToken_WhenEmailCaseDiffersFromRegistration()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        await _factory.Client.PostAsJsonAsync(
+            "/api/v1/auth/register",
+            new RegisterUserRequest("Jane", "Doe", "Jane@Example.com", "Password123!"), cancellationToken: TestContext.Current.CancellationToken);
+
+        // Act
+        HttpResponseMessage response = await _factory.Client.PostAsJsonAsync(
+            "/api/v1/auth/login",
+            new LoginUserRequest("JANE@EXAMPLE.COM", "Password123!"), cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Login_ShouldReturnUnauthorized_WhenPasswordIsWrong()
     {
         // Arrange

@@ -183,7 +183,8 @@ public sealed class IntegrationTestFactory
                     // The lowest accepted bcrypt cost, so the many logins in these tests stay fast.
                     ["PasswordHashing:WorkFactor"] = "10",
                     // High enough that the many auth calls in these tests are never throttled. RateLimitTests lowers it.
-                    ["RateLimiting:Auth:PermitLimit"] = "100000"
+                    ["RateLimiting:Credentials:PermitLimit"] = "100000",
+                    ["RateLimiting:Tokens:PermitLimit"] = "100000"
                 }));
 
         builder.ConfigureServices(services =>
