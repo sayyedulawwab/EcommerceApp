@@ -34,7 +34,8 @@ internal sealed class ProductQueryRepository(ISqlConnectionFactory sqlConnection
         {
             conditions.Add("p.price_amount <= @MaxPrice");
         }
-        if (!string.IsNullOrEmpty(query.Keyword))
+        // Whitespace counts as no keyword, as in the handler, so it can't be cached under the no-keyword key with a filter applied.
+        if (!string.IsNullOrWhiteSpace(query.Keyword))
         {
             // The keyword is text to find, not a pattern: % and _ are escaped in the parameter below.
             conditions.Add("p.name ILIKE '%' || @Keyword || '%' ESCAPE '\\'");
@@ -47,7 +48,7 @@ internal sealed class ProductQueryRepository(ISqlConnectionFactory sqlConnection
         // Column names cannot be parameters, so only these values are ever appended to the SQL.
         string[] allowedSortColumns = ["Name", "PriceAmount", "CreatedOnUtc"];
         string sortColumn = query.SortColumn is { } column && allowedSortColumns.Contains(column) ? column : "CreatedOnUtc"; // Default to CreatedOnUtc if invalid
-        string sortOrder = query.SortOrder?.ToLower(CultureInfo.CurrentCulture) == "desc" ? "DESC" : "ASC"; // Default to ASC if invalid
+        string sortOrder = string.Equals(query.SortOrder, "desc", StringComparison.OrdinalIgnoreCase) ? "DESC" : "ASC"; // Default to ASC if invalid
 
         // Two statements in one round trip: the page of rows, then the number of rows that match the whole search.
         var sqlBuilder = new StringBuilder(@"

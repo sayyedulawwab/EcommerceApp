@@ -106,6 +106,27 @@ public sealed class SearchProductTests
     }
 
     [Fact]
+    public async Task SearchProduct_ShouldTreatABlankKeywordAsNoKeyword_AndUseTheDefaultPaging()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        Category category = CategoryData.Create();
+
+        await SeedAsync(category, ProductData.CreateProduct(category.Id, name: "Keyboard"));
+
+        using HttpClient client = _factory.CreateClient();
+
+        // Act: a blank keyword must not filter by spaces, and page and pageSize may be left out.
+        PagedResponse<ProductResponse> result = await SearchAsync(client, $"/api/v1/products?keyword={Uri.EscapeDataString("   ")}");
+
+        // Assert
+        Assert.Equal(["Keyboard"], result.Items.Select(p => p.Name));
+        Assert.Equal(1, result.Page);
+        Assert.Equal(10, result.PageSize);
+    }
+
+    [Fact]
     public async Task SearchProduct_ShouldReturnEveryRowOnce_WhenPagingThroughRowsWithTheSameSortValue()
     {
         // Arrange
@@ -202,6 +223,7 @@ public sealed class SearchProductTests
     [Theory]
     [InlineData("pageSize=10&sortColumn=Quantity")]
     [InlineData("pageSize=101")]
+    [InlineData("pageSize=10&keyword=ab")]
     public async Task SearchProduct_ShouldReturnBadRequest_WhenTheSearchIsInvalid(string queryString)
     {
         // Arrange

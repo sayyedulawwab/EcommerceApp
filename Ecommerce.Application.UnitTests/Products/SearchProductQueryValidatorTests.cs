@@ -61,4 +61,26 @@ public class SearchProductQueryValidatorTests
 
         ValidationAssert.HasSingleError(result, nameof(SearchProductQuery.SortColumn));
     }
+
+    [Theory]
+    [InlineData("key")]
+    [InlineData("100%")]
+    [InlineData("   ")]
+    public void Validate_Should_ReturnNoErrors_WhenKeywordIsLongEnoughOrBlank(string keyword)
+    {
+        ValidationResult result = Validator.Validate(ValidQuery with { Keyword = keyword });
+
+        Assert.True(result.IsValid);
+    }
+
+    [Theory]
+    [InlineData("e")]
+    [InlineData("ab")]
+    [InlineData(" ab ")]
+    public void Validate_Should_ReturnError_WhenKeywordIsShorterThanTheMinimum(string keyword)
+    {
+        ValidationResult result = Validator.Validate(ValidQuery with { Keyword = keyword });
+
+        ValidationAssert.HasSingleError(result, nameof(SearchProductQuery.Keyword));
+    }
 }

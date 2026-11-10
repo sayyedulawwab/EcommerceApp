@@ -58,7 +58,7 @@ public class ProductsController() : ControllerBase
     [HttpGet]
     public async Task<IActionResult> SearchProduct([FromQuery] SearchProductRequest request, IQueryHandler<SearchProductQuery, PagedList<ProductResponse>> handler, CancellationToken cancellationToken)
     {
-        var query = new SearchProductQuery(request.CategoryId, request.MinPrice, request.MaxPrice, request.Keyword, request.Page, request.PageSize, request.SortColumn, request.SortOrder);
+        var query = new SearchProductQuery(request.CategoryId, request.MinPrice, request.MaxPrice, request.Keyword, request.Page ?? 0, request.PageSize ?? 0, request.SortColumn, request.SortOrder);
 
         Result<PagedList<ProductResponse>> result = await handler.Handle(query, cancellationToken);
 
