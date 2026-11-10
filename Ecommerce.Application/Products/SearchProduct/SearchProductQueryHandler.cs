@@ -1,6 +1,4 @@
-﻿using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
+using System.Globalization;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Application.Abstractions.Paging;
 using Ecommerce.Domain.Abstractions;
@@ -17,39 +15,27 @@ internal sealed class SearchProductQueryHandler(
         int page = request.Page > 0 ? request.Page : 1;
         int pageSize = request.PageSize > 0 ? request.PageSize : 10;
 
-        string cacheKey = $"products-{GenerateCacheKey(request)}";
+        // A keyword is free text, so it would put a new entry in the cache for every distinct word anyone sends.
+        // Keyword searches skip the cache; the trigram index keeps them cheap.
+        if (!string.IsNullOrWhiteSpace(request.Keyword))
+        {
+            ProductSearchResult searchResult = await productQueryRepository.SearchAsync(request, page, pageSize, cancellationToken);
+
+            return PagedList<ProductResponse>.Create(searchResult.Items, page, pageSize, searchResult.TotalCount);
+        }
+
+        // The key is built from the values the query actually uses (the validator allows only three sort columns),
+        // so two requests that return the same page share an entry.
+        string sortColumn = request.SortColumn ?? "CreatedOnUtc";
+        string sortOrder = string.Equals(request.SortOrder, "desc", StringComparison.OrdinalIgnoreCase) ? "desc" : "asc";
 
         // On a miss the factory queries the database; concurrent requests for the same key share that one call.
         ProductSearchResult result = await cache.GetOrCreateAsync<ProductSearchResult>(
-            cacheKey,
+            string.Create(CultureInfo.InvariantCulture, $"products:{page}:{pageSize}:{sortColumn}:{sortOrder}:{request.CategoryId}:{request.MinPrice}:{request.MaxPrice}"),
             async token => await productQueryRepository.SearchAsync(request, page, pageSize, token),
             tags: [ProductCache.Tag],
             cancellationToken: cancellationToken);
 
         return PagedList<ProductResponse>.Create(result.Items, page, pageSize, result.TotalCount);
-    }
-
-
-    private static string GenerateCacheKey(SearchProductQuery request)
-    {
-        // Create an anonymous object with all the necessary parameters
-        var parameters = new
-        {
-            request.Page,
-            request.PageSize,
-            request.CategoryId,
-            request.MinPrice,
-            request.MaxPrice,
-            request.Keyword,
-            request.SortOrder,
-            request.SortColumn
-        };
-
-        // Serialize to JSON
-        string serializedParams = JsonSerializer.Serialize(parameters);
-
-        // Hash the serialized string (SHA256 example)
-        byte[] hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(serializedParams));
-        return Convert.ToBase64String(hashBytes);
     }
 }

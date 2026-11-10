@@ -54,6 +54,58 @@ public sealed class SearchProductTests
     }
 
     [Fact]
+    public async Task SearchProduct_ShouldNotCacheAKeywordSearch_WhileANoKeywordSearchIsStillCached()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        Category category = CategoryData.Create();
+
+        await SeedAsync(category, ProductData.CreateProduct(category.Id, name: "Keyboard"));
+
+        using HttpClient client = _factory.CreateClient();
+
+        const string keywordUrl = "/api/v1/products?page=1&pageSize=10&keyword=board";
+
+        await SearchAsync(client);
+        await SearchAsync(client, keywordUrl);
+
+        // This row skips the handlers, so nothing removes a cached search.
+        await SeedAsync(ProductData.CreateProduct(category.Id, name: "Whiteboard"));
+
+        // Act
+        PagedResponse<ProductResponse> withKeyword = await SearchAsync(client, keywordUrl);
+        PagedResponse<ProductResponse> withoutKeyword = await SearchAsync(client);
+
+        // Assert
+        Assert.Equal(["Keyboard", "Whiteboard"], withKeyword.Items.Select(p => p.Name).Order());
+        Assert.Equal(["Keyboard"], withoutKeyword.Items.Select(p => p.Name));
+    }
+
+    [Fact]
+    public async Task SearchProduct_ShouldShareTheCachedResult_WhenPageIsZeroOrOne()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        Category category = CategoryData.Create();
+
+        await SeedAsync(category, ProductData.CreateProduct(category.Id, name: "Keyboard"));
+
+        using HttpClient client = _factory.CreateClient();
+
+        await SearchAsync(client, "/api/v1/products?page=1&pageSize=10");
+
+        await SeedAsync(ProductData.CreateProduct(category.Id, name: "Mouse"));
+
+        // Act
+        PagedResponse<ProductResponse> pageZero = await SearchAsync(client, "/api/v1/products?page=0&pageSize=10");
+
+        // Assert
+        Assert.Equal(["Keyboard"], pageZero.Items.Select(p => p.Name));
+    }
+
+    [Fact]
     public async Task SearchProduct_ShouldReturnEveryRowOnce_WhenPagingThroughRowsWithTheSameSortValue()
     {
         // Arrange
