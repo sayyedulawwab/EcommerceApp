@@ -154,7 +154,7 @@ Each module uses the same name in every layer (plural folders in Domain, Applica
 | Module       | Aggregate(s)          | Operations                                               |
 | ------------ | --------------------- | -------------------------------------------------------- |
 | `Categories` | `Category`            | Add, Edit, Delete, GetCategories, GetCategoryById        |
-| `Products`   | `Product`             | Add, Edit, Delete, GetProductById (with reviews), SearchProduct (Dapper, paged, cached, trigram-indexed keyword) |
+| `Products`   | `Product`             | Add, Edit, Delete, GetProductById (with reviews), SearchProduct (Dapper, paged, cached except keyword searches, trigram-indexed keyword) |
 | `Orders`     | `Order` → `OrderItem` | PlaceOrder (optional coupon), CancelOrder, SearchOrders (the user's own; paged, sorted, filtered) |
 | `Coupons`    | `Coupon`              | Add, Edit, Delete, GetCoupons (admins only)               |
 | `Reviews`    | `Review`              | AddReview                                                |
