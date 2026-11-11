@@ -22,14 +22,15 @@ services:
       - ecommerce-network
 
   nginx:
-    image: nginx:alpine
+    image: nginx:1.31.8-alpine
 
     container_name: nginx
 
     restart: unless-stopped
 
     depends_on:
-      - ecommerce-api
+      ecommerce-api:
+        condition: service_healthy
 
     ports:
       - "8080:80"

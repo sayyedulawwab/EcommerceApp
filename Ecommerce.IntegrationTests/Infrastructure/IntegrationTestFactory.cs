@@ -46,13 +46,13 @@ public sealed class IntegrationTestFactory
 
     public IntegrationTestFactory()
     {
-        _postgres = new PostgreSqlBuilder("postgres:18")
+        _postgres = new PostgreSqlBuilder("postgres:18.6")
             .WithDatabase("ecommerce")
             .WithUsername("postgres")
             .WithPassword("postgres")
             .Build();
 
-        _redis = new RedisBuilder("redis:8")
+        _redis = new RedisBuilder("redis:8.10.3")
             .Build();
     }
 
