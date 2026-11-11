@@ -68,7 +68,7 @@ Prerequisites: the .NET 10 SDK and Docker Desktop.
 
 4. The API is available at `http://localhost:5000` (direct) and `http://localhost:8080` (through nginx). In Development the OpenAPI document is served at `/openapi/v1.json`, and Grafana runs at `http://localhost:3000`.
 
-> In Development, the API recreates the database on every start: it drops it, applies migrations, and seeds sample data. Seeded users have the password `test1234`. `admin@ecommerce.test` is an admin and `customer@ecommerce.test` is a customer.
+> In Development, the API applies migrations on start and seeds sample data when the `users` table is empty, so a restart keeps your data. To start from a clean database, remove the Postgres volume (`docker compose -f infra.compose.yml --env-file .env.dev down -v`). Seeded users have the password `test1234`. `admin@ecommerce.test` is an admin and `customer@ecommerce.test` is a customer.
 
 ## Deploying
 
