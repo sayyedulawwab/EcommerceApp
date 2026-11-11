@@ -1,7 +1,7 @@
 # The EF Core migration bundle for one commit, as a small image: build it from the repo root with
 #   docker build -f deploy/migrations.Dockerfile -t <registry>/ecommerce-migrations:<sha> .
 # Run it with ConnectionStrings__Database set; it applies every pending migration and exits.
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0.404 AS build
 
 WORKDIR /src
 
@@ -27,7 +27,7 @@ ENV OpenApiGenerateDocuments=false
 # --self-contained makes a single file: the final image needs no .NET runtime and no SDK.
 RUN dotnet ef migrations bundle     --project Ecommerce.Infrastructure     --startup-project Ecommerce.API     --configuration Release     --self-contained -r linux-x64     --output /out/efbundle     --force
 
-FROM mcr.microsoft.com/dotnet/runtime-deps:10.0 AS final
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0.15 AS final
 
 WORKDIR /app
 
