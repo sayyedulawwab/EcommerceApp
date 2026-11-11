@@ -202,6 +202,20 @@ public sealed class IntegrationTestFactory
             services.RemoveAll<IEmailService>();
             services.AddSingleton<IEmailService>(Emails);
 
+            // Cache only in Redis, which ResetDatabaseAsync flushes. With the in-memory layer on, a search
+            // cached by one test was still served to the next one on the CI runners, despite the reset.
+            services.PostConfigure<HybridCacheOptions>(options =>
+            {
+                HybridCacheEntryOptions? defaults = options.DefaultEntryOptions;
+
+                options.DefaultEntryOptions = new HybridCacheEntryOptions
+                {
+                    Expiration = defaults?.Expiration,
+                    LocalCacheExpiration = defaults?.LocalCacheExpiration,
+                    Flags = (defaults?.Flags ?? HybridCacheEntryFlags.None) | HybridCacheEntryFlags.DisableLocalCache
+                };
+            });
+
             // A request with "Authorization: Test" signs in through TestAuthenticationHandler.
             // Any other request goes through the app's real JWT bearer handler, so a test can
             // send a real token, a bad token or no token at all.
