@@ -13,10 +13,6 @@ distributor:
         http:
           endpoint: 0.0.0.0:4318
 
-ingester:
-  max_block_duration: 30m
-
-
 storage:
   trace:
     backend: local                     # backend configuration to use
@@ -25,6 +21,7 @@ storage:
     local:
       path: /var/tempo/blocks
 
-compactor:
+# Tempo 3 removed the compactor; the backend worker compacts blocks and applies retention.
+backend_worker:
   compaction:
     block_retention: 168h # 7 days

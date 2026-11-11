@@ -63,7 +63,7 @@ dotnet test --project Ecommerce.Application.UnitTests/Ecommerce.Application.Unit
 # Architecture tests (layer dependencies, ArchUnitNET)
 dotnet test --project Ecommerce.ArchitectureTests/Ecommerce.ArchitectureTests.csproj
 
-# Integration tests (Docker must be running: Testcontainers starts postgres:18 and redis:8)
+# Integration tests (Docker must be running: Testcontainers starts postgres:18.6 and redis:8.10.3)
 dotnet test --project Ecommerce.IntegrationTests/Ecommerce.IntegrationTests.csproj
 
 # Add an EF migration (EF tools package lives in the API project)
