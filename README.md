@@ -72,7 +72,7 @@ Prerequisites: the .NET 10 SDK and Docker Desktop.
 
 ## Deploying
 
-Merging to `main` makes GitHub Actions publish two images to GHCR, tagged with the commit SHA: the API and an EF Core migration bundle. The server pulls them (a systemd timer runs `deploy/deploy.sh`), runs the bundle, switches the containers, checks `GET /health`, and goes back to the previous release if the new one is not healthy. No pipeline ever connects to the server. `azure-pipelines.yml` does the same on self-hosted Azure DevOps agents. See [deploy/README.md](deploy/README.md) for the setup.
+Pull requests are built and tested by GitHub Actions. After a merge to `main`, an Azure DevOps pipeline runs on an agent on the server itself: it builds the API image and an EF Core migration bundle image there, deploys **staging** automatically, and deploys **production** when you start that stage. Each deploy runs the migrations, starts the new container next to the running one, switches Traefik over once `GET /health` passes (no downtime), smoke-tests it, and goes back to the previous release if anything fails. Nothing connects to the server from outside. See [deploy/README.md](deploy/README.md) for the setup.
 
 `GET /health` is anonymous and answers `Healthy` (200) or `Unhealthy` (503) after checking PostgreSQL and Redis.
 

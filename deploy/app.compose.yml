@@ -1,0 +1,99 @@
+# The API on the server, one environment and one slot. deploy.sh copies this file into a release folder,
+# writes the .env next to it (from the environment's variable group) and starts it as the compose project
+# ecommerce-<env>-<slot>. See deploy/README.md.
+#
+# Variables deploy.sh writes: CONTAINER_NAME ROUTER SLOT API_IMAGE MIGRATIONS_IMAGE IMAGE_TAG PUBLIC_HOST
+# ASPNETCORE_ENVIRONMENT, plus the variable group's POSTGRES_* JWT_* REDIS_DATABASE (and API_MEM_LIMIT).
+services:
+  api:
+    image: ${API_IMAGE:?}:${IMAGE_TAG:?}
+    # Built on this server by the pipeline's Build stage; never fetched from a registry.
+    pull_policy: never
+    container_name: ${CONTAINER_NAME:?}
+    restart: unless-stopped
+    # A real init process as PID 1: forwards signals to dotnet and reaps child processes.
+    init: true
+    stop_grace_period: 30s
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: ${API_MEM_LIMIT:-512m}
+    pids_limit: 256
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:?}
+      ASPNETCORE_HTTP_PORTS: 8080
+      ConnectionStrings__Database: "Host=database-postgres;Port=5432;Database=${POSTGRES_DB:?};Username=${POSTGRES_USER:?};Password=${POSTGRES_PASSWORD:?};"
+      # Both environments share one Redis: each uses its own database number, so their caches never mix.
+      ConnectionStrings__Redis: cache-redis:6379,defaultDatabase=${REDIS_DATABASE:?}
+      Jwt__Issuer: ${JWT_ISSUER:-Ecommerce}
+      Jwt__Audience: ${JWT_AUDIENCE:-Ecommerce}
+      Jwt__SecretKey: ${JWT_SECRET_KEY:?}
+      # Traefik's fixed address on the edge network (deploy/edge/compose.yml). Only it may set X-Forwarded-For,
+      # so a client can not choose its own rate-limit IP.
+      ForwardedHeaders__KnownProxies__0: 172.29.0.2
+      Otlp__LogsEndpoint: http://otel-collector:4318/v1/logs
+      Otlp__TracesEndpoint: http://otel-collector:4318/v1/traces
+      Otlp__MetricsEndpoint: http://otel-collector:4318/v1/metrics
+
+    # The aspnet image has no curl or wget, so the probe is bash opening a TCP connection (/dev/tcp) and
+    # reading the status line of GET /health. Healthy means 200, which also means PostgreSQL and Redis answer.
+    # Traefik sends no traffic to the container until this passes.
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -c
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/8080 &&
+          printf 'GET /health HTTP/1.0\r\nHost: localhost\r\n\r\n' >&3 &&
+          head -n 1 <&3 | grep -q ' 200 '
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+    networks: [edge, ecommerce-network]
+
+    # Both slots carry the same router, so during a blue-green switch Traefik balances across whichever
+    # containers are healthy.
+    labels:
+      - "deploy.app=${ROUTER:?}"
+      - "traefik.enable=true"
+      - "traefik.docker.network=edge"
+      - "traefik.http.routers.${ROUTER:?}.rule=Host(`${PUBLIC_HOST:?}`)"
+      - "traefik.http.routers.${ROUTER:?}.entrypoints=websecure"
+      - "traefik.http.routers.${ROUTER:?}.tls=true"
+      - "traefik.http.services.${ROUTER:?}.loadbalancer.server.port=8080"
+
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  # One-off job: the EF Core migration bundle built from the same commit. deploy.sh runs it before the new
+  # API starts (docker compose run --rm migrate). The profile keeps `docker compose up` from starting it.
+  migrate:
+    profiles: [tools]
+    image: ${MIGRATIONS_IMAGE:?}:${IMAGE_TAG:?}
+    pull_policy: never
+    read_only: true
+    # The bundle is a self-contained single file that unpacks itself before it runs: give it a writable place.
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      DOTNET_BUNDLE_EXTRACT_BASE_DIR: /tmp
+      ConnectionStrings__Database: "Host=database-postgres;Port=5432;Database=${POSTGRES_DB:?};Username=${POSTGRES_USER:?};Password=${POSTGRES_PASSWORD:?};"
+    networks: [ecommerce-network]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+networks:
+  edge:
+    external: true
+  ecommerce-network:
+    external: true
