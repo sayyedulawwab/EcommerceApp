@@ -15,8 +15,9 @@ install -d -m 0700 /opt/edge/certs
 install -m 0644 "$SRC/compose.yml" /opt/edge/compose.yml
 install -m 0644 "$SRC"/dynamic/*.yml /opt/edge/dynamic/
 
-# Every certificate file tls.yml names must exist (comment lines are skipped).
-grep -v '^\s*#' /opt/edge/dynamic/tls.yml | grep -Eo '/certs/[^ ]+' | sort -u | while read -r p; do
+# Every certificate file tls.yml names must exist (comment lines are skipped). With no certificate listed
+# (the default) grep finds nothing and exits 1, which pipefail would turn into a silent exit.
+{ grep -v '^\s*#' /opt/edge/dynamic/tls.yml | grep -Eo '/certs/[^ ]+' || true; } | sort -u | while read -r p; do
   [[ -f "/opt/edge$p" ]] || die "tls.yml names /opt/edge$p, which does not exist"
 done
 
