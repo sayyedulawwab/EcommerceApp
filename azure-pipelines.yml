@@ -1,141 +1,80 @@
-# Azure Pipelines: build, test and deploy on self-hosted agents that run on the server itself.
-#
-# Use this OR the GitHub Actions publish job plus the systemd timer in deploy/, not both on one server.
+# CD pipeline: build the images on the server's own agent and deploy them there. Staging deploys after
+# every merge to main; production is a stage someone starts by hand. Setup: deploy/README.md.
 #
 # Security model
-#   - Runs only for pushes to main. Pull requests never trigger it (pr: none), so no one's code runs here
-#     before it is merged. Also turn off "Build pull requests from forks" and "Make secrets available to
-#     builds of forks" in the pipeline settings (Triggers > Pull request validation).
-#   - Self-hosted agents only (no Microsoft-hosted pool). Nothing connects to the server from outside: the
-#     agents on the server call out to Azure DevOps.
-#   - Nothing is pushed to a registry. The build agent and the deploy agent share the server's docker
-#     daemon, so the images built in the Build stage are the ones the Deploy stage starts.
-#   - The only secrets are in the variable group "ecommerce-production", and only the Deploy stage uses it.
-#     The Build stage runs without them. The group's secrets are written to a 0600 temporary file for the
-#     length of one step and deleted afterwards.
-#   - The Deploy stage targets the "production" environment: add an approval check there if you want a
-#     person to confirm each deployment.
-#
-# One-time setup in Azure DevOps (not done by this file)
-#   - Variable group "ecommerce-production" with all six of POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD
-#     (secret), JWT_SECRET_KEY (secret), JWT_ISSUER and JWT_AUDIENCE. Avoid $, quotes and spaces in values:
-#     they go into a docker compose env file.
-#   - Pool "ecommerce-vm" (build agent) and environment "production" with the server as a virtual machine
-#     resource (deploy agent).
+#   - Runs only for pushes to main (pr: none). Pull requests are built and tested by GitHub Actions
+#     (.github/workflows/ci.yml) on GitHub's hosted runners, and main only accepts a merge once that passed,
+#     so no unmerged code ever runs on the server. Also turn off "Build pull requests from forks" in this
+#     pipeline's settings (Triggers > Pull request validation).
+#   - One self-hosted agent, on the server, in the pool "ecommerce-vm". Nothing connects to the server from
+#     outside: the agent calls out to Azure DevOps. It is in the docker group, which is root-equivalent:
+#     use that user for nothing else.
+#   - Nothing is pushed to a registry. The image the Build stage builds is the one the deploy stages start.
+#   - Secrets live only in the variable groups ecommerce-staging and ecommerce-production, used only by
+#     their own deploy stage.
+name: $(Date:yyyyMMdd)$(Rev:.r)
 
 trigger:
   branches:
-    include:
-      - main
+    include: [main]
 
 pr: none
 
-variables:
-  - name: imageRepository
-    value: ghcr.io/sayyedulawwab
-  - name: buildConfiguration
-    value: Release
-  - name: ContinuousIntegrationBuild
-    value: 'true'
+parameters:
+  - name: noCache
+    displayName: No build cache (rebuild every layer with today's base images and packages)
+    type: boolean
+    default: false
 
 stages:
   - stage: Build
-    displayName: Build and test
+    displayName: Build images
+    # Building runs the Dockerfiles' steps on the server, so only main, even when someone starts a run by hand
+    # on another branch.
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
     jobs:
-      - job: build
-        displayName: Restore, build, test, build images
+      - job: Images
         pool:
           name: ecommerce-vm
+        workspace:
+          clean: all
         timeoutInMinutes: 30
         steps:
           - checkout: self
-            clean: true
+            fetchDepth: 1
             persistCredentials: false
 
-          - task: UseDotNet@2
-            displayName: Install the .NET 10 SDK
+          # Each build is tagged $(Build.BuildNumber), e.g. 20261114.1, and labelled with its commit.
+          - template: .azure-pipelines/templates/build-image.yml
+            parameters:
+              imageName: ecommerce-api
+              dockerfile: Ecommerce.API/Dockerfile
+              noCache: ${{ parameters.noCache }}
+
+          - template: .azure-pipelines/templates/build-image.yml
+            parameters:
+              imageName: ecommerce-migrations
+              dockerfile: deploy/migrations.Dockerfile
+              noCache: ${{ parameters.noCache }}
+
+          # The deploy stages get the compose file and the deploy script of this same commit.
+          - task: CopyFiles@2
+            displayName: Stage the deploy bundle
             inputs:
-              packageType: sdk
-              version: 10.0.x
+              Contents: |
+                deploy/app.compose.yml
+                deploy/deploy.sh
+              TargetFolder: $(Build.ArtifactStagingDirectory)/deploy
+              flattenFolders: true
 
-          # Restore, build and test each run once: later steps reuse the earlier output. The agent keeps
-          # its NuGet cache between runs, so the restore only downloads what changed.
-          - script: dotnet restore EcommerceApp.slnx
-            displayName: Restore
+          - publish: $(Build.ArtifactStagingDirectory)/deploy
+            artifact: deploy
 
-          - script: dotnet build EcommerceApp.slnx --no-restore --configuration $(buildConfiguration)
-            displayName: Build
+  - template: .azure-pipelines/templates/deploy-stage.yml
+    parameters:
+      envName: staging
 
-          - script: |
-              dotnet test --project Ecommerce.Domain.UnitTests --no-build --configuration $(buildConfiguration)
-              dotnet test --project Ecommerce.Application.UnitTests --no-build --configuration $(buildConfiguration)
-              dotnet test --project Ecommerce.ArchitectureTests --no-build --configuration $(buildConfiguration)
-            displayName: Unit and architecture tests
-
-          # Testcontainers starts PostgreSQL and Redis through the agent user's docker access.
-          - script: dotnet test --project Ecommerce.IntegrationTests --no-build --configuration $(buildConfiguration)
-            displayName: Integration tests
-
-          # Same image names and tags as the published ones, kept local. Docker's layer cache keeps the
-          # restore layer between runs, so a code-only change skips the package download.
-          - script: |
-              docker build --file Ecommerce.API/Dockerfile \
-                --label "org.opencontainers.image.revision=$(Build.SourceVersion)" \
-                --tag "$(imageRepository)/ecommerce-api:$(Build.SourceVersion)" .
-              docker build --file deploy/migrations.Dockerfile \
-                --label "org.opencontainers.image.revision=$(Build.SourceVersion)" \
-                --tag "$(imageRepository)/ecommerce-migrations:$(Build.SourceVersion)" .
-            displayName: Build the API and migration bundle images
-
-  - stage: Deploy
-    displayName: Deploy to production
-    dependsOn: Build
-    condition: succeeded()
-    jobs:
-      - deployment: deploy
-        displayName: Migrate, switch, check health
-        environment:
-          name: production
-          resourceType: virtualMachine
-        variables:
-          - group: ecommerce-production
-        timeoutInMinutes: 20
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-                # The compose files must be the ones of the commit that is deployed.
-                - checkout: self
-                  clean: true
-                  persistCredentials: false
-
-                - script: |
-                    set -euo pipefail
-                    umask 077
-                    env_file="$(Agent.TempDirectory)/ecommerce.env"
-                    {
-                      printf 'POSTGRES_DB=%s\n' "$POSTGRES_DB"
-                      printf 'POSTGRES_USER=%s\n' "$POSTGRES_USER"
-                      printf 'POSTGRES_PASSWORD=%s\n' "$POSTGRES_PASSWORD"
-                      printf 'JWT_SECRET_KEY=%s\n' "$JWT_SECRET_KEY"
-                      printf 'JWT_ISSUER=%s\n' "$JWT_ISSUER"
-                      printf 'JWT_AUDIENCE=%s\n' "$JWT_AUDIENCE"
-                    } > "$env_file"
-                    ENV_FILE="$env_file" \
-                    STATE_DIR="$HOME/.ecommerce-deploy" \
-                    APP_DIR="$(Build.SourcesDirectory)" \
-                    SKIP_GIT_SYNC=1 \
-                    IMAGE_REPOSITORY="$(imageRepository)" \
-                      bash deploy/deploy.sh --tag "$(Build.SourceVersion)"
-                  displayName: Deploy $(Build.SourceVersion)
-                  env:
-                    POSTGRES_DB: $(POSTGRES_DB)
-                    POSTGRES_USER: $(POSTGRES_USER)
-                    POSTGRES_PASSWORD: $(POSTGRES_PASSWORD)
-                    JWT_SECRET_KEY: $(JWT_SECRET_KEY)
-                    JWT_ISSUER: $(JWT_ISSUER)
-                    JWT_AUDIENCE: $(JWT_AUDIENCE)
-
-                - script: rm -f "$(Agent.TempDirectory)/ecommerce.env"
-                  displayName: Remove the secrets file
-                  condition: always()
+  - template: .azure-pipelines/templates/deploy-stage.yml
+    parameters:
+      envName: production
+      manual: true

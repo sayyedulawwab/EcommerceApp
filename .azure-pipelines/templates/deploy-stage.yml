@@ -1,0 +1,78 @@
+# One deploy stage for one environment, run by the agent on the server. Used by azure-pipelines.yml.
+#
+# Expects the Build stage to have built ecommerce-api:$(Build.BuildNumber) and
+# ecommerce-migrations:$(Build.BuildNumber) in the server's Docker daemon, and to have published the
+# artifact 'deploy' (deploy/app.compose.yml and deploy/deploy.sh from the same commit).
+#
+# Azure DevOps objects it needs (deploy/README.md):
+#   variable group  ecommerce-<envName>   POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD (secret)
+#                                         JWT_SECRET_KEY (secret) PUBLIC_HOST REDIS_DATABASE;
+#                                         optional JWT_ISSUER JWT_AUDIENCE API_MEM_LIMIT SMOKE_INSECURE
+#   environment     ecommerce-<envName>   checks: branch control (refs/heads/main), exclusive lock
+parameters:
+  - name: envName # staging | production
+    type: string
+  - name: strategy # bluegreen (no downtime) | recreate (a few seconds of downtime)
+    type: string
+    default: bluegreen
+    values: [bluegreen, recreate]
+  - name: manual # true = the stage waits until someone runs it
+    type: boolean
+    default: false
+  - name: dependsOn # ignored when manual is true
+    type: object
+    default: [Build]
+  - name: pool # the pool holding the agent on the server (the images live in its Docker daemon)
+    type: string
+    default: ecommerce-vm
+
+stages:
+  - stage: Deploy_${{ parameters.envName }}
+    displayName: Deploy ${{ parameters.envName }}
+    # Azure DevOps rejects a run whose manually started stage has dependencies, so a manual stage has none.
+    # Start it only after Build has succeeded: before that, the artifact download fails, or deploy.sh's
+    # preflight stops on the missing image, before anything running is touched.
+    ${{ if parameters.manual }}:
+      dependsOn: []
+      trigger: manual
+    ${{ else }}:
+      dependsOn: ${{ parameters.dependsOn }}
+    # Releases only from main. The environment's branch control check enforces the same on the server side.
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    variables:
+      - group: ecommerce-${{ parameters.envName }}
+    jobs:
+      - deployment: Deploy
+        displayName: API -> ${{ parameters.envName }}
+        pool:
+          name: ${{ parameters.pool }}
+        environment: ecommerce-${{ parameters.envName }}
+        workspace:
+          clean: all
+        timeoutInMinutes: 20
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: deploy
+
+                # Secrets reach the script only through this step's environment. deploy.sh writes them to the
+                # release's .env (mode 0600) and nowhere else.
+                - bash: bash "$(Pipeline.Workspace)/deploy/deploy.sh"
+                  displayName: Deploy (${{ parameters.strategy }}, health-gated, automatic rollback)
+                  env:
+                    ENV_NAME: ${{ parameters.envName }}
+                    STRATEGY: ${{ parameters.strategy }}
+                    IMAGE_TAG: $(Build.BuildNumber)
+                    BUNDLE_DIR: $(Pipeline.Workspace)/deploy
+                    PUBLIC_HOST: $(PUBLIC_HOST)
+                    REDIS_DATABASE: $(REDIS_DATABASE)
+                    POSTGRES_DB: $(POSTGRES_DB)
+                    POSTGRES_USER: $(POSTGRES_USER)
+                    POSTGRES_PASSWORD: $(POSTGRES_PASSWORD)
+                    JWT_SECRET_KEY: $(JWT_SECRET_KEY)
+                    JWT_ISSUER: $(JWT_ISSUER)
+                    JWT_AUDIENCE: $(JWT_AUDIENCE)
+                    API_MEM_LIMIT: $(API_MEM_LIMIT)
+                    SMOKE_INSECURE: $(SMOKE_INSECURE)

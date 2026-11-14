@@ -1,0 +1,16 @@
+# TLS for every router on the websecure entry point.
+#
+# No certificate is listed yet, so Traefik serves its self-signed default certificate. With a domain, put
+# the files in /opt/edge/certs (mode 0600) and add:
+#
+#   stores:
+#     default:
+#       defaultCertificate:
+#         certFile: /certs/<domain>.crt
+#         keyFile: /certs/<domain>.key
+#
+# and, once every client sends a hostname the certificate covers, sniStrict: true under options.default.
+tls:
+  options:
+    default:
+      minVersion: VersionTLS12

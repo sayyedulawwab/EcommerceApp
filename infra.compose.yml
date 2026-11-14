@@ -67,11 +67,13 @@ services:
     restart: unless-stopped
     ports:
       - "3100:3100"
+    # Data in named volumes, mounted on folders the image already owns under its own user: Docker gives a new
+    # volume that folder's owner, so no service needs root and no host folder needs a chown (on Linux, a
+    # bind-mounted folder that doesn't exist yet is created owned by root, and the service can't write to it).
     volumes:
-      - ./loki/data:/loki/data
+      - loki-data:/loki
       - ./loki/loki-config.yml:/etc/loki/config.yml:ro
     command: -config.file=/etc/loki/config.yml
-    user: "0:0"
     networks:
       - ecommerce-network
 
@@ -82,11 +84,11 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./prometheus/data:/prometheus/data
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.path=/prometheus/data"
+      - "--storage.tsdb.path=/prometheus"
       - "--storage.tsdb.retention.time=7d"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/healthy"]
@@ -104,7 +106,7 @@ services:
       - "3200:3200"
     volumes:
       - ./tempo/tempo.yml:/etc/tempo.yml:ro
-      - ./tempo/data:/var/tempo
+      - tempo-data:/var/tempo
     command: ["-config.file=/etc/tempo.yml"]
     networks:
       - ecommerce-network
@@ -117,7 +119,7 @@ services:
       - "3000:3000"
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./grafana/data:/var/lib/grafana/data
+      - grafana-data:/var/lib/grafana
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
@@ -131,6 +133,10 @@ services:
 
 volumes:
   postgres-data:
+  loki-data:
+  prometheus-data:
+  tempo-data:
+  grafana-data:
 
 networks:
   ecommerce-network:
