@@ -28,9 +28,14 @@ umask 077 # the release .env holds the environment's secrets: owner only
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 log() { printf '\n==> %s\n' "$*"; }
-# Azure DevOps passes "$(NAME)" literally when the variable is not defined: treat that as unset.
-# shellcheck disable=SC2016 # the single-quoted '$(' is that literal text, not an expansion
-val() { local v="${!1-}"; [[ "$v" == '$('*')' ]] && v=""; printf '%s' "${v:-${2-}}"; }
+# Azure DevOps passes "$(NAME)" literally when the variable is not defined: unset those. Checking the value
+# alone is not enough: docker compose prefers the environment over the release .env, so an optional variable
+# left out of the group (API_MEM_LIMIT, JWT_ISSUER) would reach the container as the text "$(NAME)".
+for k in $(compgen -e); do
+  # shellcheck disable=SC2016 # the single-quoted '$(' is that literal text, not an expansion
+  if [[ "${!k}" == '$('*')' ]]; then unset "$k"; fi
+done
+val() { local v="${!1-}"; printf '%s' "${v:-${2-}}"; } # value of variable $1, or default $2
 
 REQUIRED=(ENV_NAME IMAGE_TAG BUNDLE_DIR PUBLIC_HOST REDIS_DATABASE POSTGRES_DB POSTGRES_USER POSTGRES_PASSWORD JWT_SECRET_KEY)
 for k in "${REQUIRED[@]}"; do
