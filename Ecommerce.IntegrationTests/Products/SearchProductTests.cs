@@ -6,6 +6,7 @@ using Ecommerce.Domain.Products;
 using Ecommerce.Infrastructure;
 using Ecommerce.IntegrationTests.Helpers;
 using Ecommerce.IntegrationTests.Infrastructure;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Ecommerce.IntegrationTests.Products;
@@ -236,6 +237,32 @@ public sealed class SearchProductTests
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task SearchProduct_ShouldReturnProductsFromTheDatabase_WhenRedisIsDown()
+    {
+        // Arrange
+        // Starting the extra host seeds development data when it finds no users. Start it on an empty
+        // database (leftovers from other tests can collide with the seed), then reset to remove the seed.
+        await _factory.ResetDatabaseAsync();
+
+        await using WebApplicationFactory<Program> factoryWithoutRedis = _factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services => services.UseRedisThatIsDown()));
+
+        using HttpClient client = factoryWithoutRedis.CreateClient();
+
+        await _factory.ResetDatabaseAsync();
+
+        Category category = CategoryData.Create();
+
+        await SeedAsync(category, ProductData.CreateProduct(category.Id, name: "Keyboard"));
+
+        // Act
+        PagedResponse<ProductResponse> result = await SearchAsync(client);
+
+        // Assert: the reason GET /health reports a Redis failure as Degraded, not Unhealthy.
+        Assert.Equal(["Keyboard"], result.Items.Select(p => p.Name));
     }
 
     private static Task<PagedResponse<ProductResponse>> SearchAsync(HttpClient client)

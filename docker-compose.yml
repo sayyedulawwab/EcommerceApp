@@ -26,7 +26,7 @@ services:
       - "8080"
 
     # The aspnet image has no curl or wget, so the probe is bash opening a TCP connection (/dev/tcp) and
-    # reading the status line of GET /health. Healthy means 200, which also means PostgreSQL and Redis answer.
+    # reading the status line of GET /health. 200 means PostgreSQL answers (Healthy, or Degraded when only Redis is down).
     healthcheck:
       test:
         - CMD
