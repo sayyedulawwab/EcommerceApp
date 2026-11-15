@@ -26,7 +26,7 @@ Pull requests never run on the server: GitHub's hosted runners build and test th
 | PostgreSQL, Redis, OpenTelemetry collector, Loki, Tempo, Prometheus, Grafana | `infra.compose.yml` | `/opt/ecommerce/infra`, shared by both environments |
 | The API, per environment | `deploy/app.compose.yml` | `/opt/ecommerce/<env>/releases/<time>_<tag>/`, `current` points at the running one |
 
-Both environments share PostgreSQL (a database each: `POSTGRES_DB`) and Redis (a database number each: `REDIS_DATABASE`, so their caches never mix). Traefik routes by hostname (`PUBLIC_HOST`) and only sends traffic to a container whose healthcheck (`GET /health`: PostgreSQL and Redis answer) passes. The API trusts `X-Forwarded-For` only from Traefik's fixed address, `172.29.0.2`.
+Both environments share PostgreSQL (a database each: `POSTGRES_DB`) and Redis (a database number each: `REDIS_DATABASE`, so their caches never mix). Traefik routes by hostname (`PUBLIC_HOST`) and only sends traffic to a container whose healthcheck (`GET /health` returns 200) passes. That needs PostgreSQL; a Redis outage only makes `/health` say `Degraded` (still 200), because the API can serve from the database without its cache, so containers keep their traffic. The API trusts `X-Forwarded-For` only from Traefik's fixed address, `172.29.0.2`.
 
 ## How a deploy works
 
@@ -38,7 +38,7 @@ Both environments share PostgreSQL (a database each: `POSTGRES_DB`) and Redis (a
 4. **Switch**, by strategy:
    - `bluegreen` (the default): the new container starts in the other slot (`blue`/`green`) next to the running one. Traefik balances across both once the new one is healthy; then the old one stops. No downtime. A release that never gets healthy is removed and the running one is never touched.
    - `recreate`: stop the running container, start the new one. A few seconds of downtime; if it fails, the previous release starts again.
-5. **Smoke test** through Traefik with the real hostname (`https://$PUBLIC_HOST/health` must return `Healthy`). If it fails, the old container starts again.
+5. **Smoke test** through Traefik with the real hostname (`https://$PUBLIC_HOST/health` must return `Healthy`; `Degraded` fails it, since preflight found Redis healthy). If it fails, the old container starts again.
 6. **Retention.** The newest 5 release folders per environment and every image tag a kept release uses stay; older ones are removed.
 
 The running release keeps serving while migrations run, and with `bluegreen` the old and new release run side by side for a moment. So write each migration so the previous release still works with the new schema: add first, remove in a later release. Migrations are never reverted.

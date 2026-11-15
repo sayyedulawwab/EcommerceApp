@@ -74,7 +74,7 @@ Prerequisites: the .NET 10 SDK and Docker Desktop.
 
 Pull requests are built and tested by GitHub Actions. After a merge to `main`, an Azure DevOps pipeline runs on an agent on the server itself: it builds the API image and an EF Core migration bundle image there, deploys **staging** automatically, and deploys **production** when you start that stage. Each deploy runs the migrations, starts the new container next to the running one, switches Traefik over once `GET /health` passes (no downtime), smoke-tests it, and goes back to the previous release if anything fails. Nothing connects to the server from outside. See [deploy/README.md](deploy/README.md) for the setup.
 
-`GET /health` is anonymous and answers `Healthy` (200) or `Unhealthy` (503) after checking PostgreSQL and Redis.
+`GET /health` is anonymous and answers `Healthy` (200), `Degraded` (200: Redis is down, so the API serves from the database, more slowly) or `Unhealthy` (503: PostgreSQL is down).
 
 ## Running the Tests
 
