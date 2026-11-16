@@ -18,6 +18,8 @@ merge to main
 
 Pull requests never run on the server: GitHub's hosted runners build and test them, and the Azure pipeline only runs for `main` (`pr: none`).
 
+On GitHub, protect `main`: require a pull request and the `build-and-test` check, with **Require branches to be up to date before merging** turned on. CI doesn't run again after the merge, so that setting is what makes the merged commit the one CI tested.
+
 ## What runs on the server
 
 | Piece | From | Where |

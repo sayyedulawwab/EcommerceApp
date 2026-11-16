@@ -3,11 +3,10 @@ name: CI
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [main]
 
 # Read-only, no secrets: pull requests (including from forks) run here, on GitHub's hosted runners, never on
-# the server. main only accepts a merge once build-and-test passed; the Azure DevOps pipeline
+# the server. No run on push to main: main only accepts a merge once build-and-test passed on a branch that is
+# up to date with main, so the merged commit is the one already tested. The Azure DevOps pipeline
 # (azure-pipelines.yml) then builds the images on the server and deploys them.
 permissions: {}
 
