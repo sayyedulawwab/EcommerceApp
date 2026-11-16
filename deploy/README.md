@@ -143,7 +143,7 @@ The same for `ecommerce-production` with `POSTGRES_DB=ecommerce_production`, `PU
 
 No `'` and no line breaks in any value: they go into the release `.env` single-quoted.
 
-**The pipeline.** Pipelines > New pipeline > GitHub > this repo > Existing Azure Pipelines YAML file > `/azure-pipelines.yml`. Then, in its settings (Edit > ⋮ > Triggers > Pull request validation), make sure **Build pull requests from forks** is off. The first run asks to use the pool, the environments and the variable groups: **View > Permit**, for this pipeline only.
+**The pipeline.** Pipelines > New pipeline > GitHub > this repo > Existing Azure Pipelines YAML file > `/azure-pipelines.yml`. The wizard names it after the repo; rename it to `Ecommerce CD` (⋮ > Rename/move), since GitHub Actions does the CI. Then, in its settings (Edit > ⋮ > Triggers > Pull request validation), make sure **Build pull requests from forks** is off. The first run asks to use the pool, the environments and the variable groups: **View > Permit**, for this pipeline only.
 
 ### 3. Calling the API
 
