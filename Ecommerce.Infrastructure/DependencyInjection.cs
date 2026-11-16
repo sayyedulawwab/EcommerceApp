@@ -20,6 +20,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
+using StackExchange.Redis;
 
 namespace Ecommerce.Infrastructure;
 public static class DependencyInjection
@@ -32,10 +33,20 @@ public static class DependencyInjection
 
         services.AddStackExchangeRedisCache(redisOptions =>
         {
-
             string? connection = configuration.GetConnectionString("Redis");
 
-            redisOptions.Configuration = connection;
+            if (string.IsNullOrWhiteSpace(connection))
+            {
+                redisOptions.Configuration = connection;
+                return;
+            }
+
+            // Fail fast while Redis is down: a command fails at once instead of waiting in the client's
+            // backlog until its 5 s timeout, so HybridCache falls back to the database without slowing
+            // the request. The cost: commands sent during a short reconnect fail too, and go to the database.
+            var redis = ConfigurationOptions.Parse(connection);
+            redis.BacklogPolicy = BacklogPolicy.FailFast;
+            redisOptions.ConfigurationOptions = redis;
         });
 
         // HybridCache keeps results in memory (L1) and in Redis (L2, the IDistributedCache above).
@@ -50,8 +61,8 @@ public static class DependencyInjection
         AddAuthentication(services);
 
         // Status only: the endpoint is anonymous, so it never reports details or exceptions.
-        // Without Redis the API still answers correctly, only slower (each cached search waits for the Redis
-        // client's timeout): HybridCache logs failed Redis reads and writes and runs the query, and ProductCache
+        // Without Redis the API still answers correctly, from the database (the Redis client fails fast, above):
+        // HybridCache logs failed Redis reads and writes and runs the query, and ProductCache
         // logs a failed clear. So a Redis failure is Degraded (still 200, the container keeps its traffic), not
         // Unhealthy (503, Traefik drops every container at once).
         // The timeout keeps a Redis that never answers inside the compose probe's 5 s limit.
