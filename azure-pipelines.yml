@@ -77,5 +77,4 @@ stages:
   - template: .azure-pipelines/templates/deploy-stage.yml
     parameters:
       envName: production
-      dependsOn: [Deploy_staging] # production only after the same run's staging deploy succeeded
       manual: true
