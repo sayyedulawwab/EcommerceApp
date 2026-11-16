@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
 using Ecommerce.Application.Products;
@@ -258,11 +259,24 @@ public sealed class SearchProductTests
 
         await SeedAsync(category, ProductData.CreateProduct(category.Id, name: "Keyboard"));
 
-        // Act
-        PagedResponse<ProductResponse> result = await SearchAsync(client);
+        // Act: two searches. The first one also waits for the client's first connection attempt (up to its
+        // 5 s connect timeout), once per process; only then does the client know Redis is down.
+        var stopwatch = Stopwatch.StartNew();
+        PagedResponse<ProductResponse> first = await SearchAsync(client);
+        TimeSpan firstTime = stopwatch.Elapsed;
+
+        stopwatch.Restart();
+        PagedResponse<ProductResponse> second = await SearchAsync(client);
+        TimeSpan secondTime = stopwatch.Elapsed;
+
+        TestContext.Current.TestOutputHelper?.WriteLine($"Search with Redis down: {firstTime.TotalMilliseconds:F0} ms, then {secondTime.TotalMilliseconds:F0} ms");
 
         // Assert: the reason GET /health reports a Redis failure as Degraded, not Unhealthy.
-        Assert.Equal(["Keyboard"], result.Items.Select(p => p.Name));
+        Assert.Equal(["Keyboard"], first.Items.Select(p => p.Name));
+        Assert.Equal(["Keyboard"], second.Items.Select(p => p.Name));
+
+        // From then on, the Redis client fails fast instead of holding each command until its 5 s timeout.
+        Assert.True(secondTime < TimeSpan.FromSeconds(1), $"Second search took {secondTime}");
     }
 
     private static Task<PagedResponse<ProductResponse>> SearchAsync(HttpClient client)
