@@ -19,7 +19,7 @@ parameters:
   - name: manual # true = the stage waits until someone runs it
     type: boolean
     default: false
-  - name: dependsOn # ignored when manual is true
+  - name: dependsOn # the stages that must succeed first, manual or not
     type: object
     default: [Build]
   - name: pool # the pool holding the agent on the server (the images live in its Docker daemon)
@@ -29,14 +29,10 @@ parameters:
 stages:
   - stage: Deploy_${{ parameters.envName }}
     displayName: Deploy ${{ parameters.envName }}
-    # Azure DevOps rejects a run whose manually started stage has dependencies, so a manual stage has none.
-    # Start it only after Build has succeeded: before that, the artifact download fails, or deploy.sh's
-    # preflight stops on the missing image, before anything running is touched.
+    # A manual stage still waits for its dependencies: it can only be started once they have succeeded.
+    dependsOn: ${{ parameters.dependsOn }}
     ${{ if parameters.manual }}:
-      dependsOn: []
       trigger: manual
-    ${{ else }}:
-      dependsOn: ${{ parameters.dependsOn }}
     # Releases only from main. The environment's branch control check enforces the same on the server side.
     condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
     variables:
