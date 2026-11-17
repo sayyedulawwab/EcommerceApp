@@ -9,7 +9,7 @@ ApplicationDbContext.cs     DbContext + IApplicationDbContext + domain-event dis
 Auth/                       AuthService (bcrypt), PasswordHashingOptions, JwtService, JwtOptions, JwtOptionsSetup, JwtOptionsValidator, JwtBearerOptionsSetup
 Clock/                      DateTimeProvider
 Configurations/             {Entity}Configuration : IEntityTypeConfiguration<{Entity}>
-Data/                       ISqlConnectionFactory + SqlConnectionFactory (Npgsql), DateOnlyTypeHandler (Dapper), DataSeeder (Bogus)
+Data/                       ISqlConnectionFactory + SqlConnectionFactory (Npgsql), DataSeeder (Bogus)
 DomainEvents/               IDomainEventsDispatcher, DomainEventsDispatcher
 Emails/                     EmailService (stub, no-op)
 Health/                     DatabaseHealthCheck, RedisHealthCheck (behind GET /health)
@@ -147,8 +147,6 @@ internal sealed class ProductQueryRepository(ISqlConnectionFactory sqlConnection
 | `I{Entity}QueryRepository` → `{Entity}QueryRepository` | Scoped | Registered explicitly, one line each                     |
 | `ISqlConnectionFactory` → `SqlConnectionFactory`  | Singleton  | Returns an **opened** `NpgsqlConnection`                  |
 | `IJwtService`, `IAuthService`                     | Singleton  |                                                          |
-
-The Dapper `DateOnlyTypeHandler` is registered globally with `SqlMapper.AddTypeHandler`.
 
 ---
 

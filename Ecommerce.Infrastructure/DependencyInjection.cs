@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using Dapper;
 using Ecommerce.Application.Abstractions.Auth;
 using Ecommerce.Application.Abstractions.Clock;
 using Ecommerce.Application.Abstractions.Data;
@@ -35,9 +34,9 @@ public static class DependencyInjection
         {
             string? connection = configuration.GetConnectionString("Redis");
 
+            // ConfigurationOptions.Parse throws on an empty string, so without a connection string the options stay unset.
             if (string.IsNullOrWhiteSpace(connection))
             {
-                redisOptions.Configuration = connection;
                 return;
             }
 
@@ -87,8 +86,6 @@ public static class DependencyInjection
         services.AddScoped<IProductQueryRepository, ProductQueryRepository>();
 
         services.AddSingleton<ISqlConnectionFactory>(_ => new SqlConnectionFactory(GetConnectionString()));
-
-        SqlMapper.AddTypeHandler(new DateOnlyTypeHandler());
     }
 
     private static void AddAuthentication(IServiceCollection services)
