@@ -23,7 +23,7 @@ public class OrdersController() : ControllerBase
         Claim? userIdClaim = User?.FindFirst(ClaimTypes.NameIdentifier);
         if (userIdClaim == null || string.IsNullOrEmpty(userIdClaim.Value))
         {
-            return Unauthorized("User ID claim is missing.");
+            return Unauthorized();
         }
         var userId = Guid.Parse(userIdClaim.Value);
 
@@ -50,7 +50,7 @@ public class OrdersController() : ControllerBase
         Claim? userIdClaim = User?.FindFirst(ClaimTypes.NameIdentifier);
         if (userIdClaim == null || string.IsNullOrEmpty(userIdClaim.Value))
         {
-            return Unauthorized("User ID claim is missing.");
+            return Unauthorized();
         }
         var userId = Guid.Parse(userIdClaim.Value);
 
@@ -73,7 +73,7 @@ public class OrdersController() : ControllerBase
         Claim? userIdClaim = User?.FindFirst(ClaimTypes.NameIdentifier);
         if (userIdClaim == null || string.IsNullOrEmpty(userIdClaim.Value))
         {
-            return Unauthorized("User ID claim is missing.");
+            return Unauthorized();
         }
         var userId = Guid.Parse(userIdClaim.Value);
 
