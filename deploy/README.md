@@ -41,13 +41,21 @@ Both environments share PostgreSQL (a database each: `POSTGRES_DB`) and Redis (a
    - `bluegreen` (the default): the new container starts in the other slot (`blue`/`green`) next to the running one. Traefik balances across both once the new one is healthy; then the old one stops. No downtime. A release that never gets healthy is removed and the running one is never touched.
    - `recreate`: stop the running container, start the new one. A few seconds of downtime; if it fails, the previous release starts again.
 5. **Smoke test** through Traefik with the real hostname (`https://$PUBLIC_HOST/health` must return `Healthy`; `Degraded` fails it, since preflight found Redis healthy). If it fails, the old container starts again.
-6. **Retention.** The newest 5 release folders per environment and every image tag a kept release uses stay; older ones are removed.
+6. **Retention.** The newest 5 release folders per environment stay, and so do the 6 newest tags of each image plus every tag a kept release uses; older ones are removed.
 
 The running release keeps serving while migrations run, and with `bluegreen` the old and new release run side by side for a moment. So write each migration so the previous release still works with the new schema: add first, remove in a later release. Migrations are never reverted.
 
 ### Rolling back
 
-On the server, as the agent user, start an earlier release folder again. Its `.env` has everything it needs, and its images are kept by retention. A few seconds of downtime:
+**From Azure DevOps (preferred).** Open the pipeline, pick the last good run, and choose **Rerun stage** on its deploy stage (**Run stage** if that stage never ran). The environment's checks still apply, so production still needs the approval. The stage uses that run's `deploy` artifact (its `deploy.sh` and `app.compose.yml`) and its images (`IMAGE_TAG` is the run number), with today's variable group values. So it is a normal deploy: preflight, migrations, blue-green, smoke test, no downtime. Limits:
+
+- The run's images must still be on the server (see Retention above). If not, preflight stops before anything changes.
+- The database is not rolled back. The older migration bundle applies only missing migrations it knows and never reverts newer ones, which is why every migration must work with the previous release.
+- Azure DevOps must still keep the run.
+
+Pipelines > Environments shows each environment's deployments, newest first. The newest succeeded one is the release that runs, unless someone rolled back by hand on the server.
+
+**By hand, on the server** (when Azure DevOps is unavailable). As the agent user, start an earlier release folder again. Its `.env` has everything it needs, and its images are kept by retention. A few seconds of downtime:
 
 ```bash
 sudo -u azp bash
