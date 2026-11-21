@@ -1,0 +1,124 @@
+using System.Net;
+using System.Net.Http.Json;
+using Ecommerce.Domain.Categories;
+using Ecommerce.Domain.Products;
+using Ecommerce.Domain.Users;
+using Ecommerce.Infrastructure;
+using Ecommerce.IntegrationTests.Helpers;
+using Ecommerce.IntegrationTests.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Ecommerce.IntegrationTests.Products;
+
+public sealed class DeleteProductTests
+{
+    private readonly IntegrationTestFactory _factory;
+
+    public DeleteProductTests(IntegrationTestFactory factory)
+    {
+        _factory = factory;
+    }
+
+    [Fact]
+    public async Task DeleteProduct_ShouldDeleteIt_WhenItHasNoOrders()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        Category category = CategoryData.Create();
+        Product keyboard = ProductData.CreateProduct(category.Id, 100m);
+
+        await SeedAsync(category, keyboard);
+
+        using HttpClient adminClient = _factory.CreateAdminClient();
+
+        // Act
+        HttpResponseMessage response = await adminClient.DeleteAsync($"/api/v1/products/{keyboard.Id.Value}", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        bool exists = await _factory.ExecuteScopeAsync(sp =>
+            sp.GetRequiredService<ApplicationDbContext>().Set<Product>().AnyAsync(p => p.Id == keyboard.Id));
+
+        Assert.False(exists);
+    }
+
+    [Fact]
+    public async Task DeleteProduct_ShouldReturnConflict_WhenTheProductHasBeenOrdered()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        User user = UserData.Create();
+        Category category = CategoryData.Create();
+        Product keyboard = ProductData.CreateProduct(category.Id, 100m);
+
+        await SeedAsync(user, category, keyboard);
+
+        using HttpClient customerClient = _factory.CreateClientForUser(user.Id.Value);
+        using HttpClient adminClient = _factory.CreateAdminClient();
+
+        await OrderData.PlaceAsync(customerClient, keyboard, 1);
+
+        // Act
+        HttpResponseMessage response = await adminClient.DeleteAsync($"/api/v1/products/{keyboard.Id.Value}", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteProduct_ShouldReturnForbidden_WhenTheUserIsNotAnAdmin()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        Category category = CategoryData.Create();
+        Product keyboard = ProductData.CreateProduct(category.Id, 100m);
+
+        await SeedAsync(category, keyboard);
+
+        using HttpClient customerClient = _factory.CreateClientForUser(Guid.NewGuid());
+
+        // Act
+        HttpResponseMessage response = await customerClient.DeleteAsync($"/api/v1/products/{keyboard.Id.Value}", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteProduct_ShouldReturnBadRequest_WhenTheIdIsEmpty()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        using HttpClient adminClient = _factory.CreateAdminClient();
+
+        // Act
+        HttpResponseMessage response = await adminClient.DeleteAsync($"/api/v1/products/{Guid.Empty}", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken: TestContext.Current.CancellationToken);
+
+        Assert.NotNull(problem);
+        Assert.Equal("Validation.General", problem.Extensions["code"]?.ToString());
+    }
+
+    private Task SeedAsync(params object[] entities)
+    {
+        return _factory.ExecuteScopeAsync(async sp =>
+        {
+            ApplicationDbContext db = sp.GetRequiredService<ApplicationDbContext>();
+
+            db.AddRange(entities);
+
+            await db.SaveChangesAsync();
+        });
+    }
+}

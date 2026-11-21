@@ -19,6 +19,12 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
 
         builder.Property(order => order.Status);
 
+        // A second cancel that read the same order at the same time fails instead of giving the stock back twice.
+        builder.Property<uint>("Version")
+               .HasColumnName("xmin")
+               .HasColumnType("xid")
+               .IsRowVersion();
+
         builder.OwnsOne(order => order.Discount, discountBuilder =>
         {
             discountBuilder.Property(money => money.Amount)

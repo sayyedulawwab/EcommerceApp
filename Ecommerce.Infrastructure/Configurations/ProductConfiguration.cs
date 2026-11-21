@@ -1,4 +1,4 @@
-﻿using Ecommerce.Domain.Categories;
+using Ecommerce.Domain.Categories;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Shared;
 using Microsoft.EntityFrameworkCore;
@@ -25,6 +25,12 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
                .HasConversion(description => description.Value, value => ProductDescription.Create(value).Value);
 
         builder.Property(product => product.Quantity);
+
+        // PostgreSQL's xmin system column changes on every update, so two orders that both read the same stock can't both save.
+        builder.Property<uint>("Version")
+               .HasColumnName("xmin")
+               .HasColumnType("xid")
+               .IsRowVersion();
 
         builder.OwnsOne(product => product.Price, priceBuilder =>
         {

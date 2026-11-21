@@ -76,10 +76,9 @@ public sealed class RefreshTokenTests
         using HttpClient client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", second.AccessToken);
 
-        HttpResponseMessage addCategory = await client.PostAsJsonAsync("/api/v1/categories", new Ecommerce.API.Controllers.Categories.AddCategoryRequest("Electronics", "ELEC"), cancellationToken: TestContext.Current.CancellationToken);
+        HttpResponseMessage orders = await client.GetAsync("/api/v1/orders", TestContext.Current.CancellationToken);
 
-        // Forbidden, not Unauthorized: the token is accepted, and this user is not an admin.
-        Assert.Equal(HttpStatusCode.Forbidden, addCategory.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, orders.StatusCode);
     }
 
     [Fact]
