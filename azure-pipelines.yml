@@ -1,0 +1,80 @@
+# CD pipeline: build the images on the server's own agent and deploy them there. Staging deploys after
+# every merge to main; production is a stage someone starts by hand. Setup: deploy/README.md.
+#
+# Security model
+#   - Runs only for pushes to main (pr: none). Pull requests are built and tested by GitHub Actions
+#     (.github/workflows/ci.yml) on GitHub's hosted runners, and main only accepts a merge once that passed,
+#     so no unmerged code ever runs on the server. Also turn off "Build pull requests from forks" in this
+#     pipeline's settings (Triggers > Pull request validation).
+#   - One self-hosted agent, on the server, in the pool "ecommerce-vm". Nothing connects to the server from
+#     outside: the agent calls out to Azure DevOps. It is in the docker group, which is root-equivalent:
+#     use that user for nothing else.
+#   - Nothing is pushed to a registry. The image the Build stage builds is the one the deploy stages start.
+#   - Secrets live only in the variable groups ecommerce-staging and ecommerce-production, used only by
+#     their own deploy stage.
+name: $(Date:yyyyMMdd)$(Rev:.r)
+
+trigger:
+  branches:
+    include: [main]
+
+pr: none
+
+parameters:
+  - name: noCache
+    displayName: No build cache (rebuild every layer with today's base images and packages)
+    type: boolean
+    default: false
+
+stages:
+  - stage: Build
+    displayName: Build images
+    # Building runs the Dockerfiles' steps on the server, so only main, even when someone starts a run by hand
+    # on another branch.
+    condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
+    jobs:
+      - job: Images
+        pool:
+          name: ecommerce-vm
+        workspace:
+          clean: all
+        timeoutInMinutes: 30
+        steps:
+          - checkout: self
+            fetchDepth: 1
+            persistCredentials: false
+
+          # Each build is tagged $(Build.BuildNumber), e.g. 20261114.1, and labelled with its commit.
+          - template: .azure-pipelines/templates/build-image.yml
+            parameters:
+              imageName: ecommerce-api
+              dockerfile: Ecommerce.API/Dockerfile
+              noCache: ${{ parameters.noCache }}
+
+          - template: .azure-pipelines/templates/build-image.yml
+            parameters:
+              imageName: ecommerce-migrations
+              dockerfile: deploy/migrations.Dockerfile
+              noCache: ${{ parameters.noCache }}
+
+          # The deploy stages get the compose file and the deploy script of this same commit.
+          - task: CopyFiles@2
+            displayName: Stage the deploy bundle
+            inputs:
+              Contents: |
+                deploy/app.compose.yml
+                deploy/deploy.sh
+              TargetFolder: $(Build.ArtifactStagingDirectory)/deploy
+              flattenFolders: true
+
+          - publish: $(Build.ArtifactStagingDirectory)/deploy
+            artifact: deploy
+
+  - template: .azure-pipelines/templates/deploy-stage.yml
+    parameters:
+      envName: staging
+
+  - template: .azure-pipelines/templates/deploy-stage.yml
+    parameters:
+      envName: production
+      manual: true
