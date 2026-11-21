@@ -23,6 +23,9 @@ BUILD_CACHE_KEEP="${BUILD_CACHE_KEEP:-10gb}"
 # (deploy/edge/compose.yml, deploy/app.compose.yml). Change all three together.
 EDGE_SUBNET=172.29.0.0/24
 EDGE_GW=172.29.0.1
+# Docker assigns automatic addresses only from this half, so no container that starts before Traefik
+# (after a reboot, say) can take 172.29.0.2.
+EDGE_IP_RANGE=172.29.0.128/25
 DEPLOY_ROOT=/opt/ecommerce
 AGENT_GROUP="$(id -gn "$AGENT_USER")"
 
@@ -72,8 +75,13 @@ done
 [[ "$(docker info --format '{{.LiveRestoreEnabled}}')" == true ]] || die "live-restore is not active after 15 s: check $f"
 echo "live-restore: on"
 
-echo "==> Docker network 'edge' $EDGE_SUBNET (Traefik at 172.29.0.2)"
-docker network inspect edge >/dev/null 2>&1 || docker network create --subnet "$EDGE_SUBNET" --gateway "$EDGE_GW" edge
+echo "==> Docker network 'edge' $EDGE_SUBNET (Traefik at 172.29.0.2, automatic addresses from $EDGE_IP_RANGE)"
+if ! docker network inspect edge >/dev/null 2>&1; then
+  docker network create --subnet "$EDGE_SUBNET" --gateway "$EDGE_GW" --ip-range "$EDGE_IP_RANGE" edge
+elif [[ "$(docker network inspect edge --format '{{range .IPAM.Config}}{{.IPRange}}{{end}}')" != "$EDGE_IP_RANGE" ]]; then
+  # An older edge network without the range: a container can take Traefik's address after a reboot.
+  echo "WARNING: network 'edge' has no ip-range $EDGE_IP_RANGE. Recreate it (deploy/README.md, 'Traefik does not start after a reboot')."
+fi
 
 echo "==> Release folders: $DEPLOY_ROOT/<env>, owned by $AGENT_USER, closed to other users"
 install -d -o root -g "$AGENT_GROUP" -m 0750 "$DEPLOY_ROOT"
