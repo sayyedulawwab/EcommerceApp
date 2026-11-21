@@ -1,0 +1,33 @@
+﻿using Ecommerce.Domain.Users;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+namespace Ecommerce.Infrastructure.Configurations;
+internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
+{
+    public void Configure(EntityTypeBuilder<User> builder)
+    {
+        builder.ToTable("users");
+
+        builder.HasKey(user => user.Id);
+
+        builder.Property(user => user.Id)
+               .HasConversion(userId => userId.Value, value => new UserId(value));
+
+        builder.Property(user => user.FirstName)
+               .HasMaxLength(FirstName.MaxLength)
+               .HasConversion(name => name.Value, value => FirstName.Create(value).Value);
+
+        builder.Property(user => user.LastName)
+               .HasMaxLength(LastName.MaxLength)
+               .HasConversion(name => name.Value, value => LastName.Create(value).Value);
+
+
+        builder.Property(user => user.Email)
+               .HasMaxLength(Domain.Users.Email.MaxLength)
+               .HasConversion(email => email.Value, value => Domain.Users.Email.Create(value).Value);
+
+        builder.Property(user => user.PasswordHash);
+        builder.Property(user => user.IsAdmin);
+    }
+}

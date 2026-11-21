@@ -1,0 +1,52 @@
+using Ecommerce.Application.Abstractions.Data;
+using Ecommerce.Domain.Abstractions;
+using Ecommerce.Domain.Categories;
+using Ecommerce.Domain.Coupons;
+using Ecommerce.Domain.Orders;
+using Ecommerce.Domain.Products;
+using Ecommerce.Domain.Reviews;
+using Ecommerce.Domain.Users;
+using Ecommerce.Infrastructure.DomainEvents;
+using Microsoft.EntityFrameworkCore;
+
+namespace Ecommerce.Infrastructure;
+
+public sealed class ApplicationDbContext(DbContextOptions options, IDomainEventsDispatcher domainEventsDispatcher)
+    : DbContext(options), IApplicationDbContext
+{
+    public DbSet<Category> Categories => Set<Category>();
+    public DbSet<Coupon> Coupons => Set<Coupon>();
+    public DbSet<Product> Products => Set<Product>();
+    public DbSet<Order> Orders => Set<Order>();
+    public DbSet<Review> Reviews => Set<Review>();
+    public DbSet<User> Users => Set<User>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+
+        base.OnModelCreating(modelBuilder);
+    }
+
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        int result = await base.SaveChangesAsync(cancellationToken);
+
+        await PublishDomainEventsAsync();
+
+        return result;
+    }
+
+    private async Task PublishDomainEventsAsync()
+    {
+        // Pulling empties each aggregate's list, so a second SaveChangesAsync can't publish the same event twice.
+        List<IDomainEvent> domainEvents =
+        [
+            .. ChangeTracker
+                .Entries<IHasDomainEvents>()
+                .SelectMany(entry => entry.Entity.PullDomainEvents()),
+        ];
+
+        await domainEventsDispatcher.DispatchAsync(domainEvents);
+    }
+}
