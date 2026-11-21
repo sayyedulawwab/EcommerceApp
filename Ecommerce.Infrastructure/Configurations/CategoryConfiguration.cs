@@ -1,4 +1,4 @@
-using Ecommerce.Domain.Categories;
+﻿using Ecommerce.Domain.Categories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -21,6 +21,13 @@ internal sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
         builder.Property(category => category.Code)
                .HasMaxLength(CategoryCode.MaxLength)
                .HasConversion(code => code.Value, value => CategoryCode.Create(value).Value);
+
+        // The handlers check these first. The indexes reject a duplicate that two requests save at the same time.
+        builder.HasIndex(category => category.Name)
+               .IsUnique();
+
+        builder.HasIndex(category => category.Code)
+               .IsUnique();
 
         builder.Property(category => category.CreatedOnUtc);
 
