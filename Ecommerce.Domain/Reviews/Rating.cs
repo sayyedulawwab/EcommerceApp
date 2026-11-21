@@ -1,0 +1,25 @@
+﻿using System.Net;
+using Ecommerce.Domain.Abstractions;
+
+namespace Ecommerce.Domain.Reviews;
+public record Rating
+{
+    public static readonly Error Invalid = new("Rating.Invalid", "The rating is invalid", HttpStatusCode.BadRequest);
+
+    private Rating(int value)
+    {
+        Value = value;
+    }
+
+    public int Value { get; }
+
+    public static Result<Rating> Create(int value)
+    {
+        if (value is < 1 or > 5)
+        {
+            return Result.Failure<Rating>(Invalid);
+        }
+
+        return new Rating(value);
+    }
+}

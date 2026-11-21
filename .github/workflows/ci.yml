@@ -31,4 +31,5 @@ jobs:
 
       - name: Test
         run: |
+          dotnet test --project Ecommerce.Domain.UnitTests --no-build --configuration Release
           dotnet test --project Ecommerce.ArchitectureTests --no-build --configuration Release
