@@ -8,7 +8,7 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 builder.Services
     .AddApplication()
-    .AddPresentation()
+    .AddPresentation(builder.Configuration)
     .AddInfrastructure(builder.Configuration);
 
 builder.Services.AddApiVersioning(options =>
@@ -18,7 +18,7 @@ builder.Services.AddApiVersioning(options =>
     // The version is part of every route (api/v1/...), so the URL is the only place it is read from.
     options.ApiVersionReader = new UrlSegmentApiVersionReader();
 })
-.AddMvc()
+.AddMvc() // This is needed for controllers
 .AddApiExplorer(options =>
 {
     options.GroupNameFormat = "'v'V";
@@ -33,7 +33,16 @@ if (app.Environment.IsDevelopment())
     await app.PrepareDevelopmentDatabaseAsync();
 }
 
+// First, so everything after it sees the real client address from a trusted proxy.
+app.UseForwardedHeaders();
+
 app.UseExceptionHandler();
+
+app.UseAuthentication();
+
+app.UseAuthorization();
+
+app.UseRateLimiter();
 
 app.MapControllers();
 

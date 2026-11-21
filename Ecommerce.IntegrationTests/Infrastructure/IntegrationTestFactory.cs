@@ -1,6 +1,9 @@
-using System.Data.Common;
+using Ecommerce.Application.Abstractions.Auth;
 using Ecommerce.Application.Abstractions.Emails;
 using Ecommerce.Infrastructure;
+using Ecommerce.Infrastructure.Data;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +11,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
+using Respawn;
+using System.Security.Cryptography;
+using System.Data.Common;
+using System.Net.Http.Headers;
 using Testcontainers.PostgreSql;
 
 namespace Ecommerce.IntegrationTests.Infrastructure;
@@ -21,6 +28,8 @@ public sealed class IntegrationTestFactory
     private DatabaseReset _databaseReset = default!;
 
     private DbConnection _connection = default!;
+
+    private const string SelectorScheme = "TestOrBearer";
 
     public HttpClient Client { get; private set; } = default!;
 
@@ -43,6 +52,10 @@ public sealed class IntegrationTestFactory
 
         Client = CreateClient();
 
+        Client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(
+                TestAuthenticationHandler.AuthenticationScheme);
+
         await using AsyncServiceScope scope = Services.CreateAsyncScope();
 
         ApplicationDbContext db = scope.ServiceProvider
@@ -64,6 +77,48 @@ public sealed class IntegrationTestFactory
         await _databaseReset.ResetAsync(_connection);
     }
 
+    // A signed-in admin: the only role that can change products, categories and coupons.
+    public HttpClient CreateAdminClient()
+    {
+        HttpClient client = CreateClientForUser(TestAuthenticationHandler.UserId);
+
+        client.DefaultRequestHeaders.Add(TestAuthenticationHandler.RoleHeaderName, Roles.Admin);
+
+        return client;
+    }
+
+    public HttpClient CreateClientForUser(Guid userId)
+    {
+        HttpClient client = CreateClient();
+
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(
+                TestAuthenticationHandler.AuthenticationScheme);
+
+        client.DefaultRequestHeaders.Add(
+            TestAuthenticationHandler.UserIdHeaderName,
+            userId.ToString());
+
+        return client;
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+        if (_connection is not null)
+        {
+            await _connection.DisposeAsync();
+        }
+
+        await _postgres.DisposeAsync();
+
+        await base.DisposeAsync();
+    }
+
+    public IServiceScope CreateScope()
+    {
+        return Services.CreateScope();
+    }
+
     public async Task ExecuteScopeAsync(
         Func<IServiceProvider, Task> action)
     {
@@ -82,18 +137,6 @@ public sealed class IntegrationTestFactory
         return await action(scope.ServiceProvider);
     }
 
-    public override async ValueTask DisposeAsync()
-    {
-        if (_connection is not null)
-        {
-            await _connection.DisposeAsync();
-        }
-
-        await _postgres.DisposeAsync();
-
-        await base.DisposeAsync();
-    }
-
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
@@ -101,7 +144,14 @@ public sealed class IntegrationTestFactory
         builder.ConfigureAppConfiguration((_, config) => config.AddInMemoryCollection(
                 new Dictionary<string, string?>
                 {
-                    ["ConnectionStrings:Database"] = ConnectionString
+                    ["ConnectionStrings:Database"] = ConnectionString,
+                    // A new random signing key for every run: no key is committed anywhere.
+                    ["Jwt:SecretKey"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(48)),
+                    // The lowest accepted bcrypt cost, so the many logins in these tests stay fast.
+                    ["PasswordHashing:WorkFactor"] = "10",
+                    // High enough that the many auth calls in these tests are never throttled. RateLimitTests lowers it.
+                    ["RateLimiting:Credentials:PermitLimit"] = "100000",
+                    ["RateLimiting:Tokens:PermitLimit"] = "100000"
                 }));
 
         builder.ConfigureServices(services =>
@@ -117,6 +167,26 @@ public sealed class IntegrationTestFactory
 
             services.RemoveAll<IEmailService>();
             services.AddSingleton<IEmailService>(Emails);
+
+            // A request with "Authorization: Test" signs in through TestAuthenticationHandler.
+            // Any other request goes through the app's real JWT bearer handler, so a test can
+            // send a real token, a bad token or no token at all.
+            services.AddAuthentication()
+                .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
+                    TestAuthenticationHandler.AuthenticationScheme,
+                    _ => { })
+                .AddPolicyScheme(SelectorScheme, SelectorScheme, options =>
+                    options.ForwardDefaultSelector = context =>
+                        context.Request.Headers.Authorization.ToString() == TestAuthenticationHandler.AuthenticationScheme
+                            ? TestAuthenticationHandler.AuthenticationScheme
+                            : JwtBearerDefaults.AuthenticationScheme);
+
+            services.PostConfigure<AuthenticationOptions>(options =>
+            {
+                options.DefaultScheme = SelectorScheme;
+                options.DefaultAuthenticateScheme = SelectorScheme;
+                options.DefaultChallengeScheme = SelectorScheme;
+            });
         });
     }
 }
