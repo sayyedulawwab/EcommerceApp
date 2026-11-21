@@ -1,4 +1,5 @@
 using Ecommerce.Application.Abstractions.Data;
+using Ecommerce.Application.Exceptions;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Categories;
 using Ecommerce.Domain.Coupons;
@@ -8,9 +9,10 @@ using Ecommerce.Domain.Reviews;
 using Ecommerce.Domain.Users;
 using Ecommerce.Infrastructure.DomainEvents;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using System.Data;
 
 namespace Ecommerce.Infrastructure;
-
 public sealed class ApplicationDbContext(DbContextOptions options, IDomainEventsDispatcher domainEventsDispatcher)
     : DbContext(options), IApplicationDbContext
 {
@@ -20,6 +22,7 @@ public sealed class ApplicationDbContext(DbContextOptions options, IDomainEvents
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<User> Users => Set<User>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -30,11 +33,18 @@ public sealed class ApplicationDbContext(DbContextOptions options, IDomainEvents
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        int result = await base.SaveChangesAsync(cancellationToken);
+        try
+        {
+            int result = await base.SaveChangesAsync(cancellationToken);
 
-        await PublishDomainEventsAsync();
+            await PublishDomainEventsAsync();
 
-        return result;
+            return result;
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } postgresException)
+        {
+            throw new UniqueConstraintException("A unique constraint was violated.", ex, postgresException.ConstraintName);
+        }
     }
 
     private async Task PublishDomainEventsAsync()
