@@ -1,0 +1,21 @@
+services:
+
+  ecommerce-api:
+
+    image: ecommerceapi:${IMAGE_TAG:-latest}
+    container_name: ecommerce-api
+    build:
+      context: .
+      dockerfile: Ecommerce.API/Dockerfile
+
+    environment:
+      ASPNETCORE_HTTP_PORTS: 8080
+      ConnectionStrings__Database: "Host=database-postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};"
+
+    networks:
+      - ecommerce-network
+
+networks:
+  ecommerce-network:
+    external: true
+    name: ecommerce-network

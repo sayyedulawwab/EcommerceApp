@@ -1,0 +1,9 @@
+**/.env*
+!**/.env.example
+**/.git
+**/.vs
+**/.vscode
+**/bin
+**/obj
+**/docker-compose*
+**/Dockerfile*
