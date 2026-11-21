@@ -1,4 +1,7 @@
-using Ecommerce.API.Middleware;
+﻿using Ecommerce.API.Middleware;
+using Ecommerce.Infrastructure;
+using Ecommerce.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace Ecommerce.API.Extensions;
 

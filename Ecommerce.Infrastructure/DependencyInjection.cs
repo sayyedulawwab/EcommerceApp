@@ -8,6 +8,7 @@ using Ecommerce.Infrastructure.Auth;
 using Ecommerce.Infrastructure.Data;
 using Ecommerce.Infrastructure.DomainEvents;
 using Ecommerce.Infrastructure.Emails;
+using Ecommerce.Infrastructure.Health;
 using Ecommerce.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +16,7 @@ using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
 
@@ -56,6 +58,16 @@ public static class DependencyInjection
 
         AddPersistence(services, configuration);
         AddAuthentication(services);
+
+        // Status only: the endpoint is anonymous, so it never reports details or exceptions.
+        // Without Redis the API still answers correctly, from the database (the Redis client fails fast, above):
+        // HybridCache logs failed Redis reads and writes and runs the query, and ProductCache
+        // logs a failed clear. So a Redis failure is Degraded (still 200, the container keeps its traffic), not
+        // Unhealthy (503, Traefik drops every container at once).
+        // The timeout keeps a Redis that never answers inside the compose probe's 5 s limit.
+        services.AddHealthChecks()
+            .AddCheck<DatabaseHealthCheck>("database")
+            .AddCheck<RedisHealthCheck>("redis", failureStatus: HealthStatus.Degraded, timeout: TimeSpan.FromSeconds(2));
 
         return services;
     }

@@ -4,3 +4,7 @@ obj/
 .env
 .env.*
 !.env.example
+tempo/data/
+loki/data/
+prometheus/data/
+grafana/data/
