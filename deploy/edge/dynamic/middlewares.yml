@@ -1,0 +1,18 @@
+# Applied to every HTTPS request (entry point websecure). Only headers that are the same for every app.
+http:
+  middlewares:
+    edge-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        customResponseHeaders:
+          Server: "" # empty value = remove
+          X-Powered-By: ""
+    # When a blue-green deploy stops the old container, a request can still be on its way to it. Traefik then
+    # gets no reply and sends the request to the other container. It retries only when the container could
+    # not be reached; once a container answers, its answer is final (a stopping API still finishes the
+    # requests it accepted, within its stop_grace_period).
+    edge-retry:
+      retry:
+        attempts: 3
+        initialInterval: 100ms

@@ -1,0 +1,73 @@
+# Build steps for one image on the server's agent, then a vulnerability scan of it. The image stays in the
+# server's Docker daemon (nothing is pushed); the deploy stages start it from there. Used by
+# azure-pipelines.yml:
+#
+#   - template: .azure-pipelines/templates/build-image.yml
+#     parameters:
+#       imageName: ecommerce-api
+#       dockerfile: Ecommerce.API/Dockerfile
+#       noCache: ${{ parameters.noCache }}
+parameters:
+  - name: imageName # local name, tagged $(Build.BuildNumber)
+    type: string
+  - name: dockerfile # path from the repo root, which is the build context
+    type: string
+  - name: noCache # rebuild every layer with today's base images and packages
+    type: boolean
+    default: false
+  - name: scan # Trivy scan of OS packages and app dependencies
+    type: boolean
+    default: true
+  - name: failOnCritical # fail the build on CRITICAL findings that have a fixed version. Off: a warning only,
+    type: boolean # so a new CVE never blocks an urgent fix
+    default: false
+
+steps:
+  - bash: |
+      set -euo pipefail
+      args=(--file "$DOCKERFILE"
+            --label "org.opencontainers.image.revision=$(Build.SourceVersion)"
+            --label "org.opencontainers.image.version=$(Build.BuildNumber)"
+            --tag "$IMAGE:$(Build.BuildNumber)")
+      if [[ "${NO_CACHE,,}" == true ]]; then args+=(--pull --no-cache); echo "No build cache: every layer is rebuilt"; fi
+      docker build --progress=plain "${args[@]}" .
+    displayName: Build ${{ parameters.imageName }}:$(Build.BuildNumber)
+    env:
+      IMAGE: ${{ parameters.imageName }}
+      DOCKERFILE: ${{ parameters.dockerfile }}
+      NO_CACHE: ${{ parameters.noCache }}
+
+  - ${{ if parameters.scan }}:
+      # Trivy gets the image as a file (docker image save), so the scanner container has no access to the
+      # Docker socket. Its vulnerability database is cached in the agent user's home and refreshed daily.
+      - bash: |
+          set -euo pipefail
+          image="$IMAGE:$(Build.BuildNumber)"
+          cache="$HOME/.cache/trivy"
+          work="$(Agent.TempDirectory)/trivy-$IMAGE"
+          mkdir -p "$cache" "$work"
+          trap 'rm -f "$work/image.tar"' EXIT
+          docker image save -o "$work/image.tar" "$image"
+          docker run --rm --user "$(id -u):$(id -g)" -e TRIVY_CACHE_DIR=/cache \
+            -v "$cache:/cache" -v "$work:/work" \
+            aquasec/trivy:0.76.2 \
+            image --input /work/image.tar --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed \
+            --no-progress --timeout 15m --format json --output /work/report.json
+          jq -r '.Results[]? | .Target as $t | .Vulnerabilities[]? |
+                 [.Severity, .VulnerabilityID, .PkgName, .InstalledVersion, "-> " + .FixedVersion, $t] | @tsv' \
+            "$work/report.json" | sort || true
+          crit="$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "CRITICAL")] | length' "$work/report.json")"
+          high="$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "HIGH")] | length' "$work/report.json")"
+          echo "Fixable findings in $image: CRITICAL $crit, HIGH $high (report attached to the run)"
+          cp "$work/report.json" "$work/trivy-$IMAGE.json"
+          echo "##vso[task.uploadfile]$work/trivy-$IMAGE.json"
+          if ((crit > 0)); then
+            echo "##vso[task.logissue type=warning]$image: $crit CRITICAL finding(s) with a fixed version"
+            if [[ "${FAIL_ON_CRITICAL,,}" == true ]]; then exit 1; fi
+          fi
+        displayName: Scan ${{ parameters.imageName }} (Trivy)
+        # Report only by default: a scanner problem (such as a database download) must not stop a deploy.
+        continueOnError: ${{ not(parameters.failOnCritical) }}
+        env:
+          IMAGE: ${{ parameters.imageName }}
+          FAIL_ON_CRITICAL: ${{ parameters.failOnCritical }}
