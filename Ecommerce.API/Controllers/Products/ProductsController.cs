@@ -1,3 +1,4 @@
+﻿using Ecommerce.Application.Abstractions.Paging;
 using Asp.Versioning;
 using Ecommerce.Application.Abstractions.Auth;
 using Ecommerce.API.Extensions;
@@ -7,6 +8,7 @@ using Ecommerce.Application.Products.AddProduct;
 using Ecommerce.Application.Products.DeleteProduct;
 using Ecommerce.Application.Products.EditProduct;
 using Ecommerce.Application.Products.GetProductById;
+using Ecommerce.Application.Products.SearchProduct;
 using Ecommerce.Domain.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -42,6 +44,23 @@ public class ProductsController() : ControllerBase
         var query = new GetProductByIdQuery(id);
 
         Result<ProductResponse> result = await handler.HandleAsync(query, cancellationToken);
+
+        if (result.IsFailure)
+        {
+            return result.Error.ToActionResult();
+        }
+
+        return Ok(result.Value);
+    }
+
+    [AllowAnonymous]
+    [MapToApiVersion(1)]
+    [HttpGet]
+    public async Task<IActionResult> SearchProduct([FromQuery] SearchProductRequest request, IQueryHandler<SearchProductQuery, PagedList<ProductResponse>> handler, CancellationToken cancellationToken)
+    {
+        var query = new SearchProductQuery(request.CategoryId, request.MinPrice, request.MaxPrice, request.Keyword, request.Page ?? 0, request.PageSize ?? 0, request.SortColumn, request.SortOrder);
+
+        Result<PagedList<ProductResponse>> result = await handler.HandleAsync(query, cancellationToken);
 
         if (result.IsFailure)
         {

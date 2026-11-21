@@ -1,4 +1,4 @@
-using Ecommerce.Application.Abstractions.Data;
+﻿using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Application.Products;
 using Ecommerce.Domain.Abstractions;
@@ -7,11 +7,15 @@ using Ecommerce.Domain.Orders;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Users;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Logging;
 
 namespace Ecommerce.Application.Orders.PlaceOrder;
 internal sealed class PlaceOrderCommandHandler(
     IApplicationDbContext dbContext,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    HybridCache cache,
+    ILogger<PlaceOrderCommandHandler> logger)
     : ICommandHandler<PlaceOrderCommand, Guid>
 {
     public async Task<Result<Guid>> HandleAsync(PlaceOrderCommand request, CancellationToken cancellationToken)
@@ -66,6 +70,9 @@ internal sealed class PlaceOrderCommandHandler(
         dbContext.Orders.Add(order);
 
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        // The product search is cached, and placing an order changed the stock it shows.
+        await ProductCache.ClearAsync(cache, logger, cancellationToken);
 
         return order.Id.Value;
     }

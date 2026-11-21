@@ -28,6 +28,25 @@ services:
     networks:
       - ecommerce-network
 
+  cache-redis:
+    image: redis:8.10.3
+
+    container_name: cache-redis
+
+    ports:
+      - "6379:6379"
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+    networks:
+      - ecommerce-network
+  
 volumes:
   postgres-data:
 

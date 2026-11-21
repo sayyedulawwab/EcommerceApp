@@ -7,15 +7,18 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
 using Respawn;
 using System.Security.Cryptography;
+using StackExchange.Redis;
 using System.Data.Common;
 using System.Net.Http.Headers;
 using Testcontainers.PostgreSql;
+using Testcontainers.Redis;
 
 namespace Ecommerce.IntegrationTests.Infrastructure;
 
@@ -24,6 +27,10 @@ public sealed class IntegrationTestFactory
       IAsyncLifetime
 {
     private readonly PostgreSqlContainer _postgres;
+
+    private readonly RedisContainer _redis;
+
+    private ConnectionMultiplexer _redisConnection = default!;
 
     private DatabaseReset _databaseReset = default!;
 
@@ -44,11 +51,17 @@ public sealed class IntegrationTestFactory
             .WithUsername("postgres")
             .WithPassword("postgres")
             .Build();
+
+        _redis = new RedisBuilder("redis:8.10.3")
+            .Build();
     }
 
     public async ValueTask InitializeAsync()
     {
-        await _postgres.StartAsync();
+        await Task.WhenAll(_postgres.StartAsync(), _redis.StartAsync());
+
+        // allowAdmin lets the reset flush the cache between tests.
+        _redisConnection = await ConnectionMultiplexer.ConnectAsync($"{_redis.GetConnectionString()},allowAdmin=true");
 
         Client = CreateClient();
 
@@ -75,6 +88,18 @@ public sealed class IntegrationTestFactory
         Emails.Clear();
 
         await _databaseReset.ResetAsync(_connection);
+
+        // A cached query result from an earlier test would hide the rows this test seeds.
+        foreach (IServer server in _redisConnection.GetServers())
+        {
+            await server.FlushAllDatabasesAsync();
+        }
+
+        // Flushing Redis does not clear the in-memory copies the app keeps in front of it.
+        // "*" is HybridCache's tag for every entry.
+        HybridCache cache = Services.GetRequiredService<HybridCache>();
+
+        await cache.RemoveByTagAsync("*");
     }
 
     // A signed-in admin: the only role that can change products, categories and coupons.
@@ -109,7 +134,14 @@ public sealed class IntegrationTestFactory
             await _connection.DisposeAsync();
         }
 
+        if (_redisConnection is not null)
+        {
+            await _redisConnection.DisposeAsync();
+        }
+
         await _postgres.DisposeAsync();
+
+        await _redis.DisposeAsync();
 
         await base.DisposeAsync();
     }
@@ -145,6 +177,7 @@ public sealed class IntegrationTestFactory
                 new Dictionary<string, string?>
                 {
                     ["ConnectionStrings:Database"] = ConnectionString,
+                    ["ConnectionStrings:Redis"] = _redis.GetConnectionString(),
                     // A new random signing key for every run: no key is committed anywhere.
                     ["Jwt:SecretKey"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(48)),
                     // The lowest accepted bcrypt cost, so the many logins in these tests stay fast.
@@ -167,6 +200,20 @@ public sealed class IntegrationTestFactory
 
             services.RemoveAll<IEmailService>();
             services.AddSingleton<IEmailService>(Emails);
+
+            // Cache only in Redis, which ResetDatabaseAsync flushes. With the in-memory layer on, a search
+            // cached by one test was still served to the next one on the CI runners, despite the reset.
+            services.PostConfigure<HybridCacheOptions>(options =>
+            {
+                HybridCacheEntryOptions? defaults = options.DefaultEntryOptions;
+
+                options.DefaultEntryOptions = new HybridCacheEntryOptions
+                {
+                    Expiration = defaults?.Expiration,
+                    LocalCacheExpiration = defaults?.LocalCacheExpiration,
+                    Flags = (defaults?.Flags ?? HybridCacheEntryFlags.None) | HybridCacheEntryFlags.DisableLocalCache
+                };
+            });
 
             // A request with "Authorization: Test" signs in through TestAuthenticationHandler.
             // Any other request goes through the app's real JWT bearer handler, so a test can
