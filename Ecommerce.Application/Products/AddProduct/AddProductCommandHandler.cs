@@ -1,15 +1,18 @@
-using Ecommerce.Application.Abstractions.Data;
+﻿using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Categories;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Shared;
+using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Logging;
 
 namespace Ecommerce.Application.Products.AddProduct;
-
 internal sealed class AddProductCommandHandler(
     IApplicationDbContext dbContext,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    HybridCache cache,
+    ILogger<AddProductCommandHandler> logger)
     : ICommandHandler<AddProductCommand, Guid>
 {
     public async Task<Result<Guid>> HandleAsync(AddProductCommand request, CancellationToken cancellationToken)
@@ -42,6 +45,9 @@ internal sealed class AddProductCommandHandler(
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
+        await ProductCache.ClearAsync(cache, logger, cancellationToken);
+
         return product.Id.Value;
+
     }
 }

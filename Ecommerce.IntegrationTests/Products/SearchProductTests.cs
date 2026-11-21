@@ -1,0 +1,303 @@
+using System.Diagnostics;
+using System.Net;
+using System.Net.Http.Json;
+using Ecommerce.Application.Products;
+using Ecommerce.Domain.Categories;
+using Ecommerce.Domain.Products;
+using Ecommerce.Infrastructure;
+using Ecommerce.IntegrationTests.Helpers;
+using Ecommerce.IntegrationTests.Infrastructure;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Ecommerce.IntegrationTests.Products;
+
+// The search result is cached in the Redis container, so these tests run against the same cache as production.
+public sealed class SearchProductTests
+{
+    private const string SearchUrl = "/api/v1/products?page=1&pageSize=10";
+
+    private readonly IntegrationTestFactory _factory;
+
+    public SearchProductTests(IntegrationTestFactory factory)
+    {
+        _factory = factory;
+    }
+
+    [Fact]
+    public async Task SearchProduct_ShouldServeTheCachedResult_UntilAProductIsChangedThroughTheApi()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        Category category = CategoryData.Create();
+
+        await SeedAsync(category, ProductData.CreateProduct(category.Id, name: "Keyboard"));
+
+        using HttpClient anonymousClient = _factory.CreateClient();
+
+        await SearchAsync(anonymousClient);
+
+        // This row skips the handlers, so nothing removes the cached search.
+        await SeedAsync(ProductData.CreateProduct(category.Id, name: "Mouse"));
+
+        // Act
+        PagedResponse<ProductResponse> cached = await SearchAsync(anonymousClient);
+
+        using HttpClient adminClient = _factory.CreateAdminClient();
+
+        await adminClient.PostAsJsonAsync("/api/v1/products", ProductData.Create(category.Id.Value), cancellationToken: TestContext.Current.CancellationToken);
+
+        PagedResponse<ProductResponse> afterAdd = await SearchAsync(anonymousClient);
+
+        // Assert
+        Assert.Equal(["Keyboard"], cached.Items.Select(p => p.Name));
+        Assert.Equal(3, afterAdd.Items.Count);
+    }
+
+    [Fact]
+    public async Task SearchProduct_ShouldNotCacheAKeywordSearch_WhileANoKeywordSearchIsStillCached()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        Category category = CategoryData.Create();
+
+        await SeedAsync(category, ProductData.CreateProduct(category.Id, name: "Keyboard"));
+
+        using HttpClient client = _factory.CreateClient();
+
+        const string keywordUrl = "/api/v1/products?page=1&pageSize=10&keyword=board";
+
+        await SearchAsync(client);
+        await SearchAsync(client, keywordUrl);
+
+        // This row skips the handlers, so nothing removes a cached search.
+        await SeedAsync(ProductData.CreateProduct(category.Id, name: "Whiteboard"));
+
+        // Act
+        PagedResponse<ProductResponse> withKeyword = await SearchAsync(client, keywordUrl);
+        PagedResponse<ProductResponse> withoutKeyword = await SearchAsync(client);
+
+        // Assert
+        Assert.Equal(["Keyboard", "Whiteboard"], withKeyword.Items.Select(p => p.Name).Order());
+        Assert.Equal(["Keyboard"], withoutKeyword.Items.Select(p => p.Name));
+    }
+
+    [Fact]
+    public async Task SearchProduct_ShouldShareTheCachedResult_WhenPageIsZeroOrOne()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        Category category = CategoryData.Create();
+
+        await SeedAsync(category, ProductData.CreateProduct(category.Id, name: "Keyboard"));
+
+        using HttpClient client = _factory.CreateClient();
+
+        await SearchAsync(client, "/api/v1/products?page=1&pageSize=10");
+
+        await SeedAsync(ProductData.CreateProduct(category.Id, name: "Mouse"));
+
+        // Act
+        PagedResponse<ProductResponse> pageZero = await SearchAsync(client, "/api/v1/products?page=0&pageSize=10");
+
+        // Assert
+        Assert.Equal(["Keyboard"], pageZero.Items.Select(p => p.Name));
+    }
+
+    [Fact]
+    public async Task SearchProduct_ShouldTreatABlankKeywordAsNoKeyword_AndUseTheDefaultPaging()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        Category category = CategoryData.Create();
+
+        await SeedAsync(category, ProductData.CreateProduct(category.Id, name: "Keyboard"));
+
+        using HttpClient client = _factory.CreateClient();
+
+        // Act: a blank keyword must not filter by spaces, and page and pageSize may be left out.
+        PagedResponse<ProductResponse> result = await SearchAsync(client, $"/api/v1/products?keyword={Uri.EscapeDataString("   ")}");
+
+        // Assert
+        Assert.Equal(["Keyboard"], result.Items.Select(p => p.Name));
+        Assert.Equal(1, result.Page);
+        Assert.Equal(10, result.PageSize);
+    }
+
+    [Fact]
+    public async Task SearchProduct_ShouldReturnEveryRowOnce_WhenPagingThroughRowsWithTheSameSortValue()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        Category category = CategoryData.Create();
+
+        List<Product> products = [.. Enumerable.Range(0, 5).Select(_ => ProductData.CreateProduct(category.Id, name: "Same name"))];
+
+        await SeedAsync(category);
+        await SeedAsync([.. products]);
+
+        using HttpClient client = _factory.CreateClient();
+
+        // Act
+        List<Guid> seen = [];
+
+        for (int page = 1; page <= 3; page++)
+        {
+            PagedResponse<ProductResponse> result = await SearchAsync(client, $"/api/v1/products?page={page}&pageSize=2&sortColumn=Name");
+
+            seen.AddRange(result.Items.Select(p => p.Id));
+        }
+
+        // Assert
+        Assert.Equal(5, seen.Count);
+        Assert.Equal(products.Select(p => p.Id.Value).Order(), seen.Order());
+    }
+
+    [Theory]
+    [InlineData("", 1, 2, 5, 2)]
+    [InlineData("", 3, 2, 5, 1)]
+    [InlineData("", 4, 2, 5, 0)]
+    [InlineData("keyboard", 1, 2, 3, 2)]
+    [InlineData("keyboard", 2, 2, 3, 1)]
+    [InlineData("keyboard", 5, 2, 3, 0)]
+    [InlineData("nothing matches this", 1, 2, 0, 0)]
+    public async Task SearchProduct_ShouldReturnTheTotalOfAllMatches_OnEveryPage(string keyword, int page, int pageSize, int expectedTotal, int expectedItems)
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        Category category = CategoryData.Create();
+
+        await SeedAsync(category);
+        await SeedAsync(
+            ProductData.CreateProduct(category.Id, name: "Mechanical keyboard"),
+            ProductData.CreateProduct(category.Id, name: "Wireless keyboard"),
+            ProductData.CreateProduct(category.Id, name: "Keyboard tray"),
+            ProductData.CreateProduct(category.Id, name: "Mouse"),
+            ProductData.CreateProduct(category.Id, name: "Monitor"));
+
+        using HttpClient client = _factory.CreateClient();
+
+        // Act
+        PagedResponse<ProductResponse> result = await SearchAsync(client, $"/api/v1/products?page={page}&pageSize={pageSize}&keyword={Uri.EscapeDataString(keyword)}");
+
+        // Assert
+        Assert.Equal(expectedTotal, result.TotalCount);
+        Assert.Equal(expectedItems, result.Items.Count);
+        Assert.Equal(page > 1, result.HasPreviousPage);
+        Assert.Equal(page * pageSize < expectedTotal, result.HasNextPage);
+    }
+
+    [Theory]
+    [InlineData("100%", "100% cotton shirt")]
+    [InlineData("e_c", "snake_case lamp")]
+    [InlineData("k\\s", "back\\slash")]
+    public async Task SearchProduct_ShouldMatchTheKeywordLiterally_WhenItContainsALikeWildcard(string keyword, string expectedName)
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        Category category = CategoryData.Create();
+
+        await SeedAsync(category);
+        await SeedAsync(
+            ProductData.CreateProduct(category.Id, name: "100% cotton shirt"),
+            ProductData.CreateProduct(category.Id, name: "100 cotton shirt"),
+            ProductData.CreateProduct(category.Id, name: "snake_case lamp"),
+            ProductData.CreateProduct(category.Id, name: "snakeXcase lamp"),
+            ProductData.CreateProduct(category.Id, name: "back\\slash"),
+            ProductData.CreateProduct(category.Id, name: "backslash"));
+
+        using HttpClient client = _factory.CreateClient();
+
+        // Act
+        PagedResponse<ProductResponse> result = await SearchAsync(client, $"/api/v1/products?page=1&pageSize=10&keyword={Uri.EscapeDataString(keyword)}");
+
+        // Assert
+        Assert.Equal([expectedName], result.Items.Select(p => p.Name));
+    }
+
+    [Theory]
+    [InlineData("pageSize=10&sortColumn=Quantity")]
+    [InlineData("pageSize=101")]
+    [InlineData("pageSize=10&keyword=ab")]
+    public async Task SearchProduct_ShouldReturnBadRequest_WhenTheSearchIsInvalid(string queryString)
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        using HttpClient client = _factory.CreateClient();
+
+        // Act
+        HttpResponseMessage response = await client.GetAsync($"/api/v1/products?page=1&{queryString}", cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task SearchProduct_ShouldReturnProductsFromTheDatabase_WhenRedisIsDown()
+    {
+        // Arrange
+        // Starting the extra host seeds development data when it finds no users. Start it on an empty
+        // database (leftovers from other tests can collide with the seed), then reset to remove the seed.
+        await _factory.ResetDatabaseAsync();
+
+        await using WebApplicationFactory<Program> factoryWithoutRedis = _factory.WithWebHostBuilder(builder =>
+            builder.ConfigureServices(services => services.UseRedisThatIsDown()));
+
+        using HttpClient client = factoryWithoutRedis.CreateClient();
+
+        await _factory.ResetDatabaseAsync();
+
+        Category category = CategoryData.Create();
+
+        await SeedAsync(category, ProductData.CreateProduct(category.Id, name: "Keyboard"));
+
+        // Act: two searches. The first one also waits for the client's first connection attempt (up to its
+        // 5 s connect timeout), once per process; only then does the client know Redis is down.
+        var stopwatch = Stopwatch.StartNew();
+        PagedResponse<ProductResponse> first = await SearchAsync(client);
+        TimeSpan firstTime = stopwatch.Elapsed;
+
+        stopwatch.Restart();
+        PagedResponse<ProductResponse> second = await SearchAsync(client);
+        TimeSpan secondTime = stopwatch.Elapsed;
+
+        TestContext.Current.TestOutputHelper?.WriteLine($"Search with Redis down: {firstTime.TotalMilliseconds:F0} ms, then {secondTime.TotalMilliseconds:F0} ms");
+
+        // Assert: the reason GET /health reports a Redis failure as Degraded, not Unhealthy.
+        Assert.Equal(["Keyboard"], first.Items.Select(p => p.Name));
+        Assert.Equal(["Keyboard"], second.Items.Select(p => p.Name));
+
+        // From then on, the Redis client fails fast instead of holding each command until its 5 s timeout.
+        Assert.True(secondTime < TimeSpan.FromSeconds(1), $"Second search took {secondTime}");
+    }
+
+    private static Task<PagedResponse<ProductResponse>> SearchAsync(HttpClient client)
+    {
+        return SearchAsync(client, SearchUrl);
+    }
+
+    private static async Task<PagedResponse<ProductResponse>> SearchAsync(HttpClient client, string url)
+    {
+        PagedResponse<ProductResponse>? page = await client.GetFromJsonAsync<PagedResponse<ProductResponse>>(url, cancellationToken: TestContext.Current.CancellationToken);
+
+        return page!;
+    }
+
+    private Task SeedAsync(params object[] entities)
+    {
+        return _factory.ExecuteScopeAsync(async sp =>
+        {
+            ApplicationDbContext db = sp.GetRequiredService<ApplicationDbContext>();
+            db.AddRange(entities);
+            await db.SaveChangesAsync();
+        });
+    }
+}

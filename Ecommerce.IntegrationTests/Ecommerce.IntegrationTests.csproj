@@ -18,6 +18,7 @@
 		<PackageReference Include="Respawn" />
 
 		<PackageReference Include="Testcontainers.PostgreSql" />
+		<PackageReference Include="Testcontainers.Redis" />
 
 		<PackageReference Include="xunit.v3" />
 	</ItemGroup>

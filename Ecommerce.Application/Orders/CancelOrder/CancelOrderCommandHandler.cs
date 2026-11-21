@@ -7,11 +7,15 @@ using Ecommerce.Domain.Orders;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Users;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Logging;
 
 namespace Ecommerce.Application.Orders.CancelOrder;
 internal sealed class CancelOrderCommandHandler(
     IApplicationDbContext dbContext,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    HybridCache cache,
+    ILogger<CancelOrderCommandHandler> logger)
     : ICommandHandler<CancelOrderCommand>
 {
     public async Task<Result> HandleAsync(CancelOrderCommand request, CancellationToken cancellationToken)
@@ -46,6 +50,9 @@ internal sealed class CancelOrderCommandHandler(
         // The order, the products and the coupon all have a concurrency token, so a second cancel
         // that read the same order at the same time fails instead of giving the stock back twice.
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        // The product search is cached, and cancelling changed the stock it shows.
+        await ProductCache.ClearAsync(cache, logger, cancellationToken);
 
         return Result.Success();
     }

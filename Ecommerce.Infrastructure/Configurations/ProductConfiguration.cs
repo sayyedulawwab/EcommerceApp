@@ -1,4 +1,4 @@
-using Ecommerce.Domain.Categories;
+﻿using Ecommerce.Domain.Categories;
 using Ecommerce.Domain.Products;
 using Ecommerce.Domain.Shared;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +19,11 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(product => product.Name)
                .HasMaxLength(ProductName.MaxLength)
                .HasConversion(name => name.Value, value => ProductName.Create(value).Value);
+
+        // Lets the keyword search (ILIKE '%...%') use an index instead of reading every row.
+        builder.HasIndex(product => product.Name)
+               .HasMethod("gin")
+               .HasOperators("gin_trgm_ops");
 
         builder.Property(product => product.Description)
                .HasMaxLength(ProductDescription.MaxLength)

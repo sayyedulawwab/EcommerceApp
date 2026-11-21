@@ -247,7 +247,7 @@ public sealed class RateLimitTests
         }
 
         // Act
-        HttpResponseMessage response = await client.GetAsync("/api/v1/categories", TestContext.Current.CancellationToken);
+        HttpResponseMessage response = await client.GetAsync("/api/v1/products", TestContext.Current.CancellationToken);
 
         // Assert: the call is anonymous, so authorization answers 401, not the rate limiter.
         Assert.NotEqual(HttpStatusCode.TooManyRequests, response.StatusCode);
