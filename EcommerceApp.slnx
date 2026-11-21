@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="Ecommerce.API/Ecommerce.API.csproj" />
+  <Project Path="Ecommerce.Application.UnitTests/Ecommerce.Application.UnitTests.csproj" />
   <Project Path="Ecommerce.Application/Ecommerce.Application.csproj" />
   <Project Path="Ecommerce.ArchitectureTests/Ecommerce.ArchitectureTests.csproj" />
   <Project Path="Ecommerce.Domain.UnitTests/Ecommerce.Domain.UnitTests.csproj" />

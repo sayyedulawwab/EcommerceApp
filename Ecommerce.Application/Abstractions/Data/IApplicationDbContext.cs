@@ -1,0 +1,21 @@
+using Ecommerce.Domain.Categories;
+using Ecommerce.Domain.Coupons;
+using Ecommerce.Domain.Orders;
+using Ecommerce.Domain.Products;
+using Ecommerce.Domain.Reviews;
+using Ecommerce.Domain.Users;
+using Microsoft.EntityFrameworkCore;
+
+namespace Ecommerce.Application.Abstractions.Data;
+
+public interface IApplicationDbContext
+{
+    DbSet<Category> Categories { get; }
+    DbSet<Coupon> Coupons { get; }
+    DbSet<Product> Products { get; }
+    DbSet<Order> Orders { get; }
+    DbSet<Review> Reviews { get; }
+    DbSet<User> Users { get; }
+
+    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+}
