@@ -75,10 +75,9 @@ public sealed class RefreshTokenTests
         // The new access token works.
         using HttpClient client = _factory.CreateClientWithCookies(accessToken: second.AccessToken);
 
-        HttpResponseMessage addCategory = await client.PostAsJsonAsync("/api/v1/categories", new Ecommerce.API.Controllers.Categories.AddCategoryRequest("Electronics", "ELEC"), cancellationToken: TestContext.Current.CancellationToken);
+        HttpResponseMessage orders = await client.GetAsync("/api/v1/orders", TestContext.Current.CancellationToken);
 
-        // Forbidden, not Unauthorized: the token is accepted, and this user is not an admin.
-        Assert.Equal(HttpStatusCode.Forbidden, addCategory.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, orders.StatusCode);
     }
 
     [Fact]
@@ -96,13 +95,11 @@ public sealed class RefreshTokenTests
 
         // Act
         HttpResponseMessage refresh = await browser.PostAsync("/api/v1/auth/refresh", null, TestContext.Current.CancellationToken);
-        HttpResponseMessage addCategory = await browser.PostAsJsonAsync("/api/v1/categories", new Ecommerce.API.Controllers.Categories.AddCategoryRequest("Electronics", "ELEC"), cancellationToken: TestContext.Current.CancellationToken);
+        HttpResponseMessage orders = await browser.GetAsync("/api/v1/orders", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, refresh.StatusCode);
-
-        // Forbidden, not Unauthorized: the refreshed token is accepted, and this user is not an admin.
-        Assert.Equal(HttpStatusCode.Forbidden, addCategory.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, orders.StatusCode);
     }
 
     [Fact]

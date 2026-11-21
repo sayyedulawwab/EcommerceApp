@@ -41,6 +41,10 @@ public sealed class ApplicationDbContext(DbContextOptions options, IDomainEvents
 
             return result;
         }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            throw new ConcurrencyException("Concurrency exception occurred.", ex);
+        }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } postgresException)
         {
             throw new UniqueConstraintException("A unique constraint was violated.", ex, postgresException.ConstraintName);

@@ -3,7 +3,11 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Ecommerce.API.Controllers.Auth;
 using Ecommerce.API.Controllers.Categories;
+using Ecommerce.API.Controllers.Orders;
 using Ecommerce.Application.Abstractions.Auth;
+using Ecommerce.Domain.Orders;
+using Ecommerce.Domain.Products;
+using Ecommerce.Domain.Categories;
 using Ecommerce.Domain.Users;
 using Ecommerce.Infrastructure;
 using Ecommerce.Infrastructure.Auth;
@@ -28,7 +32,22 @@ public sealed class AccessTokenCookieTests
     }
 
     [Fact]
-    public async Task AddCategory_ShouldReturnUnauthorized_WhenThereIsNoCookie()
+    public async Task GetOrders_ShouldReturnOk_WhenTheCookieComesFromLogin()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        using HttpClient client = await CreateSignedInClientAsync(isAdmin: false);
+
+        // Act
+        HttpResponseMessage response = await client.GetAsync("/api/v1/orders", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetOrders_ShouldReturnUnauthorized_WhenThereIsNoCookie()
     {
         // Arrange
         await _factory.ResetDatabaseAsync();
@@ -36,47 +55,83 @@ public sealed class AccessTokenCookieTests
         using HttpClient client = _factory.CreateClient();
 
         // Act
-        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/categories", new AddCategoryRequest("Electronics", "ELEC"), cancellationToken: TestContext.Current.CancellationToken);
+        HttpResponseMessage response = await client.GetAsync("/api/v1/orders", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
-    public async Task AddCategory_ShouldReturnUnauthorized_WhenTheTokenSignatureIsChanged()
+    public async Task GetOrders_ShouldReturnUnauthorized_WhenTheTokenSignatureIsChanged()
     {
         // Arrange
         await _factory.ResetDatabaseAsync();
 
-        string token = await LoginAsync(isAdmin: true);
+        string token = await LoginAsync(isAdmin: false);
         string[] parts = token.Split('.');
         string tamperedToken = $"{parts[0]}.{parts[1]}.{Reverse(parts[2])}";
 
         using HttpClient client = _factory.CreateClientWithCookies(accessToken: tamperedToken);
 
         // Act
-        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/categories", new AddCategoryRequest("Electronics", "ELEC"), cancellationToken: TestContext.Current.CancellationToken);
+        HttpResponseMessage response = await client.GetAsync("/api/v1/orders", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
-    public async Task AddCategory_ShouldReturnUnauthorized_WhenAValidTokenIsSentAsABearerHeader()
+    public async Task GetOrders_ShouldReturnUnauthorized_WhenAValidTokenIsSentAsABearerHeader()
     {
         // Arrange
         await _factory.ResetDatabaseAsync();
 
-        string token = await LoginAsync(isAdmin: true);
+        string token = await LoginAsync(isAdmin: false);
 
         using HttpClient client = _factory.CreateClientWithoutCookieJar();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         // Act
-        HttpResponseMessage response = await client.PostAsJsonAsync("/api/v1/categories", new AddCategoryRequest("Electronics", "ELEC"), cancellationToken: TestContext.Current.CancellationToken);
+        HttpResponseMessage response = await client.GetAsync("/api/v1/orders", TestContext.Current.CancellationToken);
 
         // Assert: the token is accepted only from the cookie.
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PlaceOrder_ShouldUseTheUserIdFromTheToken_WhenTheCookieComesFromLogin()
+    {
+        // Arrange
+        await _factory.ResetDatabaseAsync();
+
+        Category category = CategoryData.Create();
+        Product product = ProductData.CreateProduct(category.Id);
+
+        await _factory.ExecuteScopeAsync(async sp =>
+        {
+            ApplicationDbContext db = sp.GetRequiredService<ApplicationDbContext>();
+            db.AddRange(category, product);
+            await db.SaveChangesAsync();
+        });
+
+        using HttpClient client = await CreateSignedInClientAsync(isAdmin: false);
+
+        UserId userId = await _factory.ExecuteScopeAsync(sp =>
+            sp.GetRequiredService<ApplicationDbContext>().Set<User>().Select(user => user.Id).SingleAsync());
+
+        // Act
+        HttpResponseMessage response = await client.PostAsJsonAsync(
+            "/api/v1/orders",
+            new PlaceOrderRequest([new PlaceOrderProductRequest(product.Id.Value, 1)]),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        Order order = await _factory.ExecuteScopeAsync(sp =>
+            sp.GetRequiredService<ApplicationDbContext>().Set<Order>().SingleAsync());
+
+        Assert.Equal(userId, order.UserId);
     }
 
     [Theory]

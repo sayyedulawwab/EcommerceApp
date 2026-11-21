@@ -21,6 +21,12 @@ internal sealed class CouponConfiguration : IEntityTypeConfiguration<Coupon>
         builder.HasIndex(coupon => coupon.Code)
                .IsUnique();
 
+        // Two orders that redeem the last use at the same time can't both save.
+        builder.Property<uint>("Version")
+               .HasColumnName("xmin")
+               .HasColumnType("xid")
+               .IsRowVersion();
+
         builder.Property(coupon => coupon.PercentOff);
         builder.Property(coupon => coupon.StartsOnUtc);
         builder.Property(coupon => coupon.ExpiresOnUtc);
