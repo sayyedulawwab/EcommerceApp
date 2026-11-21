@@ -1,13 +1,10 @@
 ﻿using System.Reflection;
 using Ecommerce.Application.Abstractions.Auth;
-using Ecommerce.Application.Abstractions.Clock;
 using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Emails;
 using Ecommerce.Application.Products;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Infrastructure.Auth;
-using Ecommerce.Infrastructure.Clock;
-using Ecommerce.Infrastructure.Data;
 using Ecommerce.Infrastructure.DomainEvents;
 using Ecommerce.Infrastructure.Emails;
 using Ecommerce.Infrastructure.Health;
@@ -19,6 +16,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
+using Npgsql;
 using StackExchange.Redis;
 
 namespace Ecommerce.Infrastructure;
@@ -26,7 +24,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddTransient<IDateTimeProvider, DateTimeProvider>();
+        // .NET's own clock abstraction. Handlers take TimeProvider, so a test can pass a fixed clock instead.
+        services.AddSingleton(TimeProvider.System);
         services.AddTransient<IEmailService, EmailService>();
         services.AddTransient<IDomainEventsDispatcher, DomainEventsDispatcher>();
 
@@ -85,7 +84,9 @@ public static class DependencyInjection
 
         services.AddScoped<IProductQueryRepository, ProductQueryRepository>();
 
-        services.AddSingleton<ISqlConnectionFactory>(_ => new SqlConnectionFactory(GetConnectionString()));
+        // One data source for the app's lifetime: it owns the connection pool, and Dapper queries
+        // open their connections from it. Created on first use, for the same reason as above.
+        services.AddSingleton(_ => NpgsqlDataSource.Create(GetConnectionString()));
     }
 
     private static void AddAuthentication(IServiceCollection services)

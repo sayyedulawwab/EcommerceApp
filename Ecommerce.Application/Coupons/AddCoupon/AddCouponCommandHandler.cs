@@ -1,4 +1,3 @@
-using Ecommerce.Application.Abstractions.Clock;
 using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
@@ -8,10 +7,10 @@ using Microsoft.EntityFrameworkCore;
 namespace Ecommerce.Application.Coupons.AddCoupon;
 internal sealed class AddCouponCommandHandler(
     IApplicationDbContext dbContext,
-    IDateTimeProvider dateTimeProvider)
+    TimeProvider timeProvider)
     : ICommandHandler<AddCouponCommand, Guid>
 {
-    public async Task<Result<Guid>> Handle(AddCouponCommand request, CancellationToken cancellationToken)
+    public async Task<Result<Guid>> HandleAsync(AddCouponCommand request, CancellationToken cancellationToken)
     {
         Result<CouponCode> code = CouponCode.Create(request.Code);
 
@@ -25,7 +24,7 @@ internal sealed class AddCouponCommandHandler(
             return Result.Failure<Guid>(CouponErrors.AlreadyExists);
         }
 
-        Result<Coupon> coupon = Coupon.Create(code.Value, request.PercentOff, request.StartsOnUtc, request.ExpiresOnUtc, request.MaxRedemptions, dateTimeProvider.UtcNow);
+        Result<Coupon> coupon = Coupon.Create(code.Value, request.PercentOff, request.StartsOnUtc, request.ExpiresOnUtc, request.MaxRedemptions, timeProvider.GetUtcNow().UtcDateTime);
 
         if (coupon.IsFailure)
         {

@@ -23,7 +23,7 @@ public class CouponsController() : ControllerBase
     {
         var command = new AddCouponCommand(request.Code, request.PercentOff, request.StartsOn.UtcDateTime, request.ExpiresOn.UtcDateTime, request.MaxRedemptions);
 
-        Result<Guid> result = await handler.Handle(command, cancellationToken);
+        Result<Guid> result = await handler.HandleAsync(command, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -39,7 +39,7 @@ public class CouponsController() : ControllerBase
     {
         var query = new GetCouponsQuery();
 
-        Result<IReadOnlyList<CouponResponse>> result = await handler.Handle(query, cancellationToken);
+        Result<IReadOnlyList<CouponResponse>> result = await handler.HandleAsync(query, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -55,7 +55,7 @@ public class CouponsController() : ControllerBase
     {
         var command = new EditCouponCommand(id, request.PercentOff, request.StartsOn.UtcDateTime, request.ExpiresOn.UtcDateTime, request.MaxRedemptions);
 
-        Result<Guid> result = await handler.Handle(command, cancellationToken);
+        Result<Guid> result = await handler.HandleAsync(command, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -71,7 +71,7 @@ public class CouponsController() : ControllerBase
     {
         var command = new DeleteCouponCommand(id);
 
-        Result<Guid> result = await handler.Handle(command, cancellationToken);
+        Result<Guid> result = await handler.HandleAsync(command, cancellationToken);
 
         if (result.IsFailure)
         {

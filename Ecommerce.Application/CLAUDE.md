@@ -7,8 +7,7 @@ Use-case layer: commands, queries, handlers, validators, responses, and the port
 ```
 Abstractions/
   Auth/        IAuthService (bcrypt hash/verify/rehash), IJwtService (access token, refresh token generation and hashing)
-  Behaviors/   LoggingDecorator, ValidationDecorator
-  Clock/       IDateTimeProvider
+  Behaviors/   LoggingHandlers, ValidatingHandlers
   Data/        IApplicationDbContext (DbSets + SaveChangesAsync)
   Emails/      IEmailService
   Messaging/   ICommand, ICommand<T>, IQuery<T>, ICommandHandler<...>, IQueryHandler<...>
@@ -33,7 +32,7 @@ public interface ICommand<TResponse>;
 public interface IQuery<TResponse>;
 
 public interface ICommandHandler<in TCommand> where TCommand : ICommand
-{ Task<Result> Handle(TCommand command, CancellationToken cancellationToken); }
+{ Task<Result> HandleAsync(TCommand command, CancellationToken cancellationToken); }
 
 public interface ICommandHandler<in TCommand, TResponse> where TCommand : ICommand<TResponse>
 { Task<Result<TResponse>> Handle(TCommand command, CancellationToken cancellationToken); }
@@ -47,9 +46,9 @@ Controllers inject the closed handler interface directly (`ICommandHandler<AddPr
 ### DI and decorators (`DependencyInjection.AddApplication`)
 
 - Scrutor scans this assembly and registers **every** `IQueryHandler<,>`, `ICommandHandler<>`, `ICommandHandler<,>` and `IDomainEventHandler<>` implementation (including `internal` ones) as **scoped**. New handlers need no registration.
-- Decorators are applied with `TryDecorate`. The resulting order is **`LoggingDecorator` → `ValidationDecorator` → handler** for both commands and queries.
+- Decorators are applied with `TryDecorate`. The resulting order is **`LoggingHandlers` → `ValidatingHandlers` → handler** for both commands and queries.
 - `AddValidatorsFromAssembly` auto-registers all validators.
-- **Query validators run too**: `ValidationDecorator.QueryHandler` wraps every `IQueryHandler`, exactly like the command one. A query with a `{Query}Validator` (`SearchProductQueryValidator`, `SearchOrdersQueryValidator`) gets a 400 `ValidationError` before its handler runs; a query without one is not affected. Handlers do not inject `IValidator`.
+- **Query validators run too**: `ValidatingQueryHandler` wraps every `IQueryHandler`, exactly like the command one. A query with a `{Query}Validator` (`SearchProductQueryValidator`, `SearchOrdersQueryValidator`) gets a 400 `ValidationError` before its handler runs; a query without one is not affected. Handlers do not inject `IValidator`.
 - A new cross-cutting concern is a new decorator class in `Abstractions/Behaviors/`, registered with `TryDecorate`. Only add one when asked; there are no MediatR-style pipeline behaviors.
 - **Domain event handlers** (`internal sealed class XDomainEventHandler : IDomainEventHandler<XDomainEvent>`) live in Application and are picked up by the scan. Put each in the module folder next to the use case that triggers it (`Users/Register/SendWelcomeEmailDomainEventHandler.cs`, `Orders/PlaceOrder/SendOrderConfirmationDomainEventHandler.cs`). The event carries only IDs, so the handler loads what it needs with `AsNoTracking()` and returns quietly if the entity is gone.
 
@@ -86,7 +85,7 @@ public record PlaceOrderCommand(Guid UserId, List<OrderStockItem> OrderStockItem
 ```csharp
 internal sealed class EditCategoryCommandHandler(
     IApplicationDbContext dbContext,
-    IDateTimeProvider dateTimeProvider)
+    TimeProvider timeProvider)
     : ICommandHandler<EditCategoryCommand, Guid>
 {
     public async Task<Result<Guid>> Handle(EditCategoryCommand request, CancellationToken cancellationToken)
@@ -102,7 +101,7 @@ internal sealed class EditCategoryCommandHandler(
             category,
             new CategoryName(request.Name),
             new CategoryCode(request.Code),
-            dateTimeProvider.UtcNow);
+            timeProvider.GetUtcNow().UtcDateTime);
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -113,21 +112,21 @@ internal sealed class EditCategoryCommandHandler(
 
 Rules:
 
-- **`internal sealed class`** with a **primary constructor**. Dependencies are `IApplicationDbContext`, query repositories, `HybridCache`, and Application ports (`IDateTimeProvider`, `IAuthService`, ...). Never inject `ApplicationDbContext` or other Infrastructure types.
-- The `Handle` parameter is named `request`.
+- **`internal sealed class`** with a **primary constructor**. Dependencies are `IApplicationDbContext`, query repositories, `HybridCache`, and Application ports (`IAuthService`, ...), and .NET's `TimeProvider`. Never inject `ApplicationDbContext` or other Infrastructure types.
+- The `HandleAsync` parameter is named `request`.
 - **Ordering:**
   1. Load each referenced entity. If one is missing, `return Result.Failure<T>({Entity}Errors.NotFound);`.
   2. Run business checks such as duplicates. Failures return `{Entity}Errors.X` (e.g. `UserErrors.AlreadyExists` when `dbContext.Users.AnyAsync(...)` finds the email).
-  3. Build value objects from primitives with their `Create` (`ProductName.Create(request.Name)`, `Currency.FromCode(request.PriceCurrency)`, `Rating.Create(...)`). Build them before step 1 or 2 when a query needs them (`RegisterUserCommandHandler` checks for the email). If any fails, return `ValidationError.FromResults([name, description, currency])` (400 with every failed value):
+  3. Build value objects from primitives with their `Create` (`ProductName.Create(request.Name)`, `Currency.FromCode(request.PriceCurrency)`, `Rating.Create(...)`). Build them before step 1 or 2 when a query needs them (`RegisterUserCommandHandler` checks for the email). If any fails, return `ValidationError.Collect(name, description, currency)` (400 with every failed value):
      ```csharp
      if (name.IsFailure || description.IsFailure || currency.IsFailure)
      {
-         return Result.Failure<Guid>(ValidationError.FromResults([name, description, currency]));
+         return Result.Failure<Guid>(ValidationError.Collect(name, description, currency));
      }
      ```
   4. Change state **only through the domain**: `X.Create(...)`, `X.Update(x, ...)`, `order.AddOrderItem(...)`. Never set entity properties from a handler. Domain methods that return `Result` are propagated the same way:
      ```csharp
-     Result addItemResult = order.AddOrderItem(product, item.Quantity, dateTimeProvider.UtcNow);
+     Result addItemResult = order.AddOrderItem(product, item.Quantity, timeProvider.GetUtcNow().UtcDateTime);
 
      if (addItemResult.IsFailure)
      {
@@ -138,7 +137,7 @@ Rules:
   6. `await dbContext.SaveChangesAsync(cancellationToken);`. Exactly once, at the end, and **never on a failure path**.
   7. Clear the product cache if the write affects cached reads (see Caching).
   8. `return entity.Id.Value;` (implicit `Result<Guid>`).
-- Timestamps always come from `dateTimeProvider.UtcNow`.
+- Timestamps always come from `timeProvider.GetUtcNow().UtcDateTime`.
 - Pass `cancellationToken` through every async call.
 - Side effects such as email belong in a domain-event handler, not inline here.
 

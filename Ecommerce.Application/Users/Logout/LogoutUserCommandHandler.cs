@@ -1,5 +1,4 @@
 using Ecommerce.Application.Abstractions.Auth;
-using Ecommerce.Application.Abstractions.Clock;
 using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
@@ -9,13 +8,13 @@ namespace Ecommerce.Application.Users.Logout;
 internal sealed class LogoutUserCommandHandler(
     IApplicationDbContext dbContext,
     IJwtService jwtService,
-    IDateTimeProvider dateTimeProvider)
+    TimeProvider timeProvider)
     : ICommandHandler<LogoutUserCommand>
 {
-    public async Task<Result> Handle(LogoutUserCommand request, CancellationToken cancellationToken)
+    public async Task<Result> HandleAsync(LogoutUserCommand request, CancellationToken cancellationToken)
     {
         string tokenHash = jwtService.HashRefreshToken(request.RefreshToken);
-        DateTime now = dateTimeProvider.UtcNow;
+        DateTime now = timeProvider.GetUtcNow().UtcDateTime;
 
         // An unknown or already revoked token is not an error: the caller ends up signed out either way,
         // and the response does not tell anyone whether a token exists.

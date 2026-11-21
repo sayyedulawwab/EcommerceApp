@@ -6,7 +6,7 @@ using Ecommerce.Domain.Shared;
 using Ecommerce.Domain.Users;
 
 namespace Ecommerce.Domain.Orders;
-public sealed class Order : Entity<OrderId>
+public sealed class Order : AggregateRoot<OrderId>
 {
     private readonly List<OrderItem> _orderItems = [];
 
@@ -42,7 +42,7 @@ public sealed class Order : Entity<OrderId>
     {
         var order = new Order(OrderId.New(), userId, Money.Zero(), OrderStatus.Placed, createdOnUtc);
 
-        order.RaiseDomainEvent(new OrderPlacedDomainEvent(order.Id));
+        order.RecordDomainEvent(new OrderPlacedDomainEvent(order.Id));
 
         return order;
     }

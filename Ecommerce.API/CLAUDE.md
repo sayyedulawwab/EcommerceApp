@@ -7,9 +7,9 @@ HTTP layer: resource-based, versioned controllers that map request DTOs to comma
 ```
 Controllers/{Resource}/     {Resource}Controller.cs + {Verb}{Entity}Request.cs records
 Extensions/                 ErrorMappingExtensions (Error → IActionResult), MiddlewareExtensions,
-                            MigrationExtensions (dev migrate + seed), ApplicationBuilderExtensions
+                            DevelopmentDatabaseExtensions (dev migrate + seed), ApplicationBuilderExtensions
 Infrastructure/             ExceptionHandler (IExceptionHandler → 409 for ConcurrencyException, else 500 ProblemDetails)
-Middleware/                 RequestContextLoggingMiddleware (CorrelationId)
+Middleware/                 CorrelationIdMiddleware (CorrelationId)
 DependencyInjection.cs      AddPresentation()
 Program.cs                  Host, logging, OpenTelemetry, versioning, pipeline
 ```
@@ -32,7 +32,7 @@ public class CategoriesController() : ControllerBase
     {
         var command = new EditCategoryCommand(id, request.Name, request.Code);
 
-        Result<Guid> result = await handler.Handle(command, cancellationToken);
+        Result<Guid> result = await handler.HandleAsync(command, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -108,8 +108,8 @@ Every failure is an RFC 9457 `ProblemDetails` (`application/problem+json`). `Err
 
 - Service registration: `AddApplication()` → `AddPresentation()` → `AddInfrastructure(configuration)`, then `AddOpenApi()` and `AddApiVersioning(...)`.
 - API versioning: default `1.0`, `ReportApiVersions`. The version is read from the URL segment only (`UrlSegmentApiVersionReader`), so a route without `v{n}` doesn't match. The API explorer uses `GroupNameFormat = "'v'V"` and `SubstituteApiVersionInUrl`.
-- Development only: `app.MapOpenApi()` and `app.ApplyMigrations()` (migrates, and seeds the database when it is empty).
-- Middleware order (keep it): `UseRequestContextLogging()` → `UseExceptionHandler()` → `UseAuthentication()` → `UseAuthorization()` → `MapControllers()`, then `MapHealthChecks("/health")`.
+- Development only: `app.MapOpenApi()` and `app.PrepareDevelopmentDatabaseAsync()` (migrates, and seeds the database when it is empty).
+- Middleware order (keep it): `UseMiddleware<CorrelationIdMiddleware>()` → `UseExceptionHandler()` → `UseAuthentication()` → `UseAuthorization()` → `MapControllers()`, then `MapHealthChecks("/health")`.
 - `GET /health` is anonymous, unversioned and returns only `Healthy` (200), `Degraded` (200, Redis down: the API still serves from the database) or `Unhealthy` (503, PostgreSQL down): never details or exceptions. The checks (`DatabaseHealthCheck`, `RedisHealthCheck`) live in Infrastructure's `Health/`. The compose healthcheck and the deploy script rely on it.
 - Don't add `public partial class Program;`. Since .NET 10 a source generator makes the top-level `Program` public, which is all `WebApplicationFactory<Program>` needs (analyzer ASP0027 flags the declaration as redundant).
 
@@ -120,9 +120,9 @@ Every failure is an RFC 9457 `ProblemDetails` (`application/problem+json`). `Err
 - Logging is `Microsoft.Extensions.Logging` only. Don't add Serilog or another logging library: the default console provider covers `docker logs`, and the OpenTelemetry provider exports to OTLP with the trace and span IDs on every record. Levels come from the `Logging` section in `appsettings.json`.
 - `builder.Logging.AddOpenTelemetry` sets `IncludeScopes` (so scope values such as `CorrelationId` are exported) and `IncludeFormattedMessage`.
 - Request logs come from the ASP.NET Core traces and the `http.server.request.duration` metric, not from a per-request log line.
-- `RequestContextLoggingMiddleware` opens an `ILogger.BeginScope` with `CorrelationId` from the `X-Correlation-Id` header, falling back to `TraceIdentifier`.
+- `CorrelationIdMiddleware` opens an `ILogger.BeginScope` with `CorrelationId` from the `X-Correlation-Id` header, falling back to `TraceIdentifier`.
 - OpenTelemetry covers traces (ASP.NET Core + HttpClient), metrics (ASP.NET Core, HttpClient, runtime) and logs. Each OTLP/HTTP-protobuf exporter is enabled only when its endpoint is configured: `Otlp:LogsEndpoint`, `Otlp:TracesEndpoint`, `Otlp:MetricsEndpoint`.
-- Command/query logging already happens in Application's `LoggingDecorator`. Don't add per-action logging in controllers.
+- Command/query logging already happens in Application's `LoggingHandlers`. Don't add per-action logging in controllers.
 
 ---
 

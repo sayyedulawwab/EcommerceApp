@@ -33,7 +33,7 @@ public class OrdersController() : ControllerBase
 
         var command = new PlaceOrderCommand(userId, orderItems, request.CouponCode);
 
-        Result<Guid> result = await handler.Handle(command, cancellationToken);
+        Result<Guid> result = await handler.HandleAsync(command, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -56,7 +56,7 @@ public class OrdersController() : ControllerBase
 
         var command = new CancelOrderCommand(userId, id);
 
-        Result result = await handler.Handle(command, cancellationToken);
+        Result result = await handler.HandleAsync(command, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -79,7 +79,7 @@ public class OrdersController() : ControllerBase
 
         var query = new SearchOrdersQuery(userId, request.Status, request.From?.UtcDateTime, request.To?.UtcDateTime, request.Page, request.PageSize, request.SortColumn, request.SortOrder);
 
-        Result<PagedList<OrderResponse>> result = await handler.Handle(query, cancellationToken);
+        Result<PagedList<OrderResponse>> result = await handler.HandleAsync(query, cancellationToken);
 
         if (result.IsFailure)
         {

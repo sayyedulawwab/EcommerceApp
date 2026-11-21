@@ -60,7 +60,7 @@ public class OrderTests
     {
         Order order = CreateOrder();
 
-        IDomainEvent domainEvent = Assert.Single(order.GetDomainEvents());
+        IDomainEvent domainEvent = Assert.Single(order.PullDomainEvents());
         Assert.Equal(new OrderPlacedDomainEvent(order.Id), domainEvent);
     }
 

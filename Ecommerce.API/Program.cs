@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Ecommerce.API;
 using Ecommerce.API.Extensions;
+using Ecommerce.API.Middleware;
 using Ecommerce.Application;
 using Ecommerce.Infrastructure;
 using OpenTelemetry.Logs;
@@ -14,7 +15,7 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 Activity.DefaultIdFormat = ActivityIdFormat.W3C;
 Activity.ForceDefaultIdFormat = true;
 
-// Scopes carry the CorrelationId from RequestContextLoggingMiddleware to the exported log records.
+// Scopes carry the CorrelationId from CorrelationIdMiddleware to the exported log records.
 builder.Logging.AddOpenTelemetry(options =>
 {
     options.IncludeScopes = true;
@@ -103,13 +104,13 @@ WebApplication app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwaggerWithUi();
-    app.ApplyMigrations();
+    await app.PrepareDevelopmentDatabaseAsync();
 }
 
 // First, so everything after it sees the real client address from a trusted proxy.
 app.UseForwardedHeaders();
 
-app.UseRequestContextLogging();
+app.UseMiddleware<CorrelationIdMiddleware>();
 
 app.UseExceptionHandler();
 

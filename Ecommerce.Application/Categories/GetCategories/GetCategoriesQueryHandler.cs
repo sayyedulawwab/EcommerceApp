@@ -9,7 +9,7 @@ namespace Ecommerce.Application.Categories.GetCategories;
 internal sealed class GetCategoriesQueryHandler(IApplicationDbContext dbContext)
     : IQueryHandler<GetCategoriesQuery, IReadOnlyList<CategoryResponse>>
 {
-    public async Task<Result<IReadOnlyList<CategoryResponse>>> Handle(GetCategoriesQuery request, CancellationToken cancellationToken)
+    public async Task<Result<IReadOnlyList<CategoryResponse>>> HandleAsync(GetCategoriesQuery request, CancellationToken cancellationToken)
     {
 
         IReadOnlyList<Category> productCategories = await dbContext.Categories.AsNoTracking().ToListAsync(cancellationToken);

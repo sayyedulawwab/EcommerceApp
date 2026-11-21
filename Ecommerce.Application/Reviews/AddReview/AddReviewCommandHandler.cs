@@ -1,5 +1,4 @@
-﻿using Ecommerce.Application.Abstractions.Clock;
-using Ecommerce.Application.Abstractions.Data;
+﻿using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Products;
@@ -11,10 +10,10 @@ namespace Ecommerce.Application.Reviews.AddReview;
 
 internal sealed class AddReviewCommandHandler(
     IApplicationDbContext dbContext,
-    IDateTimeProvider dateTimeProvider)
+    TimeProvider timeProvider)
     : ICommandHandler<AddReviewCommand, Guid>
 {
-    public async Task<Result<Guid>> Handle(AddReviewCommand request, CancellationToken cancellationToken)
+    public async Task<Result<Guid>> HandleAsync(AddReviewCommand request, CancellationToken cancellationToken)
     {
 
         Product? product = await dbContext.Products.FirstOrDefaultAsync(product => product.Id == new ProductId(request.ProductId), cancellationToken);
@@ -29,14 +28,15 @@ internal sealed class AddReviewCommandHandler(
 
         if (rating.IsFailure || comment.IsFailure)
         {
-            return Result.Failure<Guid>(ValidationError.FromResults([rating, comment]));
+            return Result.Failure<Guid>(ValidationError.Collect(rating, comment));
         }
 
-        var review = Review.Create(product,
-                                   new UserId(request.UserId),
-                                   rating.Value,
-                                   comment.Value,
-                                   dateTimeProvider.UtcNow);
+        var review = Review.Write(
+            product.Id,
+            new UserId(request.UserId),
+            rating.Value,
+            comment.Value,
+            timeProvider.GetUtcNow().UtcDateTime);
 
         dbContext.Reviews.Add(review);
 

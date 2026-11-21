@@ -9,7 +9,7 @@ namespace Ecommerce.Application.Categories.GetCategoryById;
 internal sealed class GetCategoryByIdQueryHandler(IApplicationDbContext dbContext)
     : IQueryHandler<GetCategoryByIdQuery, CategoryResponse>
 {
-    public async Task<Result<CategoryResponse>> Handle(GetCategoryByIdQuery request, CancellationToken cancellationToken)
+    public async Task<Result<CategoryResponse>> HandleAsync(GetCategoryByIdQuery request, CancellationToken cancellationToken)
     {
         Category? category = await dbContext.Categories.AsNoTracking().FirstOrDefaultAsync(category => category.Id == new CategoryId(request.Id), cancellationToken);
 

@@ -10,7 +10,7 @@ internal sealed class DeleteCategoryCommandHandler(
     IApplicationDbContext dbContext)
     : ICommandHandler<DeleteCategoryCommand, Guid>
 {
-    public async Task<Result<Guid>> Handle(DeleteCategoryCommand request, CancellationToken cancellationToken)
+    public async Task<Result<Guid>> HandleAsync(DeleteCategoryCommand request, CancellationToken cancellationToken)
     {
         Category? category = await dbContext.Categories.FirstOrDefaultAsync(category => category.Id == new CategoryId(request.Id), cancellationToken);
 

@@ -5,7 +5,7 @@ Pure domain model with **no project or package dependencies** (BCL only, e.g. `S
 ## Folder layout
 
 ```
-Abstractions/   Entity<TId>, IEntity, IDomainEvent, IDomainEventHandler<T>,
+Abstractions/   Entity<TId>, AggregateRoot<TId>, IHasDomainEvents, IDomainEvent, IDomainEventHandler<T>,
                 Result, Result<T>, Error, ValidationError
 Shared/         Money, Currency (cross-aggregate value objects)
 {Module}/       {Entity}.cs, {Entity}Id.cs, one file per value object, {Entity}Errors.cs,
@@ -19,7 +19,7 @@ Modules: `Categories`, `Coupons`, `Products`, `Orders`, `Reviews`, `Users`.
 ## Entities
 
 ```csharp
-public sealed class Product : Entity<ProductId>
+public sealed class Product : AggregateRoot<ProductId>
 {
     // 1. Private full constructor: every persisted field, passes id to base
     private Product(ProductId id, ProductName name, ProductDescription description, Money price, int quantity, CategoryId categoryId, DateTime createdOnUtc) : base(id)
@@ -47,7 +47,7 @@ public sealed class Product : Entity<ProductId>
     {
         var product = new Product(ProductId.New(), name, description, price, quantity, categoryId, createdOnUtc);
 
-        product.RaiseDomainEvent(new ProductCreatedDomainEvent(product.Id));
+        product.RecordDomainEvent(new ProductCreatedDomainEvent(product.Id));
 
         return product;
     }
@@ -66,11 +66,11 @@ public sealed class Product : Entity<ProductId>
 
 Rules:
 
-- `public sealed class {Entity} : Entity<{Entity}Id>`. `Id` comes from the base class (`{ get; init; }`); don't redeclare it.
+- `public sealed class {Entity} : AggregateRoot<{Entity}Id>`. `Id` comes from the base class (`{ get; init; }`); don't redeclare it.
 - **A private full constructor** (calls `: base(id)`) that EF Core also uses to materialize the entity. Add a private parameterless one (with `#pragma warning disable CS8618`) **only when the entity has an owned type** (`Money` on `Product`, `Order`, `OrderItem`): EF Core can't bind an owned type through a constructor parameter.
 - **All properties use `{ get; private set; }`.** State changes only through the entity's static/instance methods; external code never assigns properties.
 - Properties are typed as **value objects and strongly typed IDs**, not primitives (`ProductName`, `Money`, `CategoryId`). Plain `int`/`bool`/`string` is fine where no VO exists (`Quantity`, `IsAdmin`, `PasswordHash`).
-- **Timestamps:** `CreatedOnUtc` (`DateTime`) is set by `Create`. `UpdatedOnUtc` (`DateTime?`) is set by `Update`. Both are **passed in by the caller** (from `IDateTimeProvider`); the domain never reads the clock.
+- **Timestamps:** `CreatedOnUtc` (`DateTime`) is set by `Create`. `UpdatedOnUtc` (`DateTime?`) is set by `Update`. Both are **passed in by the caller** (from `TimeProvider`); the domain never reads the clock.
 - **`static Create(...)`** takes value objects plus `createdOnUtc`, generates the id with `{Entity}Id.New()`, raises `{Entity}CreatedDomainEvent`, and returns the entity. When the entity has rules beyond its value objects, `Create` returns `Result<{Entity}>` instead (`Product.Create` rejects a price <= 0 and a negative quantity with `ProductErrors.InvalidPrice` / `InvalidQuantity`).
 - **`static Update({Entity} entity, ...)`** is the established pattern here. It takes the entity plus the mutable fields and `updatedOnUtc`, mutates the entity, and returns it (handlers reassign: `category = Category.Update(category, ...)`). `Product.Update` checks the same rules as `Product.Create` and returns `Result`, changing nothing on failure. It never touches `Id` or `CreatedOnUtc`. Match this shape for new entities.
 - **Reference other aggregates by ID** (`Product.CategoryId`, `Review.ProductId`, `Review.UserId`, `Order.UserId`). The one exception is `OrderItem.Product`, a navigation used for order responses. The price is copied into `OrderItem.UnitPrice` when the line is created, so a later price change doesn't change past orders.
@@ -94,7 +94,7 @@ A rule goes in a domain service in the module folder, not in an aggregate and no
 - `Orders/OrderCancellationService.Cancel(order, products, coupon, utcNow)` cancels a placed order, gives each product its stock back and releases the coupon's redemption.
 
 - A service with no dependencies is a `static class` with static methods (the analyzers require it, CA1822/S2325). Make it an instance class only when it depends on something, such as an interface declared in the Domain.
-- It works on loaded aggregates and returns `Result`. It doesn't load data, save or read the clock: the handler loads the aggregates, passes `dateTimeProvider.UtcNow`, and saves.
+- It works on loaded aggregates and returns `Result`. It doesn't load data, save or read the clock: the handler loads the aggregates, passes `timeProvider.GetUtcNow().UtcDateTime`, and saves.
 - Each aggregate still enforces its own rules (`AddOrderItem`: quantity and currency, `RemoveStock`: enough stock, `Coupon.Redeem`: period and usage limit). The service only decides the order of the calls.
 - If a later step fails, earlier aggregates have already changed in memory. That's safe only because the handler doesn't save on a failure. A caller that saves anyway (an outbox, a shared unit of work) needs the service to check every step before changing anything.
 
@@ -200,7 +200,7 @@ public sealed record ProductCreatedDomainEvent(ProductId ProductId) : IDomainEve
 ```
 
 - `sealed record`, past-tense name, lives in `{Module}/Events/`. It **carries IDs only**; handlers reload what they need.
-- Raised **inside the entity** with `RaiseDomainEvent(...)` (protected on `Entity<TId>`), typically in `Create`. Never raised from Application code.
+- Raised **inside the entity** with `RecordDomainEvent(...)` (protected on `AggregateRoot<TId>`; only aggregate roots record events), typically in `Create`. Never raised from Application code.
 - They are collected on the entity and dispatched by `ApplicationDbContext` **after** `SaveChangesAsync` succeeds (see the Infrastructure guide). An aggregate that is never saved (e.g. an order rejected for stock) dispatches nothing.
-- Handlers implement `IDomainEventHandler<TEvent>` (`Task Handle(T domainEvent, CancellationToken cancellationToken)`) and live in Application. Handled today: `UserCreatedDomainEvent` (welcome email) and `OrderPlacedDomainEvent` (raised in `Order.Create`, order confirmation email). `ProductCreated`, `CategoryCreated` and `ReviewCreated` have no handlers yet.
+- Handlers implement `IDomainEventHandler<TEvent>` (`Task HandleAsync(T domainEvent, CancellationToken cancellationToken)`) and live in Application. Handled today: `UserCreatedDomainEvent` (welcome email) and `OrderPlacedDomainEvent` (raised in `Order.Create`, order confirmation email). `ProductCreated`, `CategoryCreated` and `ReviewCreated` have no handlers yet.
 

@@ -13,7 +13,7 @@ internal sealed class SendOrderConfirmationDomainEventHandler(
     IEmailService emailService)
     : IDomainEventHandler<OrderPlacedDomainEvent>
 {
-    public async Task Handle(OrderPlacedDomainEvent domainEvent, CancellationToken cancellationToken)
+    public async Task HandleAsync(OrderPlacedDomainEvent domainEvent, CancellationToken cancellationToken)
     {
         // The event carries only the id, so load what the email needs.
         Order? order = await dbContext.Orders.AsNoTracking().FirstOrDefaultAsync(order => order.Id == domainEvent.OrderId, cancellationToken);

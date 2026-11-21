@@ -30,7 +30,7 @@ public class AuthController() : ControllerBase
             request.Email,
             request.Password);
 
-        Result<Guid> result = await handler.Handle(command, cancellationToken);
+        Result<Guid> result = await handler.HandleAsync(command, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -50,7 +50,7 @@ public class AuthController() : ControllerBase
     {
         var command = new LoginUserCommand(request.Email, request.Password);
 
-        Result<AuthTokensResponse> result = await handler.Handle(command, cancellationToken);
+        Result<AuthTokensResponse> result = await handler.HandleAsync(command, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -70,7 +70,7 @@ public class AuthController() : ControllerBase
     {
         var command = new RefreshAccessTokenCommand(request.RefreshToken);
 
-        Result<AuthTokensResponse> result = await handler.Handle(command, cancellationToken);
+        Result<AuthTokensResponse> result = await handler.HandleAsync(command, cancellationToken);
 
         if (result.IsFailure)
         {
@@ -90,7 +90,7 @@ public class AuthController() : ControllerBase
     {
         var command = new LogoutUserCommand(request.RefreshToken);
 
-        Result result = await handler.Handle(command, cancellationToken);
+        Result result = await handler.HandleAsync(command, cancellationToken);
 
         if (result.IsFailure)
         {

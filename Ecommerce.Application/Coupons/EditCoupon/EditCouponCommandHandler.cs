@@ -1,4 +1,3 @@
-using Ecommerce.Application.Abstractions.Clock;
 using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
@@ -8,10 +7,10 @@ using Microsoft.EntityFrameworkCore;
 namespace Ecommerce.Application.Coupons.EditCoupon;
 internal sealed class EditCouponCommandHandler(
     IApplicationDbContext dbContext,
-    IDateTimeProvider dateTimeProvider)
+    TimeProvider timeProvider)
     : ICommandHandler<EditCouponCommand, Guid>
 {
-    public async Task<Result<Guid>> Handle(EditCouponCommand request, CancellationToken cancellationToken)
+    public async Task<Result<Guid>> HandleAsync(EditCouponCommand request, CancellationToken cancellationToken)
     {
         Coupon? coupon = await dbContext.Coupons.FirstOrDefaultAsync(coupon => coupon.Id == new CouponId(request.Id), cancellationToken);
 
@@ -20,7 +19,7 @@ internal sealed class EditCouponCommandHandler(
             return Result.Failure<Guid>(CouponErrors.NotFound);
         }
 
-        Result updateResult = coupon.Update(request.PercentOff, request.StartsOnUtc, request.ExpiresOnUtc, request.MaxRedemptions, dateTimeProvider.UtcNow);
+        Result updateResult = coupon.Update(request.PercentOff, request.StartsOnUtc, request.ExpiresOnUtc, request.MaxRedemptions, timeProvider.GetUtcNow().UtcDateTime);
 
         if (updateResult.IsFailure)
         {

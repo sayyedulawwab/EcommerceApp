@@ -1,5 +1,4 @@
-﻿using Ecommerce.Application.Abstractions.Clock;
-using Ecommerce.Application.Abstractions.Data;
+﻿using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Application.Products;
 using Ecommerce.Domain.Abstractions;
@@ -14,12 +13,12 @@ using Microsoft.Extensions.Logging;
 namespace Ecommerce.Application.Orders.PlaceOrder;
 internal sealed class PlaceOrderCommandHandler(
     IApplicationDbContext dbContext,
-    IDateTimeProvider dateTimeProvider,
+    TimeProvider timeProvider,
     HybridCache cache,
     ILogger<PlaceOrderCommandHandler> logger)
     : ICommandHandler<PlaceOrderCommand, Guid>
 {
-    public async Task<Result<Guid>> Handle(PlaceOrderCommand request, CancellationToken cancellationToken)
+    public async Task<Result<Guid>> HandleAsync(PlaceOrderCommand request, CancellationToken cancellationToken)
     {
         // Load every product in the order with one query, instead of one query per item.
         var productIds = request.OrderStockItems.Select(item => new ProductId(item.ProductId)).ToList();
@@ -59,7 +58,7 @@ internal sealed class PlaceOrderCommandHandler(
             }
         }
 
-        Result<Order> placeResult = OrderPlacementService.Place(new UserId(request.UserId), lines, coupon, dateTimeProvider.UtcNow);
+        Result<Order> placeResult = OrderPlacementService.Place(new UserId(request.UserId), lines, coupon, timeProvider.GetUtcNow().UtcDateTime);
 
         if (placeResult.IsFailure)
         {

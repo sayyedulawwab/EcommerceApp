@@ -3,14 +3,13 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using Ecommerce.Application.Abstractions.Auth;
-using Ecommerce.Application.Abstractions.Clock;
 using Ecommerce.Domain.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Ecommerce.Infrastructure.Auth;
-internal sealed class JwtService(IOptions<JwtOptions> jwtOptions, IDateTimeProvider dateTimeProvider) : IJwtService
+internal sealed class JwtService(IOptions<JwtOptions> jwtOptions, TimeProvider timeProvider) : IJwtService
 {
     private const int RefreshTokenBytes = 32;
 
@@ -42,7 +41,7 @@ internal sealed class JwtService(IOptions<JwtOptions> jwtOptions, IDateTimeProvi
             claims.Add(new Claim(ClaimTypes.Role, Roles.Admin));
         }
 
-        DateTime now = dateTimeProvider.UtcNow;
+        DateTime now = timeProvider.GetUtcNow().UtcDateTime;
 
         var descriptor = new SecurityTokenDescriptor
         {

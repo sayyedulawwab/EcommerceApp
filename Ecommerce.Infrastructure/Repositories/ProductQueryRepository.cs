@@ -4,11 +4,11 @@ using System.Text;
 using Dapper;
 using Ecommerce.Application.Products;
 using Ecommerce.Application.Products.SearchProduct;
-using Ecommerce.Infrastructure.Data;
+using Npgsql;
 
 namespace Ecommerce.Infrastructure.Repositories;
 
-internal sealed class ProductQueryRepository(ISqlConnectionFactory sqlConnectionFactory) : IProductQueryRepository
+internal sealed class ProductQueryRepository(NpgsqlDataSource dataSource) : IProductQueryRepository
 {
     public async Task<ProductSearchResult> SearchAsync(
         SearchProductQuery query,
@@ -16,7 +16,8 @@ internal sealed class ProductQueryRepository(ISqlConnectionFactory sqlConnection
         int pageSize,
         CancellationToken cancellationToken = default)
     {
-        using IDbConnection connection = sqlConnectionFactory.CreateConnection();
+        // A pooled connection, opened asynchronously; disposing it returns it to the pool.
+        await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(cancellationToken);
 
         // List to hold SQL conditions
         var conditions = new List<string>();

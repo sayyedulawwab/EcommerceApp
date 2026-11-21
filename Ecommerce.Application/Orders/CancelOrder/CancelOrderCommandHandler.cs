@@ -1,4 +1,3 @@
-using Ecommerce.Application.Abstractions.Clock;
 using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Application.Products;
@@ -14,12 +13,12 @@ using Microsoft.Extensions.Logging;
 namespace Ecommerce.Application.Orders.CancelOrder;
 internal sealed class CancelOrderCommandHandler(
     IApplicationDbContext dbContext,
-    IDateTimeProvider dateTimeProvider,
+    TimeProvider timeProvider,
     HybridCache cache,
     ILogger<CancelOrderCommandHandler> logger)
     : ICommandHandler<CancelOrderCommand>
 {
-    public async Task<Result> Handle(CancelOrderCommand request, CancellationToken cancellationToken)
+    public async Task<Result> HandleAsync(CancelOrderCommand request, CancellationToken cancellationToken)
     {
         // Another customer's order is reported as not found, so the response doesn't reveal that it exists.
         Order? order = await dbContext.Orders
@@ -41,7 +40,7 @@ internal sealed class CancelOrderCommandHandler(
             ? null
             : await dbContext.Coupons.FirstAsync(coupon => coupon.Id == order.CouponId, cancellationToken);
 
-        Result cancelResult = OrderCancellationService.Cancel(order, products, coupon, dateTimeProvider.UtcNow);
+        Result cancelResult = OrderCancellationService.Cancel(order, products, coupon, timeProvider.GetUtcNow().UtcDateTime);
 
         if (cancelResult.IsFailure)
         {

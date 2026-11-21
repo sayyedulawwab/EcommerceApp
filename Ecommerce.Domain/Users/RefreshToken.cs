@@ -4,7 +4,7 @@ namespace Ecommerce.Domain.Users;
 
 // Only the SHA-256 hash of the token is stored. The token itself is shown to the client once.
 // Revoking happens in the database with a conditional update, so two requests can't both revoke the same token.
-public sealed class RefreshToken : Entity<RefreshTokenId>
+public sealed class RefreshToken : AggregateRoot<RefreshTokenId>
 {
     private RefreshToken(RefreshTokenId id, UserId userId, string tokenHash, DateTime createdOnUtc, DateTime expiresOnUtc)
         : base(id)

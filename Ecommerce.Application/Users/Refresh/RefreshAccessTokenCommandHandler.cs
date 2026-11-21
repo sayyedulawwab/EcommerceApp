@@ -1,5 +1,4 @@
 using Ecommerce.Application.Abstractions.Auth;
-using Ecommerce.Application.Abstractions.Clock;
 using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
@@ -10,12 +9,12 @@ namespace Ecommerce.Application.Users.Refresh;
 internal sealed class RefreshAccessTokenCommandHandler(
     IApplicationDbContext dbContext,
     IJwtService jwtService,
-    IDateTimeProvider dateTimeProvider)
+    TimeProvider timeProvider)
     : ICommandHandler<RefreshAccessTokenCommand, AuthTokensResponse>
 {
-    public async Task<Result<AuthTokensResponse>> Handle(RefreshAccessTokenCommand request, CancellationToken cancellationToken)
+    public async Task<Result<AuthTokensResponse>> HandleAsync(RefreshAccessTokenCommand request, CancellationToken cancellationToken)
     {
-        DateTime now = dateTimeProvider.UtcNow;
+        DateTime now = timeProvider.GetUtcNow().UtcDateTime;
         string tokenHash = jwtService.HashRefreshToken(request.RefreshToken);
 
         RefreshToken? stored = await dbContext.RefreshTokens
