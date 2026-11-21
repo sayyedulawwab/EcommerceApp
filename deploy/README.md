@@ -169,6 +169,14 @@ curl -k https://api-staging.ecommerce.test/health    # -k: Traefik's self-signed
 
 With a domain: point its DNS at the server, put the certificate in `/opt/edge/certs`, list it in `deploy/edge/dynamic/tls.yml`, re-run `install-edge.sh`, and remove `SMOKE_INSECURE` from the variable groups.
 
+## Traefik does not start after a reboot
+
+Symptom: a deploy stops at the preflight with `traefik is not running`, and `sudo docker compose up -d` in `/opt/edge` fails with `failed to set up container networking: Address already in use`.
+
+Cause: Traefik needs the fixed address 172.29.0.2 on the `edge` network, because the API trusts forwarded headers only from it. On an `edge` network created without an ip-range, Docker can hand that address to an API container that starts first after a reboot.
+
+Fix, once per server: `sudo deploy/host/recreate-edge-network.sh`. It recreates `edge` with `--ip-range 172.29.0.128/25`, so automatic addresses come only from .128 to .255, starts Traefik on .2, and reconnects the containers that were on the network. `bootstrap-host.sh` creates the network this way on a new server, and warns when an existing one has no range.
+
 ## Security notes
 
 - The agent user is in the `docker` group, which is root-equivalent. Use it for nothing else, and keep pull requests off the server (GitHub Actions builds them).
