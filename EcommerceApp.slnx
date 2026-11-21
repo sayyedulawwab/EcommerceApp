@@ -6,4 +6,5 @@
   <Project Path="Ecommerce.Domain.UnitTests/Ecommerce.Domain.UnitTests.csproj" />
   <Project Path="Ecommerce.Domain/Ecommerce.Domain.csproj" />
   <Project Path="Ecommerce.Infrastructure/Ecommerce.Infrastructure.csproj" />
+  <Project Path="Ecommerce.IntegrationTests/Ecommerce.IntegrationTests.csproj" />
 </Solution>
