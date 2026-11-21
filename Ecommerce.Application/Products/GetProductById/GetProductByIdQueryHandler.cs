@@ -11,7 +11,7 @@ internal sealed class GetProductByIdQueryHandler(
     IApplicationDbContext dbContext)
     : IQueryHandler<GetProductByIdQuery, ProductResponse>
 {
-    public async Task<Result<ProductResponse>> Handle(GetProductByIdQuery request, CancellationToken cancellationToken)
+    public async Task<Result<ProductResponse>> HandleAsync(GetProductByIdQuery request, CancellationToken cancellationToken)
     {
         Product? product = await dbContext.Products.AsNoTracking().FirstOrDefaultAsync(product => product.Id == new ProductId(request.Id), cancellationToken);
 

@@ -1,4 +1,3 @@
-using Ecommerce.Application.Abstractions.Clock;
 using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
@@ -8,10 +7,10 @@ using Microsoft.EntityFrameworkCore;
 namespace Ecommerce.Application.Categories.EditCategory;
 internal sealed class EditCategoryCommandHandler(
     IApplicationDbContext dbContext,
-    IDateTimeProvider dateTimeProvider)
+    TimeProvider timeProvider)
     : ICommandHandler<EditCategoryCommand, Guid>
 {
-    public async Task<Result<Guid>> Handle(EditCategoryCommand request, CancellationToken cancellationToken)
+    public async Task<Result<Guid>> HandleAsync(EditCategoryCommand request, CancellationToken cancellationToken)
     {
         Category? category = await dbContext.Categories.FirstOrDefaultAsync(category => category.Id == new CategoryId(request.Id), cancellationToken);
 
@@ -25,7 +24,7 @@ internal sealed class EditCategoryCommandHandler(
 
         if (name.IsFailure || code.IsFailure)
         {
-            return Result.Failure<Guid>(ValidationError.FromResults([name, code]));
+            return Result.Failure<Guid>(ValidationError.Collect(name, code));
         }
 
         Error duplicate = await FindDuplicateAsync(category.Id, name.Value, code.Value, cancellationToken);
@@ -39,7 +38,7 @@ internal sealed class EditCategoryCommandHandler(
             category,
             name.Value,
             code.Value,
-            dateTimeProvider.UtcNow);
+            timeProvider.GetUtcNow().UtcDateTime);
 
         try
         {

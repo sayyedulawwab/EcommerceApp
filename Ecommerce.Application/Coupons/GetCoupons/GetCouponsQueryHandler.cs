@@ -8,7 +8,7 @@ namespace Ecommerce.Application.Coupons.GetCoupons;
 internal sealed class GetCouponsQueryHandler(IApplicationDbContext dbContext)
     : IQueryHandler<GetCouponsQuery, IReadOnlyList<CouponResponse>>
 {
-    public async Task<Result<IReadOnlyList<CouponResponse>>> Handle(GetCouponsQuery request, CancellationToken cancellationToken)
+    public async Task<Result<IReadOnlyList<CouponResponse>>> HandleAsync(GetCouponsQuery request, CancellationToken cancellationToken)
     {
         List<Coupon> coupons = await dbContext.Coupons
             .AsNoTracking()

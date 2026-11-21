@@ -12,7 +12,7 @@ internal sealed class RegisterUserCommandHandler(
     IApplicationDbContext dbContext)
     : ICommandHandler<RegisterUserCommand, Guid>
 {
-    public async Task<Result<Guid>> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
+    public async Task<Result<Guid>> HandleAsync(RegisterUserCommand request, CancellationToken cancellationToken)
     {
         Result<FirstName> firstName = FirstName.Create(request.FirstName);
         Result<LastName> lastName = LastName.Create(request.LastName);
@@ -20,7 +20,7 @@ internal sealed class RegisterUserCommandHandler(
 
         if (firstName.IsFailure || lastName.IsFailure || email.IsFailure)
         {
-            return Result.Failure<Guid>(ValidationError.FromResults([firstName, lastName, email]));
+            return Result.Failure<Guid>(ValidationError.Collect(firstName, lastName, email));
         }
 
         bool emailExists = await dbContext.Users.AnyAsync(user => user.Email == email.Value, cancellationToken);

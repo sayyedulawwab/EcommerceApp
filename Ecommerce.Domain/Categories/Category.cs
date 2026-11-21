@@ -3,7 +3,7 @@ using Ecommerce.Domain.Categories.Events;
 
 namespace Ecommerce.Domain.Categories;
 
-public sealed class Category : Entity<CategoryId>
+public sealed class Category : AggregateRoot<CategoryId>
 {
     private Category(CategoryId id, CategoryName name, CategoryCode code, DateTime createdOnUtc) : base(id)
     {
@@ -22,7 +22,7 @@ public sealed class Category : Entity<CategoryId>
     {
         var category = new Category(CategoryId.New(), name, code, createdOnUtc);
 
-        category.RaiseDomainEvent(new CategoryCreatedDomainEvent(category.Id));
+        category.RecordDomainEvent(new CategoryCreatedDomainEvent(category.Id));
 
         return category;
     }

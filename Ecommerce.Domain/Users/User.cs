@@ -2,7 +2,7 @@ using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Users.Events;
 
 namespace Ecommerce.Domain.Users;
-public sealed class User : Entity<UserId>
+public sealed class User : AggregateRoot<UserId>
 {
     private User(UserId id, FirstName firstName, LastName lastName, Email email, string passwordHash, bool isAdmin) : base(id)
     {
@@ -23,7 +23,7 @@ public sealed class User : Entity<UserId>
     {
         var user = new User(UserId.New(), firstName, lastName, email, passwordHash, isAdmin);
 
-        user.RaiseDomainEvent(new UserCreatedDomainEvent(user.Id));
+        user.RecordDomainEvent(new UserCreatedDomainEvent(user.Id));
 
         return user;
     }

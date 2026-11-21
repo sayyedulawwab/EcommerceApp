@@ -1,6 +1,5 @@
 using System.Text;
 using Ecommerce.Application.Abstractions.Auth;
-using Ecommerce.Application.Abstractions.Clock;
 using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
@@ -12,10 +11,10 @@ internal sealed class LoginUserCommandHandler(
     IApplicationDbContext dbContext,
     IAuthService authService,
     IJwtService jwtService,
-    IDateTimeProvider dateTimeProvider)
+    TimeProvider timeProvider)
     : ICommandHandler<LoginUserCommand, AuthTokensResponse>
 {
-    public async Task<Result<AuthTokensResponse>> Handle(
+    public async Task<Result<AuthTokensResponse>> HandleAsync(
         LoginUserCommand request,
         CancellationToken cancellationToken)
     {
@@ -57,7 +56,7 @@ internal sealed class LoginUserCommandHandler(
             return Result.Failure<AuthTokensResponse>(UserErrors.InvalidCredentials);
         }
 
-        DateTime now = dateTimeProvider.UtcNow;
+        DateTime now = timeProvider.GetUtcNow().UtcDateTime;
         string refreshToken = jwtService.GenerateRefreshToken();
 
         dbContext.RefreshTokens.Add(RefreshToken.Create(

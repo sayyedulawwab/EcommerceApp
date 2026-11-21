@@ -10,7 +10,7 @@ internal sealed class SearchProductQueryHandler(
     HybridCache cache)
     : IQueryHandler<SearchProductQuery, PagedList<ProductResponse>>
 {
-    public async Task<Result<PagedList<ProductResponse>>> Handle(SearchProductQuery request, CancellationToken cancellationToken)
+    public async Task<Result<PagedList<ProductResponse>>> HandleAsync(SearchProductQuery request, CancellationToken cancellationToken)
     {
         int page = request.Page > 0 ? request.Page : 1;
         int pageSize = request.PageSize > 0 ? request.PageSize : 10;

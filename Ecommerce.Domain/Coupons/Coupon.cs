@@ -4,7 +4,7 @@ using Ecommerce.Domain.Shared;
 namespace Ecommerce.Domain.Coupons;
 
 // A percentage discount that is valid for a period and for a limited number of orders.
-public sealed class Coupon : Entity<CouponId>
+public sealed class Coupon : AggregateRoot<CouponId>
 {
     private Coupon(CouponId id, CouponCode code, int percentOff, DateTime startsOnUtc, DateTime expiresOnUtc, int maxRedemptions, DateTime createdOnUtc) : base(id)
     {

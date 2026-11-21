@@ -13,7 +13,7 @@ internal sealed class DeleteProductCommandHandler(
     ILogger<DeleteProductCommandHandler> logger)
     : ICommandHandler<DeleteProductCommand, Guid>
 {
-    public async Task<Result<Guid>> Handle(DeleteProductCommand request, CancellationToken cancellationToken)
+    public async Task<Result<Guid>> HandleAsync(DeleteProductCommand request, CancellationToken cancellationToken)
     {
         Product? product = await dbContext.Products.FirstOrDefaultAsync(product => product.Id == new ProductId(request.Id), cancellationToken);
 

@@ -194,10 +194,9 @@ public sealed class IntegrationTestFactory
             services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(ConnectionString)
                        .UseSnakeCaseNamingConvention());
 
-            services.RemoveAll<ISqlConnectionFactory>();
+            services.RemoveAll<NpgsqlDataSource>();
 
-            services.AddSingleton<ISqlConnectionFactory>(
-                new SqlConnectionFactory(ConnectionString));
+            services.AddSingleton(_ => NpgsqlDataSource.Create(ConnectionString));
 
             services.RemoveAll<IEmailService>();
             services.AddSingleton<IEmailService>(Emails);

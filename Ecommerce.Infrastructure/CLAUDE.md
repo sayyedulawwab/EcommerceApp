@@ -7,9 +7,8 @@ Implements the Application ports, including `IApplicationDbContext`. Persistence
 ```
 ApplicationDbContext.cs     DbContext + IApplicationDbContext + domain-event dispatch
 Auth/                       AuthService (bcrypt), PasswordHashingOptions, JwtService, JwtOptions, JwtOptionsSetup, JwtOptionsValidator, JwtBearerOptionsSetup
-Clock/                      DateTimeProvider
 Configurations/             {Entity}Configuration : IEntityTypeConfiguration<{Entity}>
-Data/                       ISqlConnectionFactory + SqlConnectionFactory (Npgsql), DataSeeder (Bogus)
+Data/                       DataSeeder (Bogus)
 DomainEvents/               IDomainEventsDispatcher, DomainEventsDispatcher
 Emails/                     EmailService (stub, no-op)
 Health/                     DatabaseHealthCheck, RedisHealthCheck (behind GET /health)
@@ -31,7 +30,7 @@ public sealed class ApplicationDbContext(DbContextOptions options, IDomainEvents
 - `OnModelCreating` → `ApplyConfigurationsFromAssembly(...)`, so a new `IEntityTypeConfiguration<T>` is picked up automatically.
 - `SaveChangesAsync`:
   1. `base.SaveChangesAsync` (commits).
-  2. Collects domain events from every tracked `IEntity`, clears them, and calls `IDomainEventsDispatcher.DispatchAsync`.
+  2. Collects domain events from every tracked `IHasDomainEvents` with `PullDomainEvents()` (which empties each list), and calls `IDomainEventsDispatcher.DispatchAsync`.
   3. Rethrows `DbUpdateConcurrencyException` as `Application.Exceptions.ConcurrencyException`, which the API returns as 409.
 - `Product`, `Order` and `Coupon` have a concurrency token: a shadow `uint Version` mapped to PostgreSQL's `xmin` system column with `IsRowVersion()`. Two orders that read the same stock or the last coupon use can't both save, and two cancels of the same order can't both give the stock back. Npgsql doesn't create a column for `xmin`, so its migration only adds a history row.
 - **Dispatch is synchronous and in-request, after commit, with no outbox.** `DomainEventsDispatcher` creates a new DI scope per event and resolves every `IDomainEventHandler<TEvent>`. A handler exception surfaces to the HTTP request (→ 500) even though the data is already saved. Keep handlers idempotent and resilient.
@@ -93,11 +92,11 @@ Rules:
 ## Query repositories (Dapper)
 
 ```csharp
-internal sealed class ProductQueryRepository(ISqlConnectionFactory sqlConnectionFactory) : IProductQueryRepository
+internal sealed class ProductQueryRepository(NpgsqlDataSource dataSource) : IProductQueryRepository
 {
     public async Task<IReadOnlyList<ProductResponse>> SearchAsync(SearchProductQuery query, int page, int pageSize, CancellationToken cancellationToken = default)
     {
-        using IDbConnection connection = sqlConnectionFactory.CreateConnection();   // returns an already-open connection
+        await using NpgsqlConnection connection = await dataSource.OpenConnectionAsync(cancellationToken);   // pooled; disposing returns it to the pool
 
         // ... build the SQL, then
         CommandDefinition command = new(sql, new { query.CategoryId, Page = page, PageSize = pageSize }, cancellationToken: cancellationToken);
@@ -110,7 +109,7 @@ internal sealed class ProductQueryRepository(ISqlConnectionFactory sqlConnection
 ```
 
 - Only for SQL that is better written by hand (see the Application guide). There are no generic or CRUD repositories: handlers use `IApplicationDbContext`.
-- `ISqlConnectionFactory` is internal to Infrastructure; Application never sees a connection.
+- `NpgsqlDataSource` is internal to Infrastructure; Application never sees a connection.
 - Write SQL against **snake_case** tables/columns and alias each column **`AS PascalCase`** to match the response property.
 - **Always parameterize values** (`@Param` plus an anonymous object). Never interpolate user input. Dynamic `ORDER BY` columns come **only from a whitelist array**; direction is normalized to `ASC`/`DESC`.
 - Get the paged total from a **separate `SELECT COUNT(*)`** sent with the page query in the same command (`QueryMultipleAsync`, one round trip), and return both as a `ProductSearchResult`. Build the `WHERE` clause once and use it in both statements so the total always matches the filters. A `COUNT(*) OVER ()` column was measured and is slower when there is no keyword (it sorts every matching row), but it was somewhat faster than the two statements when a keyword filtered the rows (the filter runs once instead of twice).
@@ -129,7 +128,7 @@ internal sealed class ProductQueryRepository(ISqlConnectionFactory sqlConnection
 - The only acceptable hand edit is adding a data fix-up (`migrationBuilder.Sql(...)`) to a **new** migration you just generated, e.g. resetting values that the old schema forced (see `MakeOrderUpdatedOnUtcNullable`). Never edit a migration that has already been applied anywhere.
 - Before committing, check that the generated `Up`/`Down` contains only the change you intended; anything else means the model drifted.
 - In every other environment migrations are applied by the migration bundle (`deploy/migrations.Dockerfile`, run by `deploy/deploy.sh` before the containers switch), never at startup.
-- Migrations are applied at startup **in Development only**, by `app.ApplyMigrations()` (extension in `Ecommerce.API/Extensions/MigrationExtensions.cs`). It runs `Migrate()`, then `DataSeeder.SeedData` only if `users` is empty, so a restart keeps the data and doesn't insert the fixed accounts twice.
+- Migrations are applied at startup **in Development only**, by `app.PrepareDevelopmentDatabaseAsync()` (extension in `Ecommerce.API/Extensions/DevelopmentDatabaseExtensions.cs`). It runs `MigrateAsync()`, then `DataSeeder.SeedData` only if `users` is empty, so a restart keeps the data and doesn't insert the fixed accounts twice.
 
 ---
 
@@ -137,7 +136,7 @@ internal sealed class ProductQueryRepository(ISqlConnectionFactory sqlConnection
 
 | Service                                           | Lifetime   | Notes                                                    |
 | ------------------------------------------------- | ---------- | -------------------------------------------------------- |
-| `IDateTimeProvider` → `DateTimeProvider`          | Transient  | `UtcNow => DateTime.UtcNow`                              |
+| `TimeProvider` → `TimeProvider.System`          | Singleton  | .NET's system clock                                      |
 | `IEmailService` → `EmailService`                  | Transient  | Stub, returns `Task.CompletedTask`                        |
 | `IDomainEventsDispatcher` → `DomainEventsDispatcher` | Transient |                                                         |
 | `IDistributedCache` (Redis)                       | –          | `ConnectionStrings:Redis`; the L2 cache of `HybridCache`  |
@@ -145,7 +144,7 @@ internal sealed class ProductQueryRepository(ISqlConnectionFactory sqlConnection
 | `ApplicationDbContext`                            | Scoped     | `UseNpgsql(...).UseSnakeCaseNamingConvention()`, `ConnectionStrings:Database` |
 | `IApplicationDbContext` → same `ApplicationDbContext` | Scoped | `sp.GetRequiredService<ApplicationDbContext>()`           |
 | `I{Entity}QueryRepository` → `{Entity}QueryRepository` | Scoped | Registered explicitly, one line each                     |
-| `ISqlConnectionFactory` → `SqlConnectionFactory`  | Singleton  | Returns an **opened** `NpgsqlConnection`                  |
+| `NpgsqlDataSource`                       | Singleton  | Owns the pool; `OpenConnectionAsync` for Dapper           |
 | `IJwtService`, `IAuthService`                     | Singleton  |                                                          |
 
 ---

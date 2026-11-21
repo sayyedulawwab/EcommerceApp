@@ -5,7 +5,7 @@ using Ecommerce.Domain.Shared;
 
 namespace Ecommerce.Domain.Products;
 
-public sealed class Product : Entity<ProductId>
+public sealed class Product : AggregateRoot<ProductId>
 {
     private Product(ProductId id, ProductName name, ProductDescription description, Money price, int quantity, CategoryId categoryId, DateTime createdOnUtc) : base(id)
     {
@@ -42,7 +42,7 @@ public sealed class Product : Entity<ProductId>
 
         var product = new Product(ProductId.New(), name, description, price, quantity, categoryId, createdOnUtc);
 
-        product.RaiseDomainEvent(new ProductCreatedDomainEvent(product.Id));
+        product.RecordDomainEvent(new ProductCreatedDomainEvent(product.Id));
 
         return product;
     }

@@ -28,7 +28,7 @@ public class ReviewsController() : ControllerBase
 
         var command = new AddReviewCommand(request.ProductId, userId, request.Rating, request.Comment);
 
-        Result<Guid> result = await handler.Handle(command, cancellationToken);
+        Result<Guid> result = await handler.HandleAsync(command, cancellationToken);
 
         if (result.IsFailure)
         {

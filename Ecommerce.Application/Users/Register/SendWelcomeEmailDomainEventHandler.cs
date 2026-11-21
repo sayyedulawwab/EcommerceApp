@@ -11,7 +11,7 @@ internal sealed class SendWelcomeEmailDomainEventHandler(
     IEmailService emailService)
     : IDomainEventHandler<UserCreatedDomainEvent>
 {
-    public async Task Handle(UserCreatedDomainEvent domainEvent, CancellationToken cancellationToken)
+    public async Task HandleAsync(UserCreatedDomainEvent domainEvent, CancellationToken cancellationToken)
     {
         // The event carries only the id, so load what the email needs.
         User? user = await dbContext.Users.AsNoTracking().FirstOrDefaultAsync(user => user.Id == domainEvent.UserId, cancellationToken);

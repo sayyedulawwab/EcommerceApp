@@ -8,7 +8,7 @@ namespace Ecommerce.Application.Coupons.DeleteCoupon;
 internal sealed class DeleteCouponCommandHandler(IApplicationDbContext dbContext)
     : ICommandHandler<DeleteCouponCommand, Guid>
 {
-    public async Task<Result<Guid>> Handle(DeleteCouponCommand request, CancellationToken cancellationToken)
+    public async Task<Result<Guid>> HandleAsync(DeleteCouponCommand request, CancellationToken cancellationToken)
     {
         Coupon? coupon = await dbContext.Coupons.FirstOrDefaultAsync(coupon => coupon.Id == new CouponId(request.Id), cancellationToken);
 

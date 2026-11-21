@@ -20,7 +20,7 @@ public class CategoryTests
         Assert.Equal(UtcNow, category.CreatedOnUtc);
         Assert.Null(category.UpdatedOnUtc);
 
-        IDomainEvent domainEvent = Assert.Single(category.GetDomainEvents());
+        IDomainEvent domainEvent = Assert.Single(category.PullDomainEvents());
         Assert.Equal(new CategoryCreatedDomainEvent(category.Id), domainEvent);
     }
 

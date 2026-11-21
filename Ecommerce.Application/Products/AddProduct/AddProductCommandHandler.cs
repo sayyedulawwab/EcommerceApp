@@ -1,5 +1,4 @@
-﻿using Ecommerce.Application.Abstractions.Clock;
-using Ecommerce.Application.Abstractions.Data;
+﻿using Ecommerce.Application.Abstractions.Data;
 using Ecommerce.Application.Abstractions.Messaging;
 using Ecommerce.Domain.Abstractions;
 using Ecommerce.Domain.Categories;
@@ -11,12 +10,12 @@ using Microsoft.Extensions.Logging;
 namespace Ecommerce.Application.Products.AddProduct;
 internal sealed class AddProductCommandHandler(
     IApplicationDbContext dbContext,
-    IDateTimeProvider dateTimeProvider,
+    TimeProvider timeProvider,
     HybridCache cache,
     ILogger<AddProductCommandHandler> logger)
     : ICommandHandler<AddProductCommand, Guid>
 {
-    public async Task<Result<Guid>> Handle(AddProductCommand request, CancellationToken cancellationToken)
+    public async Task<Result<Guid>> HandleAsync(AddProductCommand request, CancellationToken cancellationToken)
     {
         Result<ProductName> name = ProductName.Create(request.Name);
         Result<ProductDescription> description = ProductDescription.Create(request.Description);
@@ -24,7 +23,7 @@ internal sealed class AddProductCommandHandler(
 
         if (name.IsFailure || description.IsFailure || currency.IsFailure)
         {
-            return Result.Failure<Guid>(ValidationError.FromResults([name, description, currency]));
+            return Result.Failure<Guid>(ValidationError.Collect(name, description, currency));
         }
 
         Result<Product> productResult = Product.Create(
@@ -33,7 +32,7 @@ internal sealed class AddProductCommandHandler(
             new Money(request.PriceAmount, currency.Value),
             request.Quantity,
             new CategoryId(request.CategoryId),
-            dateTimeProvider.UtcNow);
+            timeProvider.GetUtcNow().UtcDateTime);
 
         if (productResult.IsFailure)
         {

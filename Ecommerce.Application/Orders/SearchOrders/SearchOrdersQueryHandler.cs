@@ -11,7 +11,7 @@ namespace Ecommerce.Application.Orders.SearchOrders;
 internal sealed class SearchOrdersQueryHandler(IApplicationDbContext dbContext)
     : IQueryHandler<SearchOrdersQuery, PagedList<OrderResponse>>
 {
-    public async Task<Result<PagedList<OrderResponse>>> Handle(SearchOrdersQuery request, CancellationToken cancellationToken)
+    public async Task<Result<PagedList<OrderResponse>>> HandleAsync(SearchOrdersQuery request, CancellationToken cancellationToken)
     {
         // Customers see only their own orders.
         IQueryable<Order> query = dbContext.Orders
