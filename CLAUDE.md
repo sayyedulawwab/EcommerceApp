@@ -15,6 +15,8 @@ Ecommerce REST API (products, categories, orders, reviews, users/auth). This fil
 | [Ecommerce.API/CLAUDE.md](Ecommerce.API/CLAUDE.md)                             | Controllers, request DTOs, error mapping, versioning, logging  |
 | [Ecommerce.IntegrationTests/CLAUDE.md](Ecommerce.IntegrationTests/CLAUDE.md)   | HTTP-level tests (Testcontainers + Respawn)                    |
 
+Topic rules in `.claude/rules/` load when matching files are opened: `code.md` (any `.cs` file: technologies, request lifecycle, modules, naming, code style, Result & errors, time, adding a feature, known quirks), `testing.md` (test projects), `build-and-deploy.md` (packages, configuration, Docker, pipelines, deployment).
+
 ---
 
 ## 1. Stack
@@ -25,26 +27,6 @@ Ecommerce REST API (products, categories, orders, reviews, users/auth). This fil
 - **Domain-Driven Design**: aggregates, value objects, strongly typed IDs, domain events
 - **PostgreSQL 18**: **EF Core 10** for the write side and migrations, **Dapper** for read-side projections
 - **xUnit** for tests, using the **default `Assert.*` only** (no FluentAssertions, no mocking library)
-
-| Technology                              | Purpose                                                        |
-| --------------------------------------- | -------------------------------------------------------------- |
-| EF Core + Npgsql                        | Handlers use `IApplicationDbContext` directly; change tracking, migrations |
-| EFCore.NamingConventions                | `UseSnakeCaseNamingConvention()`: all tables/columns snake_case |
-| Dapper                                  | Hand-written SQL reads behind query repositories in Infrastructure |
-| FluentValidation                        | One validator per command, run by `ValidatingHandlers`        |
-| Scrutor                                 | Assembly scanning for handlers + decorator registration        |
-| Redis + `HybridCache`                   | Query result caching: in-memory (L1) in front of Redis (L2), cleared by tag |
-| JWT Bearer (`JsonWebTokenHandler`)       | Auth; 15-minute access token + rotating refresh token; `[Authorize]` on controllers, `[Authorize(Roles = Roles.Admin)]` on admin writes |
-| BCrypt.Net-Next                         | Password hashing (bcrypt, work factor 12)                      |
-| Microsoft.AspNetCore.RateLimiting       | Per-IP sliding-window limits on the `/auth` endpoints                |
-| Asp.Versioning                          | URL segment only (`/api/v1/...`)                               |
-| Microsoft.AspNetCore.OpenApi            | `MapOpenApi()` (Development only)                              |
-| Microsoft.Extensions.Logging            | `ILogger<T>` with message templates; no third-party logging library |
-| OpenTelemetry                           | Logs/traces/metrics → OTLP collector → Loki/Tempo/Prometheus → Grafana |
-| Bogus                                   | Development data seeding (`DataSeeder`)                        |
-| SonarAnalyzer.CSharp                    | Static analysis (warnings are errors)                          |
-| Testcontainers, Respawn, WebApplicationFactory | Integration tests against real PostgreSQL and Redis     |
-| ArchUnitNET                             | Architecture tests: layer dependency rules                     |
 
 ---
 
@@ -79,17 +61,6 @@ docker compose -f docker-compose.yml -f docker-compose.override.yml --env-file .
 # API: http://localhost:5000 (direct) or http://localhost:8080 (via nginx); Grafana: http://localhost:3000
 ```
 
-Build and environment notes:
-
-- `TreatWarningsAsErrors` is on solution-wide, so **NuGet audit warnings are errors too**, locally, in CI and in the Docker build. A package with a known vulnerability, even a transitive one, fails restore. Only NU1900 (vulnerability data couldn't be downloaded) stays a warning. There are no automatic package upgrades, so the audit is the signal. When it fails:
-  1. Upgrade the package: change its `PackageVersion` in `Directory.Packages.props`. For a transitive package, add a `PackageVersion` for it; transitive pinning moves every project to that version. Or remove the package that pulls it in.
-  2. Only when no fixed version exists yet, or an urgent fix can't wait for the upgrade to be tested, suppress that one advisory in `Directory.Packages.props` with `<NuGetAuditSuppress Include="https://github.com/advisories/GHSA-..." />` and a comment saying why it's safe for now and when to remove it. Never turn the audit off or add NU1901-NU1904 to `WarningsNotAsErrors`.
-- **Pin exact package versions** (no floating `10.0.*`). Keep ASP.NET Core / EF Core packages on the same patch version: `Microsoft.EntityFrameworkCore.Relational` is pinned in Infrastructure for this reason, and `Microsoft.Extensions.ApiDescription.Server` must stay compatible with the pinned `Microsoft.OpenApi`, or the build-time OpenAPI step (which regenerates `Ecommerce.API/Ecommerce.API.json`) fails.
-- `appsettings.json` holds only environment-agnostic settings (`Logging` levels). Connection strings and OTLP endpoints (and the `Jwt` issuer and audience) live in `appsettings.Development.json` (Docker hostnames `database-postgres`, `cache-redis`, `otel-collector`). Anything running outside Development (Production, containers) must supply them as environment variables (`ConnectionStrings__Database`, `ConnectionStrings__Redis`, `Jwt__Issuer`, `Jwt__Audience`, `Jwt__SecretKey`, `Otlp__*Endpoint`); `docker-compose.yml` does this from `.env.*` values, and compose fails fast if `JWT_SECRET_KEY` is unset. **`Jwt:SecretKey` is in no committed file**, and the app refuses to start without one of at least 32 bytes. Locally: `dotnet user-secrets set "Jwt:SecretKey" "$(openssl rand -base64 48)" --project Ecommerce.API` for `dotnet run`, or `JWT_SECRET_KEY` in `.env.dev` for Docker. Running with `dotnet run` on the host needs overrides pointing at `localhost` (and `--no-launch-profile` to control the URL).
-- Deployed environments get their values, secrets included, from the Azure DevOps variable groups `ecommerce-staging` and `ecommerce-production` (`deploy/README.md`), never from a file in the repo.
-- The Docker build passes `/p:OpenApiGenerateDocuments=false` to `dotnet publish`: build-time OpenAPI generation boots the app, which has no connection string there. `Ecommerce.API.json` is regenerated by normal local builds.
-- Asp.Versioning 10.2+ adds analyzers (AV0016/AV0029/AV0030) that fail this build; the package is pinned at 10.0.0 until the OpenAPI setup is migrated.
-- **Deployment** is described in `deploy/README.md`: GitHub Actions builds and tests pull requests (`main` requires it); after a merge, `azure-pipelines.yml` runs on the Azure DevOps agent on the server, builds the API and migration bundle images there (tagged with the run number, never pushed to a registry), deploys staging automatically and production when started by hand. `deploy/deploy.sh` runs the migrations, then a blue-green switch behind Traefik (`deploy/edge/`) with a health gate, a smoke test and automatic rollback. `deploy/host/` holds the one-time server scripts. Nothing connects to the server from outside. `GET /health` is anonymous and returns only `Healthy` (200), `Degraded` (200: Redis is down or doesn't answer within 2 s; the API serves from the database, slower) or `Unhealthy` (503: PostgreSQL is down); the compose healthcheck uses it, and the deploy smoke test accepts only `Healthy`. The migration bundle is built by `deploy/migrations.Dockerfile` from the `dotnet-ef` version pinned in `dotnet-tools.json` (keep it on the EF Core patch version). `OpenApiGenerateDocuments` in `Ecommerce.API.csproj` only defaults to true when nothing set it, so the Docker builds switch it off with an environment variable.
 - **In Development, startup runs `PrepareDevelopmentDatabaseAsync()`: it migrates, then seeds Bogus data only if `users` is empty.** The dev database keeps its data across restarts; to start fresh, drop it (or remove the Postgres volume).
 
 ---
@@ -110,8 +81,6 @@ EcommerceApp.slnx
 └── Ecommerce.IntegrationTests/       # End-to-end HTTP tests against PostgreSQL in Docker
 ```
 
-Supporting folders: `deploy/` (deploy script, the API's compose file for the server, Traefik in `edge/`, one-time server scripts in `host/`, migration bundle Dockerfile), `.azure-pipelines/templates/` (build and deploy-stage templates), `nginx/` (local dev only), `otel/`, `loki/`, `tempo/`, `prometheus/`, `grafana/` (observability stack config), `docker-compose*.yml`, `infra.compose.yml`, `.env.example` (copied to the git-ignored `.env.dev` / `.env.prod`; never commit them).
-
 ### Dependency direction
 
 ```
@@ -123,155 +92,3 @@ Infrastructure → Application → Domain    (implements the Application abstrac
 - **Domain** references nothing: no EF, no Dapper, no attributes.
 - **Application** defines the ports (`IApplicationDbContext`, `IProductQueryRepository`, `IAuthService`, `IJwtService`, `IEmailService`); time comes from .NET's `TimeProvider`. It references EF Core (for `DbSet<T>` and LINQ in handlers) and the `HybridCache` abstraction (`Microsoft.Extensions.Caching.Abstractions`), but not Dapper, Npgsql or Redis.
 - **Infrastructure** implements those ports. `ApplicationDbContext` implements `IApplicationDbContext`; the Dapper query repositories implement the query repository interfaces.
-
-### Layer responsibilities
-
-| Layer          | Role                                                    | Key patterns                                                   |
-| -------------- | ------------------------------------------------------- | -------------------------------------------------------------- |
-| Domain         | Business state, invariants, factories                   | `Entity<TId>`, record value objects, `{Entity}Errors`, domain events |
-| Application    | Use-case orchestration, validation, read projections    | `ICommandHandler`/`IQueryHandler`, decorators, FluentValidation, `IApplicationDbContext` |
-| Infrastructure | Persistence and external services                       | `ApplicationDbContext : IApplicationDbContext`, Dapper query repositories, `IEntityTypeConfiguration<T>` |
-| API            | HTTP, routing, auth, request → command mapping          | Resource controllers, action-injected handlers, `Error.ToActionResult()` |
-
-### Request lifecycle
-
-**Command** (POST/PUT/DELETE):
-
-1. The controller action receives a `{Verb}{Entity}Request` plus an `ICommandHandler<TCommand, TResponse>` injected **as an action parameter**.
-2. The controller maps the request to a command. The route `id` and the user id from JWT claims are passed in explicitly.
-3. The decorator chain runs **`LoggingHandlers` (outer) → `ValidatingHandlers` → handler**. On validation failure it returns `ValidationError` (400) without calling the handler.
-4. The handler runs its lookups (failures return `Result.Failure`), builds value objects, calls the domain `Create`/`Update`, stages new or removed entities with `dbContext.{Set}.Add`/`Remove` (tracked entities need no `Update` call), then `dbContext.SaveChangesAsync`.
-5. `ApplicationDbContext.SaveChangesAsync` saves, then **dispatches the collected domain events synchronously** (each in a new DI scope).
-6. The handler clears the product cache by tag if needed (a failed clear is logged, not returned) and returns `Result<T>`. The controller returns 2xx, or `result.Error.ToActionResult()`.
-
-**Query** (GET): `LoggingHandlers` (outer) → `ValidatingHandlers` → handler. A query with a validator returns `ValidationError` (400) before the handler runs; a query without one passes straight through. The handler reads through `IApplicationDbContext` with `AsNoTracking()` (simple reads), or through a Dapper query repository (multi-table joins, selected columns, stored procedures, SQL that is easier or faster by hand), optionally via the cache.
-
----
-
-## 4. Domain Modules
-
-Each module uses the same name in every layer (plural folders in Domain, Application and API, e.g. `Products/`):
-
-| Module       | Aggregate(s)          | Operations                                               |
-| ------------ | --------------------- | -------------------------------------------------------- |
-| `Categories` | `Category`            | Add, Edit, Delete, GetCategories, GetCategoryById        |
-| `Products`   | `Product`             | Add, Edit, Delete, GetProductById (with reviews), SearchProduct (Dapper, paged, cached except keyword searches, trigram-indexed keyword) |
-| `Orders`     | `Order` → `OrderItem` | PlaceOrder (optional coupon), CancelOrder, SearchOrders (the user's own; paged, sorted, filtered) |
-| `Coupons`    | `Coupon`              | Add, Edit, Delete, GetCoupons (admins only)               |
-| `Reviews`    | `Review`              | AddReview                                                |
-| `Users`      | `User`, `RefreshToken` | Register (command), Login (command → access + refresh token), Refresh, Logout; exposed via `AuthController` |
-| `Shared`     | `Money`, `Currency`   | Value objects reused across aggregates                   |
-
----
-
-## 5. Naming Conventions
-
-| Artifact              | Pattern                                                                                   | Example                                   |
-| --------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------- |
-| Commands              | `Add{Entity}Command`, `Edit{Entity}Command`, `Delete{Entity}Command`, or a domain verb    | `EditProductCommand`, `PlaceOrderCommand`, `RegisterUserCommand` |
-| Queries               | `Get{Entity}ByIdQuery`, `Get{Entities}Query` / `GetAll{Entities}Query`, `Search{Entity}Query` | `GetCategoryByIdQuery`, `SearchProductQuery` |
-| Handlers              | `{CommandOrQuery}Handler`                                                                 | `AddCategoryCommandHandler`               |
-| Validators            | `{Command}Validator`                                                                      | `AddProductCommandValidator`              |
-| Feature folder        | `Application/{Module}/{Verb}{Entity}/`, named after the operation, not the command        | `Application/Products/EditProduct/`       |
-| Responses             | `{Entity}Response` (`sealed class`)                                                        | `ProductResponse`, `OrderItemResponse`    |
-| API request DTOs      | `{Verb}{Entity}Request` (`record`) next to the controller                                  | `AddProductRequest`, `GiveReviewRequest`  |
-| Controllers           | `{Resource}Controller` in `API/Controllers/{Resource}/`                                    | `ProductsController`                      |
-| Strongly typed IDs    | `{Entity}Id`                                                                              | `ProductId`                               |
-| Domain errors         | `{Entity}Errors` static class; codes `"{Entity}.{Reason}"`                                 | `UserErrors.AlreadyExists`                |
-| Domain events         | `{Entity}{PastTenseVerb}DomainEvent` in `Domain/{Module}/Events/`                          | `ProductCreatedDomainEvent`               |
-| Query repositories    | `I{Entity}QueryRepository` (Application) / `{Entity}QueryRepository` (Infrastructure)      | `IProductQueryRepository`                 |
-| EF configurations     | `{Entity}Configuration`                                                                   | `OrderItemConfiguration`                  |
-| DB tables / columns   | snake_case plural tables, snake_case columns (automatic)                                  | `order_items.created_on_utc`              |
-| Timestamps            | `CreatedOnUtc` (`DateTime`), `UpdatedOnUtc` (`DateTime?`)                                  |                                           |
-
-Each Command/Query record, Handler and Validator gets **its own file** in the feature folder. A response shared by several features lives at the module root (`Application/Categories/CategoryResponse.cs`). A response used by one feature lives in that feature folder (`Application/Orders/GetAllOrders/OrderResponse.cs`).
-
----
-
-## 6. Code Style (enforced at build: warnings are errors)
-
-`Directory.Build.props` sets `AnalysisMode=All`, `TreatWarningsAsErrors`, `EnforceCodeStyleInBuild`, plus SonarAnalyzer. `.editorconfig` severities are mostly `error`, so style violations **break the build**.
-
-- **File-scoped namespaces**; `using` directives **outside** the namespace, `System.*` first. The namespace must match the folder.
-- **Always use braces**, even for single-line `if`.
-- **Explicit types.** Use `var` only when the type is apparent from the right-hand side (`new X(...)`, `X.Create(...)`). Otherwise spell it out:
-  ```csharp
-  var category = Category.Create(new CategoryName(request.Name), new CategoryCode(request.Code), timeProvider.GetUtcNow().UtcDateTime);
-  Category? category = await dbContext.Categories.FirstOrDefaultAsync(category => category.Id == new CategoryId(request.Id), cancellationToken);
-  Result<Guid> result = await handler.HandleAsync(command, cancellationToken);
-  IReadOnlyList<ProductResponse> products = await productQueryRepository.SearchAsync(request, page, pageSize, cancellationToken);
-  ```
-- **Primary constructors** for DI in handlers, query repositories, services, controllers and middleware. Use the parameters directly; there are no `_field` assignments.
-- No `this.` qualification. Use predefined types (`string`, not `String`). Use collection expressions (`[]`, `[.. items]`).
-- Expression-bodied members for properties, operators and lambdas. Methods and constructors use block bodies.
-- Pattern matching: `is null` / `is not null`, `value is < 1 or > 5`, `switch` expressions.
-- **Visibility:** handlers, query repositories, EF configurations and most infrastructure services are **`internal sealed`**. Domain entities are `public sealed`. Validators are `public class`. Responses are `public sealed class`.
-- Nullable reference types are enabled, but `CS8618`/`CS8600`/`CS8603` are suppressed (the EF private constructors leave non-nullable properties unset).
-- Structured logging templates only (`logger.LogInformation("Processing command {Command}", commandName)`), never string interpolation in log calls.
-
----
-
-## 7. Result & Error Pattern (all layers)
-
-Defined in `Ecommerce.Domain/Abstractions/`:
-
-- `Result` / `Result<TValue>`: `IsSuccess`, `IsFailure`, `Error`, `Value`. Reading `Value` on a failure throws.
-- `Result<T>` has an **implicit conversion from `T`**, so handlers `return category.Id.Value;` and `return categoryResponse;`.
-- Failures: `return Result.Failure<Guid>(CategoryErrors.NotFound);`
-- `Error(string Name, string Description, HttpStatusCode Code)` is a record. `Code` is `System.Net.HttpStatusCode`; there is no custom status enum. Use the `Error.BadRequest/Unauthorized/NotFound/Conflict/InternalServerError(name, description)` factories, or (preferred) a `static readonly Error` on `{Entity}Errors`.
-- Status codes in use: `BadRequest` (400), `Unauthorized` (401), `NotFound` (404), `Conflict` (409), `InternalServerError` (500).
-- `ValidationError : Error` (400) carries `Error[] Errors`, one per failed property.
-
-Rules:
-
-- **Expected business failures return `Result.Failure`; do not throw.** Unhandled exceptions become a 500 `ProblemDetails` from `API/Infrastructure/ExceptionHandler`, except `ConcurrencyException`, which becomes a 409.
-- The API maps `Error.Code` to an HTTP status in one place: `ErrorMappingExtensions.ToActionResult()`.
-- Value objects that validate input return `Result<T>` from `Create` (see `Rating`), and aggregate methods that enforce invariants return `Result` (see `Order.AddOrderItem`). Callers must check `IsFailure` before continuing or using `.Value`.
-- Validators catch bad input before it reaches the database. String limits mirror the column lengths (200/2000), and currency codes are checked with `Currency.IsSupported`, so bad input is a 400, not a 500.
-
----
-
-## 8. Time & Identity
-
-- **Always UTC.** Application code gets time from `TimeProvider.GetUtcNow().UtcDateTime` and passes it into domain factories/mutations (`createdOnUtc`, `updatedOnUtc`). Never call `DateTime.Now`, and don't call `DateTime.UtcNow` in Domain or Application.
-- **Strongly typed Guid IDs** (`record ProductId(Guid Value)`) are generated **in the domain** (`ProductId.New()` inside `Create`), not by the database. Handlers return `entity.Id.Value` (a `Guid`).
-- The current user's id comes from the JWT `ClaimTypes.NameIdentifier` claim. **Controllers** read it and pass it in the command (`UserId`). There is no current-user service in Application.
-
----
-
-## 9. Adding a New Feature
-
-1. **Domain:** entity (`Entity<TId>`, private constructors, static `Create`/`Update`), `{Entity}Id`, value objects, `{Entity}Errors`, `{Entity}CreatedDomainEvent`.
-2. **Infrastructure:** `{Entity}Configuration` (table, ID/VO conversions, owned `Money`, FKs), a `DbSet<{Entity}>` on `IApplicationDbContext` and `ApplicationDbContext`, then an EF migration. Add a query repository only for a read that needs hand-written SQL.
-3. **Application:** feature folder containing the Command/Query record, `internal sealed` Handler, Validator (commands), and Response. Handlers are auto-registered by Scrutor; there is nothing to wire.
-4. **API:** `{Verb}{Entity}Request` record and a controller action (versioned route, handler injected as an action parameter, `ToActionResult()` on failure).
-5. **Side effects** (emails, etc.) go in an `IDomainEventHandler<TEvent>` for an event raised by the entity, never inline in the handler. Cache invalidation is the exception: it is done inline after `SaveChangesAsync` (see the Application guide).
-6. **Tests:** HTTP tests in `Ecommerce.IntegrationTests/{Module}/` against the real PostgreSQL container, unit tests in `Ecommerce.Domain.UnitTests/{Module}/` for new domain rules, and validator tests in `Ecommerce.Application.UnitTests/{Module}/` for new validation rules. Cover the success path **and every distinct failure path**. Never mock `DbSet` or use SQLite or the EF InMemory provider.
-
----
-
-## 10. Testing (summary; details in each test project's `CLAUDE.md`)
-
-- xUnit `[Fact]` / `[Theory]` + `[InlineData]`, default **`Assert.*`** only. No mocking library.
-- **AAA:** `// Arrange`, `// Act`, `// Assert` comments in every integration test.
-- Handlers are tested over HTTP against PostgreSQL in Testcontainers, not with mocks. Never mock `DbSet`, and never swap in SQLite or the EF InMemory provider: they don't behave like PostgreSQL.
-- Domain rules (`Order.AddOrderItem`, `Rating.Create`, ...) are plain unit tests of the entities: no database, no mocks.
-- Validator rules are unit tests of the validator: build one valid command, change one field with `with`, and assert the single error's `PropertyName` (`ValidationAssert.HasSingleError`). Integration tests keep one 400 test per endpoint; the permutations live here.
-- Build domain objects through their real factories (`User.Create(...)`).
-- Assert failures against the **domain error instance**: `Assert.Equal(OrderErrors.InvalidQuantity, result.Error)`. Over HTTP, assert the status code and the database state.
-- Naming: domain and validator tests `{Method}_Should_{Outcome}_When{Condition}`; integration tests `{Action}_Should{Outcome}_When{Condition}`.
-- Use `Options.Create(new XOptions { ... })` for options in tests; never mock `IOptions<T>`.
-
----
-
-## 11. Known Quirks
-
-These exist in the codebase today. Leave them alone unless asked:
-
-- Passwords are bcrypt hashes. A row with an older hash (PBKDF2 or SHA-256, from a dev database made before bcrypt) can no longer log in; recreate the dev data. There is no password-change endpoint; when one is added it must revoke all of the user's refresh tokens.
-- Emails are compared exactly as typed, so `Jane@x.com` and `jane@x.com` are two accounts (the unique index is case-sensitive).
-- Login reports a missing user and a wrong password with the same `UserErrors.InvalidCredentials` (401), so it doesn't reveal which emails are registered. Keep it that way.
-- `OrderResponse.ShippedOnUtc/DeliveredOnUtc` and `OrderItemResponse.UpdatedOnUtc` exist but are never populated.
-- `HybridCache` has no backplane. `RemoveByTagAsync` clears the calling instance's in-memory copy and marks the tag in Redis, but other running instances keep serving their own in-memory copy until it expires (`LocalCacheExpiration`, 1 minute). With several instances, a product change can show as stale for up to that long on the others.
-- Domain event handlers are auto-registered by the Scrutor scan in `Ecommerce.Application/DependencyInjection.cs`.
-- A coupon's usage limit is shared by all customers ("the first 100 orders"). There's no per-customer limit.
