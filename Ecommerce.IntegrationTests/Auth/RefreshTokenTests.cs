@@ -1,15 +1,16 @@
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Ecommerce.API.Controllers.Auth;
 using Ecommerce.Application.Abstractions.Auth;
-using Ecommerce.Application.Users;
 using Ecommerce.Domain.Users;
 using Ecommerce.Infrastructure;
+using Ecommerce.Infrastructure.Auth;
+using Ecommerce.IntegrationTests.Helpers;
 using Ecommerce.IntegrationTests.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Net.Http.Headers;
 
 namespace Ecommerce.IntegrationTests.Auth;
 
@@ -26,14 +27,14 @@ public sealed class RefreshTokenTests
     }
 
     [Fact]
-    public async Task Login_ShouldReturnARefreshToken_AndStoreOnlyItsHash()
+    public async Task Login_ShouldSetARefreshTokenCookie_AndStoreOnlyItsHash()
     {
         // Arrange
         await _factory.ResetDatabaseAsync();
         await RegisterAsync();
 
         // Act
-        AuthTokensResponse tokens = await LoginAsync();
+        Tokens tokens = await LoginAsync();
 
         // Assert
         Assert.False(string.IsNullOrWhiteSpace(tokens.RefreshToken));
@@ -48,22 +49,21 @@ public sealed class RefreshTokenTests
     }
 
     [Fact]
-    public async Task Refresh_ShouldReturnNewTokensAndRevokeTheOldOne_WhenTheTokenIsValid()
+    public async Task Refresh_ShouldSetNewCookiesAndRevokeTheOldToken_WhenTheTokenIsValid()
     {
         // Arrange
         await _factory.ResetDatabaseAsync();
         await RegisterAsync();
-        AuthTokensResponse first = await LoginAsync();
+        Tokens first = await LoginAsync();
 
         // Act
         HttpResponseMessage response = await RefreshAsync(first.RefreshToken);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
-        AuthTokensResponse? second = await response.Content.ReadFromJsonAsync<AuthTokensResponse>(cancellationToken: TestContext.Current.CancellationToken);
+        Tokens second = ReadTokens(response);
 
-        Assert.NotNull(second);
         Assert.NotEqual(first.RefreshToken, second.RefreshToken);
 
         List<RefreshToken> stored = await GetStoredTokensAsync();
@@ -73,11 +73,32 @@ public sealed class RefreshTokenTests
         Assert.False(stored.Single(token => token.TokenHash == HashOf(second.RefreshToken)).IsRevoked);
 
         // The new access token works.
-        using HttpClient client = _factory.CreateClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", second.AccessToken);
+        using HttpClient client = _factory.CreateClientWithCookies(accessToken: second.AccessToken);
 
         HttpResponseMessage orders = await client.GetAsync("/api/v1/orders", TestContext.Current.CancellationToken);
 
+        Assert.Equal(HttpStatusCode.OK, orders.StatusCode);
+    }
+
+    [Fact]
+    public async Task Refresh_ShouldKeepTheUserSignedIn_WhenTheBrowserSendsTheCookiesItWasGiven()
+    {
+        // Arrange: a client with a cookie jar behaves like a browser.
+        await _factory.ResetDatabaseAsync();
+        await RegisterAsync();
+
+        using HttpClient browser = _factory.CreateClient();
+
+        (await browser.PostAsJsonAsync(
+            "/api/v1/auth/login", new LoginUserRequest(Email, Password), cancellationToken: TestContext.Current.CancellationToken))
+            .EnsureSuccessStatusCode();
+
+        // Act
+        HttpResponseMessage refresh = await browser.PostAsync("/api/v1/auth/refresh", null, TestContext.Current.CancellationToken);
+        HttpResponseMessage orders = await browser.GetAsync("/api/v1/orders", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, refresh.StatusCode);
         Assert.Equal(HttpStatusCode.OK, orders.StatusCode);
     }
 
@@ -87,11 +108,11 @@ public sealed class RefreshTokenTests
         // Arrange
         await _factory.ResetDatabaseAsync();
         await RegisterAsync();
-        AuthTokensResponse first = await LoginAsync();
-        AuthTokensResponse otherSession = await LoginAsync();
+        Tokens first = await LoginAsync();
+        Tokens otherSession = await LoginAsync();
 
         HttpResponseMessage rotation = await RefreshAsync(first.RefreshToken);
-        AuthTokensResponse? second = await rotation.Content.ReadFromJsonAsync<AuthTokensResponse>(cancellationToken: TestContext.Current.CancellationToken);
+        Tokens second = ReadTokens(rotation);
 
         // Act: the first token was already used once.
         HttpResponseMessage reuse = await RefreshAsync(first.RefreshToken);
@@ -101,7 +122,7 @@ public sealed class RefreshTokenTests
         Assert.All(await GetStoredTokensAsync(), token => Assert.True(token.IsRevoked));
 
         // Neither the newer token nor the other session can refresh any more.
-        Assert.Equal(HttpStatusCode.Unauthorized, (await RefreshAsync(second!.RefreshToken)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await RefreshAsync(second.RefreshToken)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await RefreshAsync(otherSession.RefreshToken)).StatusCode);
     }
 
@@ -112,8 +133,8 @@ public sealed class RefreshTokenTests
         await _factory.ResetDatabaseAsync();
         await RegisterAsync();
         await RegisterAsync("john@example.com");
-        AuthTokensResponse jane = await LoginAsync();
-        AuthTokensResponse john = await LoginAsync("john@example.com");
+        Tokens jane = await LoginAsync();
+        Tokens john = await LoginAsync("john@example.com");
 
         await RefreshAsync(jane.RefreshToken);
 
@@ -121,7 +142,7 @@ public sealed class RefreshTokenTests
         await RefreshAsync(jane.RefreshToken);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, (await RefreshAsync(john.RefreshToken)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await RefreshAsync(john.RefreshToken)).StatusCode);
     }
 
     [Fact]
@@ -130,18 +151,18 @@ public sealed class RefreshTokenTests
         // Arrange
         await _factory.ResetDatabaseAsync();
         await RegisterAsync();
-        AuthTokensResponse tokens = await LoginAsync();
+        Tokens tokens = await LoginAsync();
 
         // Act
         HttpResponseMessage[] responses = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ => RefreshAsync(tokens.RefreshToken)));
 
         // Assert
-        Assert.Single(responses, response => response.StatusCode == HttpStatusCode.OK);
+        Assert.Single(responses, response => response.StatusCode == HttpStatusCode.NoContent);
         Assert.Equal(3, responses.Count(response => response.StatusCode == HttpStatusCode.Unauthorized));
     }
 
     [Fact]
-    public async Task Refresh_ShouldReturnUnauthorized_WhenTheTokenIsUnknown()
+    public async Task Refresh_ShouldReturnUnauthorizedAndClearTheCookies_WhenTheTokenIsUnknown()
     {
         // Arrange
         await _factory.ResetDatabaseAsync();
@@ -155,6 +176,7 @@ public sealed class RefreshTokenTests
         ProblemDetails? problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(UserErrors.InvalidRefreshToken.Name, problem!.Extensions["code"]?.ToString());
+        AssertCookiesCleared(response);
     }
 
     [Fact]
@@ -163,7 +185,7 @@ public sealed class RefreshTokenTests
         // Arrange
         await _factory.ResetDatabaseAsync();
         await RegisterAsync();
-        AuthTokensResponse active = await LoginAsync();
+        Tokens active = await LoginAsync();
 
         string expiredToken = "expired-token-value";
 
@@ -187,36 +209,38 @@ public sealed class RefreshTokenTests
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await RefreshAsync(active.RefreshToken)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await RefreshAsync(active.RefreshToken)).StatusCode);
     }
 
     [Fact]
-    public async Task Refresh_ShouldReturnBadRequest_WhenTheTokenIsEmpty()
+    public async Task Refresh_ShouldReturnUnauthorized_WhenThereIsNoCookie()
     {
         // Arrange
         await _factory.ResetDatabaseAsync();
 
+        using HttpClient client = _factory.CreateClientWithoutCookieJar();
+
         // Act
-        HttpResponseMessage response = await RefreshAsync("");
+        HttpResponseMessage response = await client.PostAsync("/api/v1/auth/refresh", null, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
-    public async Task Logout_ShouldRevokeThePresentedToken_WhenTheTokenIsValid()
+    public async Task Logout_ShouldRevokeTheTokenAndClearTheCookies_WhenTheTokenIsValid()
     {
         // Arrange
         await _factory.ResetDatabaseAsync();
         await RegisterAsync();
-        AuthTokensResponse tokens = await LoginAsync();
+        Tokens tokens = await LoginAsync();
 
         // Act
-        HttpResponseMessage response = await _factory.Client.PostAsJsonAsync(
-            "/api/v1/auth/logout", new LogoutRequest(tokens.RefreshToken), cancellationToken: TestContext.Current.CancellationToken);
+        HttpResponseMessage response = await LogoutAsync(tokens.RefreshToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        AssertCookiesCleared(response);
         Assert.Equal(HttpStatusCode.Unauthorized, (await RefreshAsync(tokens.RefreshToken)).StatusCode);
     }
 
@@ -226,15 +250,14 @@ public sealed class RefreshTokenTests
         // Arrange
         await _factory.ResetDatabaseAsync();
         await RegisterAsync();
-        AuthTokensResponse tokens = await LoginAsync();
-        AuthTokensResponse otherSession = await LoginAsync();
+        Tokens tokens = await LoginAsync();
+        Tokens otherSession = await LoginAsync();
 
         // Act
-        await _factory.Client.PostAsJsonAsync(
-            "/api/v1/auth/logout", new LogoutRequest(tokens.RefreshToken), cancellationToken: TestContext.Current.CancellationToken);
+        await LogoutAsync(tokens.RefreshToken);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, (await RefreshAsync(otherSession.RefreshToken)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await RefreshAsync(otherSession.RefreshToken)).StatusCode);
     }
 
     [Fact]
@@ -244,25 +267,26 @@ public sealed class RefreshTokenTests
         await _factory.ResetDatabaseAsync();
 
         // Act
-        HttpResponseMessage response = await _factory.Client.PostAsJsonAsync(
-            "/api/v1/auth/logout", new LogoutRequest("this-token-was-never-issued"), cancellationToken: TestContext.Current.CancellationToken);
+        HttpResponseMessage response = await LogoutAsync("this-token-was-never-issued");
 
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 
     [Fact]
-    public async Task Logout_ShouldReturnBadRequest_WhenTheTokenIsEmpty()
+    public async Task Logout_ShouldReturnNoContentAndClearTheCookies_WhenThereIsNoCookie()
     {
         // Arrange
         await _factory.ResetDatabaseAsync();
 
+        using HttpClient client = _factory.CreateClientWithoutCookieJar();
+
         // Act
-        HttpResponseMessage response = await _factory.Client.PostAsJsonAsync(
-            "/api/v1/auth/logout", new LogoutRequest(""), cancellationToken: TestContext.Current.CancellationToken);
+        HttpResponseMessage response = await client.PostAsync("/api/v1/auth/logout", null, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        AssertCookiesCleared(response);
     }
 
     private async Task RegisterAsync(string email = Email)
@@ -273,20 +297,48 @@ public sealed class RefreshTokenTests
         response.EnsureSuccessStatusCode();
     }
 
-    private async Task<AuthTokensResponse> LoginAsync(string email = Email)
+    private async Task<Tokens> LoginAsync(string email = Email)
     {
         HttpResponseMessage response = await _factory.Client.PostAsJsonAsync(
             "/api/v1/auth/login", new LoginUserRequest(email, Password), cancellationToken: TestContext.Current.CancellationToken);
 
         response.EnsureSuccessStatusCode();
 
-        return (await response.Content.ReadFromJsonAsync<AuthTokensResponse>(cancellationToken: TestContext.Current.CancellationToken))!;
+        return ReadTokens(response);
     }
 
-    private Task<HttpResponseMessage> RefreshAsync(string refreshToken)
+    private async Task<HttpResponseMessage> RefreshAsync(string refreshToken)
     {
-        return _factory.Client.PostAsJsonAsync(
-            "/api/v1/auth/refresh", new RefreshTokenRequest(refreshToken), cancellationToken: TestContext.Current.CancellationToken);
+        using HttpClient client = _factory.CreateClientWithCookies(refreshToken: refreshToken);
+
+        return await client.PostAsync("/api/v1/auth/refresh", null, TestContext.Current.CancellationToken);
+    }
+
+    private async Task<HttpResponseMessage> LogoutAsync(string refreshToken)
+    {
+        using HttpClient client = _factory.CreateClientWithCookies(refreshToken: refreshToken);
+
+        return await client.PostAsync("/api/v1/auth/logout", null, TestContext.Current.CancellationToken);
+    }
+
+    private static Tokens ReadTokens(HttpResponseMessage response)
+    {
+        return new Tokens(
+            SetCookies.GetValue(response, AuthCookieNames.AccessToken),
+            SetCookies.GetValue(response, AuthCookieNames.RefreshToken));
+    }
+
+    // A deleted cookie comes back empty with an expiry in the past.
+    private static void AssertCookiesCleared(HttpResponseMessage response)
+    {
+        foreach (string name in new[] { AuthCookieNames.AccessToken, AuthCookieNames.RefreshToken })
+        {
+            SetCookieHeaderValue? cookie = SetCookies.Find(response, name);
+
+            Assert.NotNull(cookie);
+            Assert.Equal(string.Empty, cookie.Value.ToString());
+            Assert.True(cookie.Expires < DateTimeOffset.UtcNow);
+        }
     }
 
     private Task<List<RefreshToken>> GetStoredTokensAsync()
@@ -301,4 +353,6 @@ public sealed class RefreshTokenTests
 
         return scope.ServiceProvider.GetRequiredService<IJwtService>().HashRefreshToken(refreshToken);
     }
+
+    private sealed record Tokens(string AccessToken, string RefreshToken);
 }

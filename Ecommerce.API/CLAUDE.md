@@ -9,7 +9,7 @@ Controllers/{Resource}/     {Resource}Controller.cs + {Verb}{Entity}Request.cs r
 Extensions/                 ErrorMappingExtensions (Error → IActionResult), MiddlewareExtensions,
                             DevelopmentDatabaseExtensions (dev migrate + seed), ApplicationBuilderExtensions
 Infrastructure/             ExceptionHandler (IExceptionHandler → 409 for ConcurrencyException, else 500 ProblemDetails)
-Middleware/                 CorrelationIdMiddleware (CorrelationId)
+Middleware/                 CorrelationIdMiddleware (CorrelationId), CsrfHeaderMiddleware (X-CSRF on writes)
 DependencyInjection.cs      AddPresentation()
 Program.cs                  Host, logging, OpenTelemetry, versioning, pipeline
 ```
@@ -64,7 +64,7 @@ Rules:
 | Get / list / search   | 200: `Ok(result.Value)`                                                   |
 | Update (PUT)          | 200: `Ok(new { id = result.Value })`                                      |
 | Delete (DELETE)       | 200: `Ok(new { id = result.Value })`                                      |
-| Register / Login      | 200: `Ok(new { id = result.Value })` / `Ok(result.Value)` (`AccessTokenResponse`) |
+| Register / Login, refresh, logout | 200: `Ok(new { id = result.Value })` / 204 with the auth cookies set or cleared, no body |
 
 ### Error responses
 
@@ -109,7 +109,7 @@ Every failure is an RFC 9457 `ProblemDetails` (`application/problem+json`). `Err
 - Service registration: `AddApplication()` → `AddPresentation()` → `AddInfrastructure(configuration)`, then `AddOpenApi()` and `AddApiVersioning(...)`.
 - API versioning: default `1.0`, `ReportApiVersions`. The version is read from the URL segment only (`UrlSegmentApiVersionReader`), so a route without `v{n}` doesn't match. The API explorer uses `GroupNameFormat = "'v'V"` and `SubstituteApiVersionInUrl`.
 - Development only: `app.MapOpenApi()` and `app.PrepareDevelopmentDatabaseAsync()` (migrates, and seeds the database when it is empty).
-- Middleware order (keep it): `UseMiddleware<CorrelationIdMiddleware>()` → `UseExceptionHandler()` → `UseAuthentication()` → `UseAuthorization()` → `MapControllers()`, then `MapHealthChecks("/health")`.
+- Middleware order (keep it): `UseMiddleware<CorrelationIdMiddleware>()` → `UseExceptionHandler()` → `UseMiddleware<CsrfHeaderMiddleware>()` → `UseAuthentication()` → `UseAuthorization()` → `MapControllers()`, then `MapHealthChecks("/health")`.
 - `GET /health` is anonymous, unversioned and returns only `Healthy` (200), `Degraded` (200, Redis down: the API still serves from the database) or `Unhealthy` (503, PostgreSQL down): never details or exceptions. The checks (`DatabaseHealthCheck`, `RedisHealthCheck`) live in Infrastructure's `Health/`. The compose healthcheck and the deploy script rely on it.
 - Don't add `public partial class Program;`. Since .NET 10 a source generator makes the top-level `Program` public, which is all `WebApplicationFactory<Program>` needs (analyzer ASP0027 flags the declaration as redundant).
 
@@ -131,6 +131,7 @@ Every failure is an RFC 9457 `ProblemDetails` (`application/problem+json`). `Err
 - `appsettings.json` has only the environment-agnostic `Logging` section. `appsettings.Development.json` has `Otlp`, `Jwt` (`Issuer`, `Audience`) and `ConnectionStrings` (`Database`, `Redis`), using Docker service names (`database-postgres`, `cache-redis`, `otel-collector`).
 - Outside Development these must come from environment variables (`ConnectionStrings__Database`, `Jwt__SecretKey`, `Otlp__LogsEndpoint`, ...); without a connection string the host fails at startup. Without `Otlp:*` endpoints the OTLP exporters are simply off.
 - The committed DB password is a dev value. **`Jwt:SecretKey` is committed nowhere**: set it with user secrets (`dotnet user-secrets set "Jwt:SecretKey" "<value>" --project Ecommerce.API`; generate one with `openssl rand -base64 48`) or `Jwt__SecretKey`. The host refuses to start with a missing key or one under 32 bytes. Never commit secrets.
-- `/auth` endpoints (`AuthController`; each action has one `[EnableRateLimiting(...)]`: `credentials` for `register` and `login`, `tokens` for `refresh` and `logout`): `register`, `login`, `refresh`, `logout`. Login and refresh return `{ accessToken, refreshToken }` in the body (bearer only, no cookies). `logout` and `refresh` take `{ refreshToken }`; logout answers 204 for any token.
+- `/auth` endpoints (`AuthController`; each action has one `[EnableRateLimiting(...)]`: `credentials` for `register` and `login`, `tokens` for `refresh` and `logout`): `register`, `login`, `refresh`, `logout`. The API serves a browser frontend, so tokens travel only in cookies (`Controllers/Auth/AuthCookies.cs`, names in Infrastructure's `Auth/AuthCookieNames.cs`): login and refresh answer 204 and set `__Host-access_token` (`Path=/`, session cookie) and `__Secure-refresh_token` (`Path=/api/v1/auth`, expires with the token), both `HttpOnly`, `Secure`, `SameSite=Strict`. Never put a token in a response body. `JwtBearerOptionsSetup` reads the access token from the cookie only; an `Authorization` header is ignored. `refresh` and `logout` read the refresh cookie: refresh with no cookie is 401, a failed refresh clears both cookies, logout clears them and answers 204 for any token.
+- CSRF (`Middleware/CsrfHeaderMiddleware.cs`, before authentication): every request other than GET, HEAD and OPTIONS must send `X-CSRF: 1`, or it gets 403 `Request.MissingCsrfHeader`. Swagger UI adds the header through a request interceptor. Don't add CORS: the frontend is served from the same origin (behind nginx), and allowing other origins would let them send the header.
 - Rate limiting (`Infrastructure/RateLimitingSetup.cs`, options in `RateLimitOptions.cs`): two sliding-window policies (6 segments, no queue), each partitioned per client IP. `credentials` (`register`, `login`): `RateLimiting:Credentials:PermitLimit` (5) per `WindowSeconds` (60). `tokens` (`refresh`, `logout`): `RateLimiting:Tokens:PermitLimit` (30) per `WindowSeconds` (60). They are separate so refresh traffic from users sharing an IP can't lock them out of login. Over the limit is 429 with `Retry-After`. There is no account lockout.
 - Client IP behind nginx (`Infrastructure/ForwardedHeadersSetup.cs`): `X-Forwarded-For` is used only when the sender is listed in `ForwardedHeaders:KnownProxies` or `ForwardedHeaders:KnownNetworks` (CIDR), and only its last entry (`ForwardLimit = 1`). With nothing listed the middleware is off. `docker-compose.yml` lists `172.28.0.0/24`, the fixed subnet `infra.compose.yml` gives `ecommerce-network` (`TRUSTED_PROXY_NETWORK` overrides it). Without it every client would share the nginx address and one bucket.

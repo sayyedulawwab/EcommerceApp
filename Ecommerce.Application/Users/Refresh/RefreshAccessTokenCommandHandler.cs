@@ -67,16 +67,17 @@ internal sealed class RefreshAccessTokenCommandHandler(
         }
 
         string refreshToken = jwtService.GenerateRefreshToken();
+        DateTime refreshTokenExpiresOnUtc = now.Add(jwtService.RefreshTokenLifetime);
 
         dbContext.RefreshTokens.Add(RefreshToken.Create(
             user.Id,
             jwtService.HashRefreshToken(refreshToken),
             now,
-            now.Add(jwtService.RefreshTokenLifetime)));
+            refreshTokenExpiresOnUtc));
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return new AuthTokensResponse(accessToken.Value, refreshToken);
+        return new AuthTokensResponse(accessToken.Value, refreshToken, refreshTokenExpiresOnUtc);
     }
 
     private Task<int> RevokeAllAsync(UserId userId, DateTime now, CancellationToken cancellationToken)

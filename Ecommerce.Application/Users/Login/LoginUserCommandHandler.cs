@@ -58,16 +58,17 @@ internal sealed class LoginUserCommandHandler(
 
         DateTime now = timeProvider.GetUtcNow().UtcDateTime;
         string refreshToken = jwtService.GenerateRefreshToken();
+        DateTime refreshTokenExpiresOnUtc = now.Add(jwtService.RefreshTokenLifetime);
 
         dbContext.RefreshTokens.Add(RefreshToken.Create(
             user.Id,
             jwtService.HashRefreshToken(refreshToken),
             now,
-            now.Add(jwtService.RefreshTokenLifetime)));
+            refreshTokenExpiresOnUtc));
 
         // Saves the refresh token and, when the work factor changed, the new password hash.
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return new AuthTokensResponse(accessToken.Value, refreshToken);
+        return new AuthTokensResponse(accessToken.Value, refreshToken, refreshTokenExpiresOnUtc);
     }
 }

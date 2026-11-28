@@ -8,7 +8,7 @@ A REST API for an ecommerce platform: products, categories, orders, product revi
 - **Categories:** add, edit, delete, list, and get by id
 - **Orders:** place an order for the signed-in user (with an optional coupon), cancel it before payment, and list the user's own orders
 - **Reviews:** rate (1–5) and comment on a product
-- **Users:** register and log in (bcrypt-hashed passwords, 15-minute JWT access tokens, rotating refresh tokens, per-IP sliding-window rate limits on `/auth`, emails stored lowercase)
+- **Users:** register and log in (bcrypt-hashed passwords, 15-minute JWT access tokens and rotating refresh tokens in HttpOnly cookies, a CSRF header check, per-IP sliding-window rate limits on `/auth`, emails stored lowercase)
 
 ## Technologies
 
@@ -94,14 +94,18 @@ dotnet test --project Ecommerce.IntegrationTests/Ecommerce.IntegrationTests.cspr
 
 ## API Endpoints
 
-All routes are versioned, and the version is read only from the URL (`/api/v1/...`). Endpoints marked 🔒 require a `Bearer` token from `/api/v1/auth/login`. Endpoints marked 🛡️ also require an admin: a customer gets 403.
+All routes are versioned, and the version is read only from the URL (`/api/v1/...`). Endpoints marked 🔒 require the access token cookie that `/api/v1/auth/login` sets. Endpoints marked 🛡️ also require an admin: a customer gets 403.
+
+The API is built for a browser frontend served from the same origin. Tokens never appear in a response body: login and refresh set them as `HttpOnly`, `Secure`, `SameSite=Strict` cookies, and the browser sends them back on its own. Every request other than GET must also send the header `X-CSRF: 1`, or it gets 403. In Swagger UI, call login first; the UI adds the header for you.
 
 ### Auth
 
 | Method | Route                    | Description                                   |
 | ------ | ------------------------ | --------------------------------------------- |
 | POST   | `/api/v1/auth/register`  | Register a user; returns the new user id      |
-| POST   | `/api/v1/auth/login`     | Log in; returns `{ "accessToken": "..." }`     |
+| POST   | `/api/v1/auth/login`     | Log in; sets the access and refresh token cookies (204) |
+| POST   | `/api/v1/auth/refresh`   | Rotate the refresh token cookie and set a new access token cookie (204) |
+| POST   | `/api/v1/auth/logout`    | Revoke the refresh token and clear both cookies (204) |
 
 ```json
 POST /api/v1/auth/register
