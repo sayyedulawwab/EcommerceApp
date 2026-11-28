@@ -15,7 +15,7 @@ paths:
 | FluentValidation                        | One validator per command, run by `ValidatingHandlers`        |
 | Scrutor                                 | Assembly scanning for handlers + decorator registration        |
 | Redis + `HybridCache`                   | Query result caching: in-memory (L1) in front of Redis (L2), cleared by tag |
-| JWT Bearer (`JsonWebTokenHandler`)       | Auth; 15-minute access token + rotating refresh token; `[Authorize]` on controllers, `[Authorize(Roles = Roles.Admin)]` on admin writes |
+| JWT Bearer (`JsonWebTokenHandler`)       | Auth for a browser frontend; 15-minute access token + rotating refresh token, both only in HttpOnly `Secure` `SameSite=Strict` cookies (never the body or an `Authorization` header), plus a required `X-CSRF: 1` header on writes; `[Authorize]` on controllers, `[Authorize(Roles = Roles.Admin)]` on admin writes |
 | BCrypt.Net-Next                         | Password hashing (bcrypt, work factor 12)                      |
 | Microsoft.AspNetCore.RateLimiting       | Per-IP sliding-window limits on the `/auth` endpoints                |
 | Asp.Versioning                          | URL segment only (`/api/v1/...`)                               |

@@ -1,6 +1,7 @@
 ﻿using Ecommerce.Application.Abstractions.Auth;
 using Ecommerce.Application.Abstractions.Emails;
 using Ecommerce.Infrastructure;
+using Ecommerce.Infrastructure.Auth;
 using Ecommerce.Infrastructure.Data;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -38,6 +39,8 @@ public sealed class IntegrationTestFactory
 
     private const string SelectorScheme = "TestOrBearer";
 
+    public const string CsrfHeaderName = "X-CSRF";
+
     public HttpClient Client { get; private set; } = default!;
 
     public FakeEmailService Emails { get; } = new();
@@ -54,6 +57,9 @@ public sealed class IntegrationTestFactory
 
         _redis = new RedisBuilder("redis:8.10.3")
             .Build();
+
+        // The auth cookies are Secure, and the clients' cookie jar only sends Secure cookies over https.
+        ClientOptions.BaseAddress = new Uri("https://localhost");
     }
 
     public async ValueTask InitializeAsync()
@@ -63,7 +69,8 @@ public sealed class IntegrationTestFactory
         // allowAdmin lets the reset flush the cache between tests.
         _redisConnection = await ConnectionMultiplexer.ConnectAsync($"{_redis.GetConnectionString()},allowAdmin=true");
 
-        Client = CreateClient();
+        // No cookie jar: this client is shared by every test, so cookies from one test's login must not reach the next.
+        Client = CreateClientWithoutCookieJar();
 
         Client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue(
@@ -125,6 +132,49 @@ public sealed class IntegrationTestFactory
             userId.ToString());
 
         return client;
+    }
+
+    // A client that sends exactly the auth cookies given here, the way a browser would send them.
+    // Use it to present a specific token, for example one that was already rotated.
+    public HttpClient CreateClientWithCookies(string? accessToken = null, string? refreshToken = null)
+    {
+        HttpClient client = CreateClientWithoutCookieJar();
+
+        List<string> cookies = [];
+
+        if (accessToken is not null)
+        {
+            cookies.Add($"{AuthCookieNames.AccessToken}={accessToken}");
+        }
+
+        if (refreshToken is not null)
+        {
+            cookies.Add($"{AuthCookieNames.RefreshToken}={refreshToken}");
+        }
+
+        if (cookies.Count > 0)
+        {
+            client.DefaultRequestHeaders.Add("Cookie", string.Join("; ", cookies));
+        }
+
+        return client;
+    }
+
+    public HttpClient CreateClientWithoutCookieJar()
+    {
+        return CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = ClientOptions.BaseAddress,
+            HandleCookies = false
+        });
+    }
+
+    // Every test client sends the CSRF header a browser frontend sends. CsrfHeaderTests removes it.
+    protected override void ConfigureClient(HttpClient client)
+    {
+        base.ConfigureClient(client);
+
+        client.DefaultRequestHeaders.Add(CsrfHeaderName, "1");
     }
 
     public override async ValueTask DisposeAsync()

@@ -84,13 +84,11 @@ public sealed class RateLimitTests
 
         for (int i = 0; i < PermitLimit; i++)
         {
-            await client.PostAsJsonAsync(
-                "/api/v1/auth/logout", new LogoutRequest("some-token"), cancellationToken: TestContext.Current.CancellationToken);
+            await client.PostAsync("/api/v1/auth/logout", null, TestContext.Current.CancellationToken);
         }
 
         // Act
-        HttpResponseMessage response = await client.PostAsJsonAsync(
-            "/api/v1/auth/refresh", new RefreshTokenRequest("some-token"), cancellationToken: TestContext.Current.CancellationToken);
+        HttpResponseMessage response = await client.PostAsync("/api/v1/auth/refresh", null, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.TooManyRequests, response.StatusCode);
@@ -107,8 +105,7 @@ public sealed class RateLimitTests
 
         for (int i = 0; i < PermitLimit + 1; i++)
         {
-            await client.PostAsJsonAsync(
-                "/api/v1/auth/refresh", new RefreshTokenRequest("some-token"), cancellationToken: TestContext.Current.CancellationToken);
+            await client.PostAsync("/api/v1/auth/refresh", null, TestContext.Current.CancellationToken);
         }
 
         // Act
@@ -135,8 +132,7 @@ public sealed class RateLimitTests
         }
 
         // Act
-        HttpResponseMessage response = await client.PostAsJsonAsync(
-            "/api/v1/auth/refresh", new RefreshTokenRequest("some-token"), cancellationToken: TestContext.Current.CancellationToken);
+        HttpResponseMessage response = await client.PostAsync("/api/v1/auth/refresh", null, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.NotEqual(HttpStatusCode.TooManyRequests, response.StatusCode);
@@ -156,8 +152,7 @@ public sealed class RateLimitTests
 
         for (int i = 0; i < PermitLimit + 1; i++)
         {
-            responses.Add(await client.PostAsJsonAsync(
-                "/api/v1/auth/refresh", new RefreshTokenRequest("some-token"), cancellationToken: TestContext.Current.CancellationToken));
+            responses.Add(await client.PostAsync("/api/v1/auth/refresh", null, TestContext.Current.CancellationToken));
         }
 
         // Assert

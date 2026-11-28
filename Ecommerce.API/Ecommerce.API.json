@@ -673,26 +673,6 @@
         "tags": [
           "Auth"
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RefreshTokenRequest"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RefreshTokenRequest"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/RefreshTokenRequest"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "200": {
             "description": "OK"
@@ -705,26 +685,6 @@
         "tags": [
           "Auth"
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LogoutRequest"
-              }
-            },
-            "text/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LogoutRequest"
-              }
-            },
-            "application/*+json": {
-              "schema": {
-                "$ref": "#/components/schemas/LogoutRequest"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
           "200": {
             "description": "OK"
@@ -963,17 +923,6 @@
           }
         }
       },
-      "LogoutRequest": {
-        "required": [
-          "refreshToken"
-        ],
-        "type": "object",
-        "properties": {
-          "refreshToken": {
-            "type": "string"
-          }
-        }
-      },
       "PlaceOrderProductRequest": {
         "required": [
           "productId",
@@ -1015,17 +964,6 @@
           }
         }
       },
-      "RefreshTokenRequest": {
-        "required": [
-          "refreshToken"
-        ],
-        "type": "object",
-        "properties": {
-          "refreshToken": {
-            "type": "string"
-          }
-        }
-      },
       "RegisterUserRequest": {
         "required": [
           "firstName",
@@ -1051,17 +989,17 @@
       }
     },
     "securitySchemes": {
-      "Bearer": {
-        "type": "http",
-        "description": "Enter a valid JSON web token here",
-        "scheme": "Bearer",
-        "bearerFormat": "JWT"
+      "AccessTokenCookie": {
+        "type": "apiKey",
+        "description": "Set by POST /api/v1/auth/login as an HttpOnly cookie",
+        "name": "__Host-access_token",
+        "in": "cookie"
       }
     }
   },
   "security": [
     {
-      "Bearer": [ ]
+      "AccessTokenCookie": [ ]
     }
   ],
   "tags": [

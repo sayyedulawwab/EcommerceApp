@@ -29,6 +29,27 @@ internal sealed class JwtBearerOptionsSetup(IOptions<JwtOptions> jwtOptions)
             // The default tolerance is 5 minutes, which would stretch a 15-minute token to 20.
             ClockSkew = TimeSpan.FromSeconds(30)
         };
+
+        options.Events = new JwtBearerEvents
+        {
+            // The token is read from the HttpOnly cookie only. Without the cookie the request is anonymous,
+            // even with an Authorization header: the API accepts a token in one place.
+            OnMessageReceived = context =>
+            {
+                string? token = context.Request.Cookies[AuthCookieNames.AccessToken];
+
+                if (string.IsNullOrEmpty(token))
+                {
+                    context.NoResult();
+                }
+                else
+                {
+                    context.Token = token;
+                }
+
+                return Task.CompletedTask;
+            }
+        };
     }
 
     public void Configure(string? name, JwtBearerOptions options)

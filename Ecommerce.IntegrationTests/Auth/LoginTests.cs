@@ -5,6 +5,8 @@ using Ecommerce.Application.Abstractions.Auth;
 using Ecommerce.Application.Users;
 using Ecommerce.Domain.Users;
 using Ecommerce.Infrastructure;
+using Ecommerce.Infrastructure.Auth;
+using Ecommerce.IntegrationTests.Helpers;
 using Ecommerce.IntegrationTests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,11 +40,9 @@ public sealed class LoginTests
             new LoginUserRequest("jane@example.com", "Password123!"), cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
-        AuthTokensResponse? token = await response.Content.ReadFromJsonAsync<AuthTokensResponse>(cancellationToken: TestContext.Current.CancellationToken);
-
-        Assert.False(string.IsNullOrWhiteSpace(token?.AccessToken));
+        Assert.False(string.IsNullOrWhiteSpace(SetCookies.GetValue(response, AuthCookieNames.AccessToken)));
     }
 
     [Fact]
@@ -61,7 +61,7 @@ public sealed class LoginTests
             new LoginUserRequest("JANE@EXAMPLE.COM", "Password123!"), cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public sealed class LoginTests
             new LoginUserRequest("old@example.com", "Password123!"), cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
         string storedHash = await GetPasswordHashAsync("old@example.com");
 
@@ -140,7 +140,7 @@ public sealed class LoginTests
             new LoginUserRequest("current@example.com", "Password123!"), cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         Assert.Equal(hash, await GetPasswordHashAsync("current@example.com"));
     }
 
@@ -210,10 +210,10 @@ public sealed class LoginTests
             new LoginUserRequest("ada@example.com", "Password123!"), cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        AuthTokensResponse? token = await response.Content.ReadFromJsonAsync<AuthTokensResponse>(cancellationToken: TestContext.Current.CancellationToken);
+        string accessToken = SetCookies.GetValue(response, AuthCookieNames.AccessToken);
 
         // The JWT payload is the second, base64url-encoded part of the token. Claims keep their full ClaimTypes URI.
-        string payload = token!.AccessToken.Split('.')[1].Replace('-', '+').Replace('_', '/');
+        string payload = accessToken.Split('.')[1].Replace('-', '+').Replace('_', '/');
         payload = payload.PadRight(payload.Length + ((4 - (payload.Length % 4)) % 4), '=');
         using var json = System.Text.Json.JsonDocument.Parse(Convert.FromBase64String(payload));
 

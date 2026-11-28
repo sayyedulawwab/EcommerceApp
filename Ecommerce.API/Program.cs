@@ -114,6 +114,9 @@ app.UseMiddleware<CorrelationIdMiddleware>();
 
 app.UseExceptionHandler();
 
+// Before authentication: a request that could be forged from another site is rejected before anything runs.
+app.UseMiddleware<CsrfHeaderMiddleware>();
+
 app.UseAuthentication();
 
 app.UseAuthorization();
