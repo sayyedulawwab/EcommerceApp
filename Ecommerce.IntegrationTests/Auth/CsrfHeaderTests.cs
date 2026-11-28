@@ -55,7 +55,7 @@ public sealed class CsrfHeaderTests
     }
 
     [Fact]
-    public async Task GetProducts_ShouldNotNeedTheCsrfHeader()
+    public async Task GetCategories_ShouldNotNeedTheCsrfHeader()
     {
         // Arrange
         await _factory.ResetDatabaseAsync();
@@ -64,7 +64,7 @@ public sealed class CsrfHeaderTests
         client.DefaultRequestHeaders.Remove(IntegrationTestFactory.CsrfHeaderName);
 
         // Act
-        HttpResponseMessage response = await client.GetAsync("/api/v1/products", TestContext.Current.CancellationToken);
+        HttpResponseMessage response = await client.GetAsync("/api/v1/categories",TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
